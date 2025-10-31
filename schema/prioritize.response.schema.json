@@ -1,0 +1,9 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://tidy-001.app/schemas/prioritize.response.json",
+  "title": "PrioritizeResponse",
+  "description": "TODO: Add complete PrioritizeResponse schema (PR #2)",
+  "type": "object",
+  "properties": {},
+  "required": []
+}

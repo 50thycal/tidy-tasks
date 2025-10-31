@@ -1,0 +1,24 @@
+{
+  "name": "tidy-001",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "schema:check": "ajv validate -s schema/clean_task.response.schema.json -d api/clean_task_example.json && ajv validate -s schema/prioritize.response.schema.json -d api/prioritize_tasks_example.json",
+    "types:gen": "typescript-json-schema \"schema/**/*.json\" \"*\" --out types/generated.d.ts"
+  },
+  "dependencies": {
+    "ajv": "^8.17.1",
+    "next": "14.2.5",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.12",
+    "@types/react": "^18.2.74",
+    "ajv-cli": "^5.0.0",
+    "typescript": "^5.6.3",
+    "typescript-json-schema": "^0.65.1"
+  }
+}
