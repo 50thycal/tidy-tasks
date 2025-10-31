@@ -1,3 +1,34 @@
 {
-  "_comment": "TODO: Add complete clean_task example in PR #2"
+  "endpoint": "/api/ai/clean_task",
+  "method": "POST",
+  "headers": {
+    "Content-Type": "application/json",
+    "X-No-Train": "true"
+  },
+  "request": {
+    "raw_text": "email brian about easement before Friday 30 min, attach grading sketch",
+    "today": "2025-10-30",
+    "timezone": "America/Phoenix",
+    "redaction": {
+      "enabled": true,
+      "entities": ["emails", "phones", "proper_names"]
+    }
+  },
+  "system_prompt": "Normalize task text. Use verb-first titles. Parse natural language dates relative to `today`. Estimate effort ∈ {5,15,30,60,120} and energy ∈ {low,med,high}. Infer importance (0–100), tags, and project if obvious. If compound, split into subtasks. Return STRICT JSON with keys: title, due_at (ISO 8601 or null), scheduled_for (ISO 8601 or null), effort_min, energy, tags[], project (or null), subtasks[], importance (0–100), notes_append (optional).",
+  "response": {
+    "title": "Email Brian about easement language",
+    "due_at": "2025-10-31T17:00:00-07:00",
+    "scheduled_for": null,
+    "effort_min": 30,
+    "energy": "low",
+    "tags": ["email", "client", "easement"],
+    "project": "Shawnee-Walker Segment 1",
+    "subtasks": [
+      "Draft email bullets",
+      "Attach grading sketch",
+      "Send and set follow-up reminder"
+    ],
+    "importance": 78,
+    "notes_append": "Mentions energized work; include grading notes."
+  }
 }

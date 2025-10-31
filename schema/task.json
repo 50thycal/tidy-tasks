@@ -1,9 +1,106 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://tidy-001.app/schemas/task.json",
+  "$id": "https://tidy.app/schema/task.json",
   "title": "Task",
-  "description": "TODO: Add complete Task schema (PR #2)",
   "type": "object",
-  "properties": {},
-  "required": []
+  "additionalProperties": false,
+  "required": ["id", "title", "status", "created_at", "updated_at"],
+  "properties": {
+    "id": { "type": "string", "description": "UUID" },
+    "title": { "type": "string", "minLength": 1, "description": "Verb-first, normalized task title" },
+    "notes": { "type": "string", "default": "" },
+    "status": {
+      "type": "string",
+      "enum": ["inbox", "active", "done", "snoozed"],
+      "default": "inbox",
+      "description": "Current lifecycle state"
+    },
+    "priority_score": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100,
+      "default": 0,
+      "description": "Computed 0–100 score used for ordering"
+    },
+    "bucket": {
+      "type": "string",
+      "enum": ["now", "next", "later", "backlog"],
+      "default": "backlog",
+      "description": "Priority bucket (lowercase for storage)"
+    },
+    "importance": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100,
+      "default": 0,
+      "description": "Inferred or user-set importance"
+    },
+    "effort_min": {
+      "type": "integer",
+      "enum": [5, 15, 30, 60, 120],
+      "default": 15,
+      "description": "Estimated focused effort in minutes"
+    },
+    "energy": {
+      "type": "string",
+      "enum": ["low", "med", "high"],
+      "default": "med",
+      "description": "Likely energy requirement"
+    },
+    "due_at": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "description": "Deadline (ISO 8601) or null"
+    },
+    "scheduled_for": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "description": "Scheduled start (ISO 8601) or null"
+    },
+    "project": { "type": ["string", "null"], "description": "Human label of project/area" },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true,
+      "default": [],
+      "description": "Freeform labels"
+    },
+    "subtasks": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "default": [],
+      "description": "Atomic steps"
+    },
+    "dependencies": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": [],
+      "description": "IDs of tasks this depends on"
+    },
+    "blocked": { "type": "boolean", "default": false, "description": "True if currently blocked" },
+    "created_at": { "type": "string", "format": "date-time", "description": "ISO 8601" },
+    "updated_at": { "type": "string", "format": "date-time", "description": "ISO 8601" }
+  },
+  "examples": [
+    {
+      "id": "t_8b3ea2a3-7a1a-4a66-8c9e-1b0b4f6d2a10",
+      "title": "Email Brian about easement language",
+      "notes": "Attach grading notes; energized work scenario.",
+      "status": "active",
+      "priority_score": 86,
+      "bucket": "now",
+      "importance": 78,
+      "effort_min": 30,
+      "energy": "low",
+      "due_at": "2025-11-03T17:00:00-07:00",
+      "scheduled_for": null,
+      "project": "Shawnee-Walker Segment 1",
+      "tags": ["email", "client", "easement"],
+      "subtasks": ["Draft bullets", "Attach sketch", "Send & set follow-up"],
+      "dependencies": [],
+      "blocked": false,
+      "created_at": "2025-10-30T15:00:00-07:00",
+      "updated_at": "2025-10-30T15:05:00-07:00"
+    }
+  ]
 }

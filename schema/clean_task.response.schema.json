@@ -1,9 +1,87 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://tidy-001.app/schemas/clean_task.response.json",
+  "$id": "https://tidy.app/schema/clean_task.response.schema.json",
   "title": "CleanTaskResponse",
-  "description": "TODO: Add complete CleanTaskResponse schema (PR #2)",
   "type": "object",
-  "properties": {},
-  "required": []
+  "additionalProperties": false,
+  "required": [
+    "title",
+    "effort_min",
+    "energy",
+    "tags",
+    "project",
+    "subtasks",
+    "importance",
+    "due_at"
+  ],
+  "properties": {
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Normalized, verb-first task title."
+    },
+    "due_at": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "description": "Explicit deadline if inferred; otherwise null."
+    },
+    "scheduled_for": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "description": "Specific scheduled start (optional)."
+    },
+    "effort_min": {
+      "type": "integer",
+      "enum": [5, 15, 30, 60, 120],
+      "description": "Estimated focused effort in minutes."
+    },
+    "energy": {
+      "type": "string",
+      "enum": ["low", "med", "high"],
+      "description": "Likely energy requirement."
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true,
+      "default": []
+    },
+    "project": {
+      "type": ["string", "null"],
+      "description": "Best-guess project name if clearly implied."
+    },
+    "subtasks": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "default": []
+    },
+    "importance": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Inferred importance score."
+    },
+    "notes_append": {
+      "type": "string",
+      "description": "Optional additional guidance to append to task notes."
+    }
+  },
+  "examples": [
+    {
+      "title": "Email Brian about easement language",
+      "due_at": "2025-10-31T17:00:00-07:00",
+      "scheduled_for": null,
+      "effort_min": 30,
+      "energy": "low",
+      "tags": ["email", "client", "easement"],
+      "project": "Shawnee-Walker Segment 1",
+      "subtasks": [
+        "Draft email bullets",
+        "Attach grading sketch",
+        "Send and set follow-up reminder"
+      ],
+      "importance": 78,
+      "notes_append": "Mentions energized work; include grading notes."
+    }
+  ]
 }

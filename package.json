@@ -5,11 +5,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "schema:check": "ajv validate -s schema/clean_task.response.schema.json -d api/clean_task_example.json && ajv validate -s schema/prioritize.response.schema.json -d api/prioritize_tasks_example.json",
+    "schema:check": "jq '.response' api/clean_task_example.json > /tmp/clean_resp.json && ajv validate -s schema/clean_task.response.schema.json -c ajv-formats -d /tmp/clean_resp.json && jq '.response' api/prioritize_tasks_example.json > /tmp/prioritize_resp.json && ajv validate -s schema/prioritize.response.schema.json -c ajv-formats -d /tmp/prioritize_resp.json",
     "types:gen": "typescript-json-schema \"schema/**/*.json\" \"*\" --out types/generated.d.ts"
   },
   "dependencies": {
     "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
     "next": "14.2.5",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"

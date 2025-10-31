@@ -1,3 +1,96 @@
 {
-  "_comment": "TODO: Add complete prioritize_tasks example in PR #2"
+  "endpoint": "/api/ai/prioritize_tasks",
+  "method": "POST",
+  "headers": {
+    "Content-Type": "application/json",
+    "X-No-Train": "true"
+  },
+  "request": {
+    "date": "2025-11-03",
+    "timezone": "America/Phoenix",
+    "energy": "med",
+    "max_focus_minutes": 240,
+    "calendar_windows": [
+      { "start": "2025-11-03T09:00:00-07:00", "end": "2025-11-03T11:30:00-07:00", "type": "free" },
+      { "start": "2025-11-03T13:30:00-07:00", "end": "2025-11-03T16:00:00-07:00", "type": "free" }
+    ],
+    "tasks": [
+      {
+        "id": "t_weekly_email",
+        "title": "Prep weekly progress email",
+        "status": "active",
+        "importance": 60,
+        "effort_min": 30,
+        "energy": "low",
+        "due_at": "2025-11-03T16:00:00-07:00",
+        "project": "Account Ops",
+        "tags": ["email", "report"]
+      },
+      {
+        "id": "t_email_brian",
+        "title": "Email Brian about easement language",
+        "status": "active",
+        "importance": 78,
+        "effort_min": 30,
+        "energy": "low",
+        "due_at": "2025-11-04T17:00:00-07:00",
+        "project": "Shawnee-Walker Segment 1",
+        "tags": ["email", "client", "easement"]
+      },
+      {
+        "id": "t_helical_calc",
+        "title": "Update helical pile calc sheet for Fulton Co.",
+        "status": "active",
+        "importance": 82,
+        "effort_min": 120,
+        "energy": "high",
+        "due_at": "2025-11-07T12:00:00-07:00",
+        "project": "Fulton Co. Substation",
+        "tags": ["calc", "civil", "substation"]
+      },
+      {
+        "id": "t_review_rdr",
+        "title": "Review RDR comments from FE",
+        "status": "active",
+        "importance": 70,
+        "effort_min": 60,
+        "energy": "med",
+        "due_at": "2025-11-05T09:00:00-07:00",
+        "project": "Shawnee-Walker Segment 1",
+        "tags": ["review", "client"]
+      }
+    ]
+  },
+  "system_prompt": "You are a planning assistant. For each task, compute priority_score (0–100) using: 40% urgency (time to due/scheduled), 40% importance, 10% momentum (same project streak: +0–20), 10% fit (alignment with energy + available windows: +0–20). Apply overload penalty if planned focus would exceed max_focus_minutes. Assign bucket ∈ {Now, Next, Later, Backlog}. Return an array of {id, priority_score, bucket, rationale}. Keep total planned (bucket=Now) ≤ max_focus_minutes. Prefer at least one short, low-energy task early to build momentum.",
+  "response": [
+    {
+      "id": "t_weekly_email",
+      "priority_score": 90,
+      "bucket": "Now",
+      "rationale": "Due today 16:00; low effort; good low-energy starter to build momentum."
+    },
+    {
+      "id": "t_email_brian",
+      "priority_score": 87,
+      "bucket": "Now",
+      "rationale": "Due tomorrow; unblocker for permit package; 30 min fits current free window."
+    },
+    {
+      "id": "t_review_rdr",
+      "priority_score": 74,
+      "bucket": "Next",
+      "rationale": "Due in two days; medium effort; schedule after email tasks."
+    },
+    {
+      "id": "t_helical_calc",
+      "priority_score": 62,
+      "bucket": "Later",
+      "rationale": "Larger high-energy block needed; due end of week; avoid overloading today."
+    }
+  ],
+  "focus_queue_summary": {
+    "planned_minutes_now": 60,
+    "remaining_capacity_minutes": 180,
+    "alternates": ["t_review_rdr"]
+  }
 }
