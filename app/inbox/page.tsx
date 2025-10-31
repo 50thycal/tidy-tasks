@@ -1,0 +1,171 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import TaskForm from "@/app/components/TaskForm";
+import TaskCard from "@/app/components/TaskCard";
+import {
+  getInboxItems,
+  saveInboxItem,
+  updateInboxItemStatus,
+  deleteInboxItem,
+  type InboxItem,
+} from "@/src/lib/clientStore";
+import type { CleanTaskRequest, CleanTaskResponse } from "@/src/types";
+
+export default function InboxPage() {
+  const [items, setItems] = useState<InboxItem[]>([]);
+  const [mounted, setMounted] = useState(false);
+
+  // Load items from localStorage on mount
+  useEffect(() => {
+    setMounted(true);
+    setItems(getInboxItems());
+  }, []);
+
+  // Handle form submission
+  const handleSubmit = async (request: CleanTaskRequest): Promise<CleanTaskResponse> => {
+    const response = await fetch("/api/ai/clean_task", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(request),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+
+      if (response.status === 422) {
+        // Validation error
+        const details = errorData.details || errorData.error;
+        throw new Error(`Validation failed: ${JSON.stringify(details)}`);
+      }
+
+      throw new Error(errorData.error || `HTTP ${response.status}`);
+    }
+
+    return await response.json();
+  };
+
+  // Handle successful cleaning
+  const handleSuccess = (result: CleanTaskResponse, request: CleanTaskRequest) => {
+    const newItem: InboxItem = {
+      id: crypto.randomUUID(),
+      created_at: new Date().toISOString(),
+      request,
+      result,
+      status: "inbox",
+    };
+
+    saveInboxItem(newItem);
+    setItems(getInboxItems());
+  };
+
+  // Handle move to active
+  const handleMoveToActive = (id: string) => {
+    updateInboxItemStatus(id, "active");
+    setItems(getInboxItems());
+  };
+
+  // Handle delete
+  const handleDelete = (id: string) => {
+    deleteInboxItem(id);
+    setItems(getInboxItems());
+  };
+
+  // Don't render until mounted (to avoid hydration mismatch)
+  if (!mounted) {
+    return (
+      <div style={{ padding: "2rem" }}>
+        <div style={{ maxWidth: "800px", margin: "0 auto" }}>
+          <h1>Inbox</h1>
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ padding: "2rem" }}>
+      <div style={{ maxWidth: "800px", margin: "0 auto" }}>
+        <h1 style={{ marginBottom: "1rem" }}>Inbox</h1>
+        <p style={{ color: "#666", marginBottom: "2rem" }}>
+          Paste a messy task description below and let AI clean it up.
+        </p>
+
+        {/* Task Form */}
+        <div
+          style={{
+            marginBottom: "3rem",
+            padding: "1.5rem",
+            backgroundColor: "#fff",
+            border: "1px solid #ddd",
+            borderRadius: "8px",
+          }}
+        >
+          <TaskForm onSubmit={handleSubmit} onSuccess={handleSuccess} />
+        </div>
+
+        {/* Saved Items List */}
+        <div>
+          <h2 style={{ fontSize: "1.25rem", marginBottom: "1rem" }}>
+            Saved Tasks {items.length > 0 && `(${items.length})`}
+          </h2>
+
+          {items.length === 0 ? (
+            <div
+              style={{
+                padding: "2rem",
+                textAlign: "center",
+                backgroundColor: "#f9f9f9",
+                borderRadius: "8px",
+                color: "#999",
+              }}
+            >
+              No tasks yet. Use the form above to clean your first task.
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+              {items.map((item) => (
+                <div key={item.id}>
+                  <div
+                    style={{
+                      fontSize: "0.85rem",
+                      color: "#999",
+                      marginBottom: "0.5rem",
+                      display: "flex",
+                      gap: "1rem",
+                      alignItems: "center",
+                    }}
+                  >
+                    <span>
+                      Created: {new Date(item.created_at).toLocaleString()}
+                    </span>
+                    <span
+                      style={{
+                        padding: "0.25rem 0.5rem",
+                        backgroundColor: item.status === "active" ? "#4caf50" : "#ff9800",
+                        color: "#fff",
+                        borderRadius: "4px",
+                        fontSize: "0.75rem",
+                        fontWeight: "500",
+                      }}
+                    >
+                      {item.status.toUpperCase()}
+                    </span>
+                  </div>
+                  <TaskCard
+                    result={item.result}
+                    showActions={true}
+                    onMoveToActive={() => handleMoveToActive(item.id)}
+                    onDelete={() => handleDelete(item.id)}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
