@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Ajv from "ajv";
 import addFormats from "ajv-formats";
 import { redact } from "@/src/lib/redact";
+import { normalizeCleanTaskResponse } from "@/src/lib/datetime";
 import type { CleanTaskRequest } from "@/src/types";
 import requestSchema from "@/schema/clean_task.request.schema.json";
 import responseSchema from "@/schema/clean_task.response.schema.json";
@@ -98,20 +99,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Normalize response (convert plain dates to ISO datetimes, handle null notes)
+    const tzFromRequest = timezone || process.env.TZ || "America/Phoenix";
+    const normalizedResponse = normalizeCleanTaskResponse(parsedResponse, tzFromRequest);
+
     // Validate response against schema
-    if (!validateResponse(parsedResponse)) {
+    if (!validateResponse(normalizedResponse)) {
       return NextResponse.json(
         {
           error: "AI response does not match schema",
           details: validateResponse.errors,
-          raw_response: parsedResponse,
+          raw_response: normalizedResponse,
         },
         { status: 422 }
       );
     }
 
     // Return validated response
-    return NextResponse.json(parsedResponse, { status: 200 });
+    return NextResponse.json(normalizedResponse, { status: 200 });
   } catch (error) {
     console.error("Error in /api/ai/clean_task:", error);
     return NextResponse.json(

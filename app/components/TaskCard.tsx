@@ -42,11 +42,12 @@ export default function TaskCard({
         border: "1px solid #ddd",
         borderRadius: "8px",
         padding: "1rem",
-        backgroundColor: "#fafafa",
+        backgroundColor: "#fff",
+        color: "#111",
       }}
     >
       {/* Title */}
-      <h3 style={{ margin: "0 0 0.5rem 0", fontSize: "1.1rem", fontWeight: "600" }}>
+      <h3 style={{ margin: "0 0 0.5rem 0", fontSize: "1.1rem", fontWeight: "600", color: "#111" }}>
         {result.title}
       </h3>
 
