@@ -36,7 +36,7 @@ export default function TaskForm({ onSubmit, onSuccess }: TaskFormProps) {
         timezone,
         redaction: {
           enabled: redactionEnabled,
-          entities: ["emails", "phones", "proper_names"],
+          entities: ["emails", "phones"],
         },
       };
 

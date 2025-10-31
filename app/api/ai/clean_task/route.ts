@@ -3,6 +3,8 @@ import Ajv from "ajv";
 import addFormats from "ajv-formats";
 import { redact } from "@/src/lib/redact";
 import { normalizeCleanTaskResponse } from "@/src/lib/datetime";
+import { getSettingsFromRequest } from "@/src/lib/settings";
+import { endOfWeek, containsEOW, isPlainDate, toEndOfDayIso } from "@/src/lib/eow";
 import type { CleanTaskRequest } from "@/src/types";
 import requestSchema from "@/schema/clean_task.request.schema.json";
 import responseSchema from "@/schema/clean_task.response.schema.json";
@@ -99,9 +101,38 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Normalize response (convert plain dates to ISO datetimes, handle null notes)
-    const tzFromRequest = timezone || process.env.TZ || "America/Phoenix";
-    const normalizedResponse = normalizeCleanTaskResponse(parsedResponse, tzFromRequest);
+    // Get settings from request or use defaults
+    const settings = getSettingsFromRequest(body);
+
+    // Normalize response (convert plain dates to ISO datetimes, handle null notes, EOW)
+    const normalizedResponse = { ...parsedResponse };
+
+    // Handle due_at normalization
+    if (typeof normalizedResponse.due_at === "string" && isPlainDate(normalizedResponse.due_at)) {
+      // Convert plain date to end-of-day ISO
+      normalizedResponse.due_at = toEndOfDayIso(
+        normalizedResponse.due_at,
+        settings.timezone,
+        settings.endOfDay
+      );
+    } else if (!normalizedResponse.due_at && containsEOW(raw_text)) {
+      // If no due_at but text contains "end of week", compute it
+      normalizedResponse.due_at = endOfWeek(new Date(), settings);
+    }
+
+    // Handle scheduled_for normalization
+    if (typeof normalizedResponse.scheduled_for === "string" && isPlainDate(normalizedResponse.scheduled_for)) {
+      normalizedResponse.scheduled_for = toEndOfDayIso(
+        normalizedResponse.scheduled_for,
+        settings.timezone,
+        settings.endOfDay
+      );
+    }
+
+    // Ensure notes_append is null if undefined
+    if (normalizedResponse.notes_append === undefined) {
+      normalizedResponse.notes_append = null;
+    }
 
     // Validate response against schema
     if (!validateResponse(normalizedResponse)) {

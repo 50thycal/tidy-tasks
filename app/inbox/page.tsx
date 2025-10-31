@@ -10,6 +10,7 @@ import {
   deleteInboxItem,
   type InboxItem,
 } from "@/src/lib/clientStore";
+import { getWorkSettings } from "@/src/lib/settings";
 import type { CleanTaskRequest, CleanTaskResponse } from "@/src/types";
 
 export default function InboxPage() {
@@ -24,12 +25,15 @@ export default function InboxPage() {
 
   // Handle form submission
   const handleSubmit = async (request: CleanTaskRequest): Promise<CleanTaskResponse> => {
+    // Get current work settings
+    const settings = getWorkSettings();
+
     const response = await fetch("/api/ai/clean_task", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(request),
+      body: JSON.stringify({ ...request, settings }),
     });
 
     if (!response.ok) {

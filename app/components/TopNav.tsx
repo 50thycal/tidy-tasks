@@ -37,6 +37,12 @@ export default function TopNav() {
           Inbox
         </Link>
         <Link
+          href="/settings"
+          style={{ textDecoration: "none", color: "#666" }}
+        >
+          Settings
+        </Link>
+        <Link
           href="/focus"
           style={{ textDecoration: "none", color: "#999", pointerEvents: "none" }}
           title="Coming soon"
