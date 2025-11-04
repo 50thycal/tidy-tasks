@@ -44,8 +44,7 @@ export default function TopNav() {
         </Link>
         <Link
           href="/focus"
-          style={{ textDecoration: "none", color: "#999", pointerEvents: "none" }}
-          title="Coming soon"
+          style={{ textDecoration: "none", color: "#666" }}
         >
           Focus
         </Link>

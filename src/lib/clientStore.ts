@@ -5,7 +5,7 @@ export interface InboxItem {
   created_at: string; // ISO 8601
   request: CleanTaskRequest;
   result: CleanTaskResponse;
-  status: "inbox" | "active";
+  status: "inbox" | "active" | "done";
 }
 
 const STORAGE_KEY = "tidy.inbox";
@@ -50,7 +50,7 @@ export function saveInboxItem(item: InboxItem): void {
 /**
  * Update an inbox item's status
  */
-export function updateInboxItemStatus(id: string, status: "inbox" | "active"): void {
+export function updateInboxItemStatus(id: string, status: "inbox" | "active" | "done"): void {
   if (typeof window === "undefined") return;
 
   try {
@@ -63,6 +63,20 @@ export function updateInboxItemStatus(id: string, status: "inbox" | "active"): v
   } catch (error) {
     console.error("Error updating inbox item:", error);
   }
+}
+
+/**
+ * Mark an inbox item as done
+ */
+export function markItemDone(id: string): void {
+  updateInboxItemStatus(id, "done");
+}
+
+/**
+ * Move an inbox item back to inbox
+ */
+export function moveItemToInbox(id: string): void {
+  updateInboxItemStatus(id, "inbox");
 }
 
 /**
