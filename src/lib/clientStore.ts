@@ -107,3 +107,24 @@ export function clearInbox(): void {
     console.error("Error clearing inbox:", error);
   }
 }
+
+/**
+ * Bulk add multiple inbox items at once
+ */
+export function bulkAddInboxItems(items: InboxItem[]): void {
+  if (typeof window === "undefined") return;
+
+  try {
+    const existingItems = getInboxItems();
+    const existingIds = new Set(existingItems.map((item) => item.id));
+
+    // Filter out duplicates and prepend new items
+    const newItems = items.filter((item) => !existingIds.has(item.id));
+    const merged = [...newItems, ...existingItems];
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+  } catch (error) {
+    console.error("Error bulk adding inbox items:", error);
+    throw error;
+  }
+}

@@ -37,16 +37,22 @@ export default function TopNav() {
           Inbox
         </Link>
         <Link
-          href="/settings"
+          href="/capture"
           style={{ textDecoration: "none", color: "#666" }}
         >
-          Settings
+          Capture
         </Link>
         <Link
           href="/focus"
           style={{ textDecoration: "none", color: "#666" }}
         >
           Focus
+        </Link>
+        <Link
+          href="/settings"
+          style={{ textDecoration: "none", color: "#666" }}
+        >
+          Settings
         </Link>
       </div>
     </nav>
