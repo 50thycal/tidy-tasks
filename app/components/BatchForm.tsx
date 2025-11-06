@@ -201,6 +201,7 @@ export default function BatchForm({ onClean, isProcessing }: BatchFormProps) {
       {/* Action buttons */}
       <div style={{ display: "flex", gap: "0.75rem" }}>
         <button
+          type="button"
           onClick={handleClean}
           disabled={isProcessing || lineCount === 0}
           style={{
@@ -217,6 +218,7 @@ export default function BatchForm({ onClean, isProcessing }: BatchFormProps) {
           {isProcessing ? "Processing..." : "Clean All with AI"}
         </button>
         <button
+          type="button"
           onClick={handleClear}
           disabled={isProcessing}
           style={{
