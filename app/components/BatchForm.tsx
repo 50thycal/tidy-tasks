@@ -49,44 +49,59 @@ export default function BatchForm({ onClean, isProcessing }: BatchFormProps) {
   const lineCount = rawText.split("\n").filter((line) => line.trim().length > 0).length;
 
   return (
-    <div
-      style={{
-        backgroundColor: "#fff",
-        border: "1px solid #ddd",
-        borderRadius: "8px",
-        padding: "1.5rem",
-      }}
-    >
-      <div style={{ marginBottom: "1rem" }}>
-        <label
-          htmlFor="batch-input"
-          style={{
-            display: "block",
-            fontWeight: "500",
-            marginBottom: "0.5rem",
-            color: "#111",
-          }}
-        >
-          Paste your tasks (one per line)
-        </label>
-        <textarea
-          id="batch-input"
-          value={rawText}
-          onChange={(e) => setRawText(e.target.value)}
-          placeholder="Email Brian about easement before Friday&#10;Review RDR package 2 hours&#10;Call contractor re: grading sketch&#10;Prep weekly progress email..."
-          disabled={isProcessing}
-          style={{
-            width: "100%",
-            minHeight: "200px",
-            padding: "0.75rem",
-            borderRadius: "4px",
-            border: "1px solid #ccc",
-            fontSize: "1rem",
-            fontFamily: "monospace",
-            resize: "vertical",
-            backgroundColor: isProcessing ? "#f5f5f5" : "#fff",
-          }}
-        />
+    <>
+      <style>
+        {`
+          #batch-input::placeholder {
+            color: #888;
+            opacity: 1;
+          }
+          #batch-input:focus {
+            outline: none;
+            border-color: #666;
+          }
+        `}
+      </style>
+      <div
+        style={{
+          backgroundColor: "#fff",
+          border: "1px solid #ddd",
+          borderRadius: "8px",
+          padding: "1.5rem",
+        }}
+      >
+        <div style={{ marginBottom: "1rem" }}>
+          <label
+            htmlFor="batch-input"
+            style={{
+              display: "block",
+              fontWeight: "500",
+              marginBottom: "0.5rem",
+              color: "#111",
+            }}
+          >
+            Paste your tasks (one per line)
+          </label>
+          <textarea
+            id="batch-input"
+            value={rawText}
+            onChange={(e) => setRawText(e.target.value)}
+            placeholder="Email Brian about easement before Friday&#10;Review RDR package 2 hours&#10;Call contractor re: grading sketch&#10;Prep weekly progress email..."
+            disabled={isProcessing}
+            style={{
+              width: "100%",
+              minHeight: "200px",
+              padding: "0.75rem",
+              borderRadius: "4px",
+              border: isProcessing ? "1px solid #555" : "1px solid #444",
+              fontSize: "1rem",
+              fontFamily: "monospace",
+              resize: "vertical",
+              backgroundColor: isProcessing ? "#1a1a1a" : "#000",
+              color: "#fff",
+              caretColor: "#fff",
+            }}
+          />
         <div
           style={{
             fontSize: "0.85rem",
@@ -235,5 +250,6 @@ export default function BatchForm({ onClean, isProcessing }: BatchFormProps) {
         </button>
       </div>
     </div>
+    </>
   );
 }
