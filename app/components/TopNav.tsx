@@ -49,6 +49,12 @@ export default function TopNav() {
           Focus
         </Link>
         <Link
+          href="/review"
+          style={{ textDecoration: "none", color: "#666" }}
+        >
+          Review
+        </Link>
+        <Link
           href="/settings"
           style={{ textDecoration: "none", color: "#666" }}
         >
