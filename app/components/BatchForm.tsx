@@ -102,154 +102,154 @@ export default function BatchForm({ onClean, isProcessing }: BatchFormProps) {
               caretColor: "#fff",
             }}
           />
-        <div
-          style={{
-            fontSize: "0.85rem",
-            color: "#666",
-            marginTop: "0.25rem",
-          }}
-        >
-          {lineCount} {lineCount === 1 ? "task" : "tasks"}
-        </div>
-      </div>
-
-      {/* Options (collapsed) */}
-      <div style={{ marginBottom: "1rem" }}>
-        <button
-          onClick={() => setShowOptions(!showOptions)}
-          style={{
-            background: "none",
-            border: "none",
-            padding: "0.5rem 0",
-            fontSize: "0.9rem",
-            color: "#1976d2",
-            cursor: "pointer",
-            textDecoration: "underline",
-          }}
-        >
-          {showOptions ? "▼" : "▶"} Advanced Options
-        </button>
-
-        {showOptions && (
           <div
             style={{
-              marginTop: "0.75rem",
-              padding: "1rem",
-              backgroundColor: "#f5f5f5",
-              borderRadius: "4px",
+              fontSize: "0.85rem",
+              color: "#666",
+              marginTop: "0.25rem",
             }}
           >
-            <div style={{ marginBottom: "1rem" }}>
-              <label style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                <input
-                  type="checkbox"
-                  checked={redactionEnabled}
-                  onChange={(e) => setRedactionEnabled(e.target.checked)}
-                />
-                <span style={{ fontSize: "0.9rem", color: "#111" }}>
-                  Enable redaction (privacy mode)
-                </span>
-              </label>
-            </div>
+            {lineCount} {lineCount === 1 ? "task" : "tasks"}
+          </div>
+        </div>
 
-            {redactionEnabled && (
-              <div style={{ marginLeft: "1.5rem" }}>
-                <div
-                  style={{
-                    fontSize: "0.85rem",
-                    color: "#666",
-                    marginBottom: "0.5rem",
-                  }}
-                >
-                  Redact:
-                </div>
-                <label
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.5rem",
-                    marginBottom: "0.5rem",
-                  }}
-                >
+        {/* Options (collapsed) */}
+        <div style={{ marginBottom: "1rem" }}>
+          <button
+            onClick={() => setShowOptions(!showOptions)}
+            style={{
+              background: "none",
+              border: "none",
+              padding: "0.5rem 0",
+              fontSize: "0.9rem",
+              color: "#1976d2",
+              cursor: "pointer",
+              textDecoration: "underline",
+            }}
+          >
+            {showOptions ? "▼" : "▶"} Advanced Options
+          </button>
+
+          {showOptions && (
+            <div
+              style={{
+                marginTop: "0.75rem",
+                padding: "1rem",
+                backgroundColor: "#f5f5f5",
+                borderRadius: "4px",
+              }}
+            >
+              <div style={{ marginBottom: "1rem" }}>
+                <label style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                   <input
                     type="checkbox"
-                    checked={redactionEntities.includes("emails")}
-                    onChange={() => toggleRedactionEntity("emails")}
+                    checked={redactionEnabled}
+                    onChange={(e) => setRedactionEnabled(e.target.checked)}
                   />
-                  <span style={{ fontSize: "0.85rem", color: "#111" }}>Email addresses</span>
-                </label>
-                <label
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.5rem",
-                    marginBottom: "0.5rem",
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={redactionEntities.includes("phones")}
-                    onChange={() => toggleRedactionEntity("phones")}
-                  />
-                  <span style={{ fontSize: "0.85rem", color: "#111" }}>Phone numbers</span>
-                </label>
-                <label
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.5rem",
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={redactionEntities.includes("proper_names")}
-                    onChange={() => toggleRedactionEntity("proper_names")}
-                  />
-                  <span style={{ fontSize: "0.85rem", color: "#111" }}>Proper names</span>
+                  <span style={{ fontSize: "0.9rem", color: "#111" }}>
+                    Enable redaction (privacy mode)
+                  </span>
                 </label>
               </div>
-            )}
-          </div>
-        )}
-      </div>
 
-      {/* Action buttons */}
-      <div style={{ display: "flex", gap: "0.75rem" }}>
-        <button
-          type="button"
-          onClick={handleClean}
-          disabled={isProcessing || lineCount === 0}
-          style={{
-            padding: "0.75rem 1.5rem",
-            backgroundColor: isProcessing || lineCount === 0 ? "#ccc" : "#1976d2",
-            color: "#fff",
-            border: "none",
-            borderRadius: "4px",
-            fontSize: "1rem",
-            fontWeight: "500",
-            cursor: isProcessing || lineCount === 0 ? "not-allowed" : "pointer",
-          }}
-        >
-          {isProcessing ? "Processing..." : "Clean All with AI"}
-        </button>
-        <button
-          type="button"
-          onClick={handleClear}
-          disabled={isProcessing}
-          style={{
-            padding: "0.75rem 1.5rem",
-            backgroundColor: "#fff",
-            color: "#666",
-            border: "1px solid #ccc",
-            borderRadius: "4px",
-            fontSize: "1rem",
-            cursor: isProcessing ? "not-allowed" : "pointer",
-          }}
-        >
-          Clear
-        </button>
+              {redactionEnabled && (
+                <div style={{ marginLeft: "1.5rem" }}>
+                  <div
+                    style={{
+                      fontSize: "0.85rem",
+                      color: "#666",
+                      marginBottom: "0.5rem",
+                    }}
+                  >
+                    Redact:
+                  </div>
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                      marginBottom: "0.5rem",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={redactionEntities.includes("emails")}
+                      onChange={() => toggleRedactionEntity("emails")}
+                    />
+                    <span style={{ fontSize: "0.85rem", color: "#111" }}>Email addresses</span>
+                  </label>
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                      marginBottom: "0.5rem",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={redactionEntities.includes("phones")}
+                      onChange={() => toggleRedactionEntity("phones")}
+                    />
+                    <span style={{ fontSize: "0.85rem", color: "#111" }}>Phone numbers</span>
+                  </label>
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={redactionEntities.includes("proper_names")}
+                      onChange={() => toggleRedactionEntity("proper_names")}
+                    />
+                    <span style={{ fontSize: "0.85rem", color: "#111" }}>Proper names</span>
+                  </label>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Action buttons */}
+        <div style={{ display: "flex", gap: "0.75rem" }}>
+          <button
+            type="button"
+            onClick={handleClean}
+            disabled={isProcessing || lineCount === 0}
+            style={{
+              padding: "0.75rem 1.5rem",
+              backgroundColor: isProcessing || lineCount === 0 ? "#ccc" : "#1976d2",
+              color: "#fff",
+              border: "none",
+              borderRadius: "4px",
+              fontSize: "1rem",
+              fontWeight: "500",
+              cursor: isProcessing || lineCount === 0 ? "not-allowed" : "pointer",
+            }}
+          >
+            {isProcessing ? "Processing..." : "Clean All with AI"}
+          </button>
+          <button
+            type="button"
+            onClick={handleClear}
+            disabled={isProcessing}
+            style={{
+              padding: "0.75rem 1.5rem",
+              backgroundColor: "#fff",
+              color: "#666",
+              border: "1px solid #ccc",
+              borderRadius: "4px",
+              fontSize: "1rem",
+              cursor: isProcessing ? "not-allowed" : "pointer",
+            }}
+          >
+            Clear
+          </button>
+        </div>
       </div>
-    </div>
     </>
   );
 }

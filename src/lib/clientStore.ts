@@ -1,11 +1,16 @@
 import type { CleanTaskRequest, CleanTaskResponse } from "@/src/types";
 
+export type InboxItemStatus = "inbox" | "active" | "done" | "snoozed";
+
 export interface InboxItem {
   id: string; // uuid
   created_at: string; // ISO 8601
+  updated_at?: string; // ISO 8601
+  touched_at?: string; // ISO 8601 (updated whenever status changes)
+  snoozed_until?: string | null; // ISO 8601 (optional)
   request: CleanTaskRequest;
   result: CleanTaskResponse;
-  status: "inbox" | "active" | "done";
+  status: InboxItemStatus;
 }
 
 const STORAGE_KEY = "tidy.inbox";
@@ -48,21 +53,67 @@ export function saveInboxItem(item: InboxItem): void {
 }
 
 /**
- * Update an inbox item's status
+ * Save all inbox items to localStorage
  */
-export function updateInboxItemStatus(id: string, status: "inbox" | "active" | "done"): void {
+export function saveAllInboxItems(items: InboxItem[]): void {
+  if (typeof window === "undefined") return;
+
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+  } catch (error) {
+    console.error("Error saving all inbox items:", error);
+    throw error;
+  }
+}
+
+/**
+ * Mutate a single inbox item
+ */
+export function mutateInboxItem(id: string, updater: (item: InboxItem) => InboxItem): void {
   if (typeof window === "undefined") return;
 
   try {
     const items = getInboxItems();
     const updated = items.map((item) =>
-      item.id === id ? { ...item, status } : item
+      item.id === id ? updater(item) : item
     );
 
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    saveAllInboxItems(updated);
   } catch (error) {
-    console.error("Error updating inbox item:", error);
+    console.error("Error mutating inbox item:", error);
+    throw error;
   }
+}
+
+/**
+ * Bulk mutate multiple inbox items
+ */
+export function bulkMutateInboxItems(ids: string[], updater: (item: InboxItem) => InboxItem): void {
+  if (typeof window === "undefined") return;
+
+  try {
+    const idsSet = new Set(ids);
+    const items = getInboxItems();
+    const updated = items.map((item) =>
+      idsSet.has(item.id) ? updater(item) : item
+    );
+
+    saveAllInboxItems(updated);
+  } catch (error) {
+    console.error("Error bulk mutating inbox items:", error);
+    throw error;
+  }
+}
+
+/**
+ * Update an inbox item's status
+ */
+export function updateInboxItemStatus(id: string, status: InboxItemStatus): void {
+  mutateInboxItem(id, (item) => ({
+    ...item,
+    status,
+    touched_at: new Date().toISOString(),
+  }));
 }
 
 /**
@@ -73,10 +124,47 @@ export function markItemDone(id: string): void {
 }
 
 /**
+ * Move an inbox item to active
+ */
+export function moveItemToActive(id: string): void {
+  updateInboxItemStatus(id, "active");
+}
+
+/**
  * Move an inbox item back to inbox
  */
 export function moveItemToInbox(id: string): void {
   updateInboxItemStatus(id, "inbox");
+}
+
+/**
+ * Snooze an inbox item for N days
+ */
+export function snoozeItem(id: string, days: number): void {
+  mutateInboxItem(id, (item) => {
+    const now = new Date();
+    const snoozeUntil = new Date(now);
+    snoozeUntil.setDate(snoozeUntil.getDate() + days);
+
+    return {
+      ...item,
+      status: "snoozed",
+      snoozed_until: snoozeUntil.toISOString(),
+      touched_at: now.toISOString(),
+    };
+  });
+}
+
+/**
+ * Unsnooze an inbox item (move back to inbox)
+ */
+export function unsnoozeItem(id: string): void {
+  mutateInboxItem(id, (item) => ({
+    ...item,
+    status: "inbox",
+    snoozed_until: null,
+    touched_at: new Date().toISOString(),
+  }));
 }
 
 /**
