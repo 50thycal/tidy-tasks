@@ -5,9 +5,8 @@ import BatchForm, { type BatchCleanOptions } from "@/app/components/BatchForm";
 import BatchResults, { type BatchTaskResult } from "@/app/components/BatchResults";
 import { bulkAddInboxItems, type InboxItem } from "@/src/lib/clientStore";
 import { getWorkSettings } from "@/src/lib/settings";
+import { runWithPool, splitTasks } from "@/src/lib/batchRunner";
 import type { CleanTaskRequest, CleanTaskResponse } from "@/src/types";
-
-const MAX_CONCURRENT = 3;
 
 export default function CapturePage() {
   const [mounted, setMounted] = useState(false);
@@ -27,22 +26,29 @@ export default function CapturePage() {
     }
   }, [toast]);
 
-  const processLine = async (
-    rawText: string,
-    options: BatchCleanOptions,
-    id: string
-  ): Promise<BatchTaskResult> => {
-    // Update status to running
-    setResults((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, status: "running" as const } : r))
-    );
+  const handleClean = async (lines: string[], options: BatchCleanOptions) => {
+    console.log(`[Capture] Starting batch clean for ${lines.length} tasks`);
+    setIsProcessing(true);
 
-    try {
-      const settings = getWorkSettings();
-      const today = new Date().toISOString().split("T")[0];
+    // Initialize all tasks as queued
+    const initialResults: BatchTaskResult[] = lines.map((line, index) => ({
+      id: `task-${Date.now()}-${index}`,
+      rawText: line,
+      status: "queued",
+    }));
+
+    setResults(initialResults);
+
+    // Get settings once
+    const settings = getWorkSettings();
+    const today = new Date().toISOString().split("T")[0];
+
+    // Worker function for each task
+    const worker = async (line: string, index: number): Promise<CleanTaskResponse> => {
+      console.log(`[Capture] Processing task ${index}: ${line.substring(0, 40)}...`);
 
       const request: CleanTaskRequest = {
-        raw_text: rawText,
+        raw_text: line,
         today,
         timezone: settings.timezone,
         redaction: {
@@ -59,83 +65,67 @@ export default function CapturePage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || `HTTP ${response.status}`);
+        console.error(`[Capture] Task ${index} failed:`, errorData);
+        throw new Error(
+          errorData.error || `HTTP ${response.status}: ${await response.text()}`
+        );
       }
 
       const result: CleanTaskResponse = await response.json();
-
-      return {
-        id,
-        rawText,
-        status: "success",
-        request,
-        result,
-      };
-    } catch (error) {
-      return {
-        id,
-        rawText,
-        status: "failed",
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
-    }
-  };
-
-  const processBatch = async (lines: string[], options: BatchCleanOptions) => {
-    setIsProcessing(true);
-
-    // Initialize results
-    const initialResults: BatchTaskResult[] = lines.map((line, index) => ({
-      id: `task-${Date.now()}-${index}`,
-      rawText: line,
-      status: "queued",
-    }));
-
-    setResults(initialResults);
-
-    // Process with concurrency limit
-    const queue = [...initialResults];
-    const activePromises: Promise<BatchTaskResult>[] = [];
-
-    const processNext = async (): Promise<void> => {
-      while (queue.length > 0 || activePromises.length > 0) {
-        // Start new tasks up to MAX_CONCURRENT
-        while (activePromises.length < MAX_CONCURRENT && queue.length > 0) {
-          const task = queue.shift()!;
-          const promise = processLine(task.rawText, options, task.id).then((result) => {
-            // Update result in state
-            setResults((prev) => prev.map((r) => (r.id === result.id ? result : r)));
-            return result;
-          });
-          activePromises.push(promise);
-        }
-
-        // Wait for at least one to complete
-        if (activePromises.length > 0) {
-          await Promise.race(activePromises);
-          // Remove completed promises
-          const stillActive: Promise<BatchTaskResult>[] = [];
-          for (const p of activePromises) {
-            const isComplete = await Promise.race([
-              p.then(() => true),
-              Promise.resolve(false),
-            ]);
-            if (!isComplete) {
-              stillActive.push(p);
-            }
-          }
-          activePromises.length = 0;
-          activePromises.push(...stillActive);
-        }
-      }
+      console.log(`[Capture] Task ${index} succeeded:`, result.title);
+      return result;
     };
 
-    await processNext();
-    setIsProcessing(false);
-  };
+    // Progress callback
+    const onProgress = (
+      index: number,
+      status: "running" | "success" | "failed",
+      data?: CleanTaskResponse | any
+    ) => {
+      setResults((prev) => {
+        const updated = [...prev];
+        updated[index] = {
+          ...updated[index],
+          status,
+          ...(status === "success" && data
+            ? {
+                result: data as CleanTaskResponse,
+                request: {
+                  raw_text: lines[index],
+                  today,
+                  timezone: settings.timezone,
+                  redaction: {
+                    enabled: options.redactionEnabled,
+                    entities: options.redactionEntities,
+                  },
+                },
+              }
+            : {}),
+          ...(status === "failed" && data
+            ? {
+                error:
+                  data instanceof Error
+                    ? data.message
+                    : typeof data === "string"
+                    ? data
+                    : "Unknown error",
+              }
+            : {}),
+        };
+        return updated;
+      });
+    };
 
-  const handleClean = (lines: string[], options: BatchCleanOptions) => {
-    processBatch(lines, options);
+    try {
+      // Run with pool (max 3 concurrent)
+      await runWithPool(lines, 3, worker, onProgress);
+      console.log("[Capture] Batch processing complete");
+    } catch (error) {
+      console.error("[Capture] Batch processing error:", error);
+      setToast("Batch processing encountered errors. Check individual tasks.");
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleAddSelected = (selectedIds: string[], destination: "inbox" | "active") => {
@@ -179,8 +169,9 @@ export default function CapturePage() {
 
     if (lines.length === 0) return;
 
-    // Get options from first failed result (assuming same options were used)
-    // For simplicity, use defaults - in production, we'd save the original options
+    console.log(`[Capture] Retrying ${lines.length} failed tasks`);
+
+    // Get options from first failed result (use defaults)
     const options: BatchCleanOptions = {
       redactionEnabled: true,
       redactionEntities: ["emails", "phones"],
@@ -190,7 +181,7 @@ export default function CapturePage() {
     setResults((prev) => prev.filter((r) => r.status !== "failed"));
 
     // Re-process
-    processBatch(lines, options);
+    handleClean(lines, options);
   };
 
   if (!mounted) {
@@ -205,6 +196,7 @@ export default function CapturePage() {
   }
 
   const successCount = results.filter((r) => r.status === "success").length;
+  const hasAnyResults = results.length > 0;
 
   return (
     <div style={{ padding: "2rem" }}>
@@ -216,14 +208,16 @@ export default function CapturePage() {
 
         <BatchForm onClean={handleClean} isProcessing={isProcessing} />
 
-        <BatchResults
-          results={results}
-          onAddSelected={handleAddSelected}
-          onDiscardSelected={handleDiscardSelected}
-          onRetryFailed={handleRetryFailed}
-        />
+        {hasAnyResults && (
+          <BatchResults
+            results={results}
+            onAddSelected={handleAddSelected}
+            onDiscardSelected={handleDiscardSelected}
+            onRetryFailed={handleRetryFailed}
+          />
+        )}
 
-        {/* Quick navigation (shown after adding tasks) */}
+        {/* Quick navigation (shown when there are successful results and not processing) */}
         {successCount > 0 && !isProcessing && (
           <div
             style={{
@@ -237,7 +231,7 @@ export default function CapturePage() {
             <div style={{ marginBottom: "1rem", color: "#2e7d32", fontWeight: "500" }}>
               Ready to continue?
             </div>
-            <div style={{ display: "flex", gap: "1rem", justifyContent: "center" }}>
+            <div style={{ display: "flex", gap: "1rem", justifyContent: "center", flexWrap: "wrap" }}>
               <a
                 href="/inbox"
                 style={{

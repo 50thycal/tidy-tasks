@@ -62,6 +62,7 @@ export default function BatchResults({
   }
 
   const processingCount = results.filter((r) => r.status === "queued" || r.status === "running").length;
+  const processingResults = results.filter((r) => r.status === "queued" || r.status === "running");
 
   return (
     <div
@@ -75,19 +76,46 @@ export default function BatchResults({
     >
       <h2 style={{ marginBottom: "1rem", color: "#111" }}>Review Results</h2>
 
-      {/* Processing indicator */}
-      {processingCount > 0 && (
+      {/* Processing tasks with individual status */}
+      {processingResults.length > 0 && (
         <div
           style={{
-            padding: "0.75rem",
+            padding: "1rem",
             backgroundColor: "#e3f2fd",
             borderRadius: "4px",
             marginBottom: "1rem",
-            color: "#1976d2",
-            fontSize: "0.9rem",
           }}
         >
-          Processing {processingCount} {processingCount === 1 ? "task" : "tasks"}...
+          <div style={{ color: "#1976d2", fontWeight: "500", marginBottom: "0.75rem" }}>
+            Processing {processingCount} {processingCount === 1 ? "task" : "tasks"}...
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+            {processingResults.map((result) => (
+              <div
+                key={result.id}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  fontSize: "0.85rem",
+                  color: "#666",
+                  backgroundColor: "#fff",
+                  padding: "0.5rem",
+                  borderRadius: "4px",
+                }}
+              >
+                <span style={{ fontSize: "1rem" }}>
+                  {result.status === "running" ? "⏳" : "⏸️"}
+                </span>
+                <span style={{ fontWeight: "500", color: result.status === "running" ? "#1976d2" : "#999" }}>
+                  {result.status === "running" ? "Running" : "Queued"}
+                </span>
+                <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {result.rawText}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -113,6 +141,7 @@ export default function BatchResults({
               {failedResults.length} {failedResults.length === 1 ? "task" : "tasks"} failed
             </div>
             <button
+              type="button"
               onClick={onRetryFailed}
               style={{
                 padding: "0.5rem 1rem",
@@ -192,7 +221,7 @@ export default function BatchResults({
                   onChange={toggleSelectAll}
                 />
                 <span style={{ fontSize: "0.9rem", color: "#111" }}>
-                  Select all ({successResults.length})
+                  Select all successes ({successResults.length})
                 </span>
               </label>
               {selectedIds.size > 0 && (
@@ -333,6 +362,7 @@ export default function BatchResults({
             }}
           >
             <button
+              type="button"
               onClick={handleDiscardSelected}
               disabled={selectedIds.size === 0}
               style={{
@@ -348,6 +378,7 @@ export default function BatchResults({
               Discard Selected
             </button>
             <button
+              type="button"
               onClick={handleAddSelected}
               disabled={selectedIds.size === 0}
               style={{
