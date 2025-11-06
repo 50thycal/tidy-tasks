@@ -105,3 +105,14 @@ a {
     color-scheme: dark;
   }
 }
+
+/* Placeholder styling for dark textarea */
+textarea.placeholder-gray-500::placeholder {
+  color: #9ca3af;
+  opacity: 1;
+}
+
+textarea.placeholder-gray-500:focus {
+  outline: none;
+  border-color: #6b7280;
+}

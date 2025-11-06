@@ -80,12 +80,15 @@ export default function BatchForm({ onClean, isProcessing }: BatchFormProps) {
             minHeight: "200px",
             padding: "0.75rem",
             borderRadius: "4px",
-            border: "1px solid #ccc",
+            border: "1px solid #444",
             fontSize: "1rem",
             fontFamily: "monospace",
             resize: "vertical",
-            backgroundColor: isProcessing ? "#f5f5f5" : "#fff",
+            backgroundColor: isProcessing ? "#1a1a1a" : "#000",
+            color: "#fff",
+            caretColor: "#fff",
           }}
+          className="placeholder-gray-500"
         />
         <div
           style={{
