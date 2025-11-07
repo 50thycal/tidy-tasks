@@ -200,9 +200,9 @@ export default function CapturePage() {
 
   return (
     <div style={{ padding: "2rem" }}>
-      <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
+      <div className="container">
         <h1 style={{ marginBottom: "0.5rem" }}>Batch Capture</h1>
-        <p style={{ color: "#666", marginBottom: "2rem" }}>
+        <p className="text-muted" style={{ marginBottom: "2rem" }}>
           Paste multiple tasks (one per line) and clean them all with AI
         </p>
 
@@ -219,42 +219,15 @@ export default function CapturePage() {
 
         {/* Quick navigation (shown when there are successful results and not processing) */}
         {successCount > 0 && !isProcessing && (
-          <div
-            style={{
-              marginTop: "2rem",
-              padding: "1.5rem",
-              backgroundColor: "#e8f5e9",
-              borderRadius: "8px",
-              textAlign: "center",
-            }}
-          >
-            <div style={{ marginBottom: "1rem", color: "#2e7d32", fontWeight: "500" }}>
+          <div className="card" style={{ marginTop: "2rem", padding: "1.5rem", textAlign: "center" }}>
+            <div style={{ marginBottom: "1rem", color: "var(--accent-2)", fontWeight: "500" }}>
               Ready to continue?
             </div>
             <div style={{ display: "flex", gap: "1rem", justifyContent: "center", flexWrap: "wrap" }}>
-              <a
-                href="/inbox"
-                style={{
-                  padding: "0.75rem 1.5rem",
-                  backgroundColor: "#fff",
-                  color: "#1976d2",
-                  textDecoration: "none",
-                  borderRadius: "4px",
-                  border: "1px solid #1976d2",
-                }}
-              >
+              <a href="/inbox" className="btn btn-muted">
                 Go to Inbox
               </a>
-              <a
-                href="/focus"
-                style={{
-                  padding: "0.75rem 1.5rem",
-                  backgroundColor: "#1976d2",
-                  color: "#fff",
-                  textDecoration: "none",
-                  borderRadius: "4px",
-                }}
-              >
+              <a href="/focus" className="btn btn-primary">
                 Go to Focus Queue
               </a>
             </div>
@@ -269,10 +242,11 @@ export default function CapturePage() {
               bottom: "2rem",
               right: "2rem",
               padding: "1rem 1.5rem",
-              backgroundColor: "#323232",
-              color: "#fff",
-              borderRadius: "4px",
-              boxShadow: "0 4px 8px rgba(0,0,0,0.2)",
+              backgroundColor: "var(--panel)",
+              color: "var(--text)",
+              borderRadius: "0.75rem",
+              border: "1px solid var(--border)",
+              boxShadow: "0 4px 8px rgba(0,0,0,0.3)",
               zIndex: 1000,
             }}
           >
