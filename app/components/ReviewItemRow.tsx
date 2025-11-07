@@ -30,15 +30,15 @@ export default function ReviewItemRow({
   return (
     <div
       style={{
-        border: "1px solid #ddd",
+        border: "1px solid var(--border)",
         borderRadius: "8px",
         padding: "1rem",
-        backgroundColor: "#fff",
+        backgroundColor: "var(--panel-2)",
         marginBottom: "0.75rem",
       }}
     >
       {/* Title */}
-      <h4 style={{ margin: "0 0 0.5rem 0", color: "#111", fontSize: "1rem" }}>
+      <h4 style={{ margin: "0 0 0.5rem 0", color: "var(--text)", fontSize: "1rem" }}>
         {result.title}
       </h4>
 
@@ -48,7 +48,7 @@ export default function ReviewItemRow({
           display: "flex",
           gap: "1rem",
           fontSize: "0.85rem",
-          color: "#666",
+          color: "var(--muted)",
           flexWrap: "wrap",
           marginBottom: "0.5rem",
         }}
@@ -64,7 +64,7 @@ export default function ReviewItemRow({
         <div
           style={{
             fontSize: "0.85rem",
-            color: "#1976d2",
+            color: "var(--accent)",
             marginBottom: "0.5rem",
           }}
         >
@@ -80,10 +80,11 @@ export default function ReviewItemRow({
               key={tag}
               style={{
                 padding: "0.25rem 0.5rem",
-                backgroundColor: "#e0e0e0",
+                backgroundColor: "var(--panel-2)",
                 borderRadius: "4px",
                 fontSize: "0.75rem",
-                color: "#666",
+                color: "var(--muted)",
+                border: "1px solid var(--border)",
               }}
             >
               {tag}
@@ -97,11 +98,11 @@ export default function ReviewItemRow({
         <div
           style={{
             fontSize: "0.85rem",
-            color: "#999",
+            color: "var(--muted)",
             fontStyle: "italic",
             marginBottom: "0.75rem",
             paddingLeft: "0.5rem",
-            borderLeft: "2px solid #e0e0e0",
+            borderLeft: "2px solid var(--border)",
           }}
         >
           {rationalePreview}
@@ -113,7 +114,7 @@ export default function ReviewItemRow({
         <div
           style={{
             fontSize: "0.85rem",
-            color: "#ff9800",
+            color: "var(--warn)",
             marginBottom: "0.75rem",
             fontWeight: "500",
           }}

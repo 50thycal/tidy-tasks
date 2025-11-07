@@ -67,26 +67,27 @@ export default function BatchResults({
   return (
     <div
       style={{
-        backgroundColor: "#fff",
-        border: "1px solid #ddd",
+        backgroundColor: "var(--panel)",
+        border: "1px solid var(--border)",
         borderRadius: "8px",
         padding: "1.5rem",
         marginTop: "2rem",
       }}
     >
-      <h2 style={{ marginBottom: "1rem", color: "#111" }}>Review Results</h2>
+      <h2 style={{ marginBottom: "1rem", color: "var(--text)" }}>Review Results</h2>
 
       {/* Processing tasks with individual status */}
       {processingResults.length > 0 && (
         <div
           style={{
             padding: "1rem",
-            backgroundColor: "#e3f2fd",
+            backgroundColor: "color-mix(in srgb, var(--accent) 15%, transparent)",
             borderRadius: "4px",
             marginBottom: "1rem",
+            border: "1px solid var(--border)",
           }}
         >
-          <div style={{ color: "#1976d2", fontWeight: "500", marginBottom: "0.75rem" }}>
+          <div style={{ color: "var(--accent)", fontWeight: "500", marginBottom: "0.75rem" }}>
             Processing {processingCount} {processingCount === 1 ? "task" : "tasks"}...
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
@@ -98,8 +99,8 @@ export default function BatchResults({
                   alignItems: "center",
                   gap: "0.5rem",
                   fontSize: "0.85rem",
-                  color: "#666",
-                  backgroundColor: "#fff",
+                  color: "var(--muted)",
+                  backgroundColor: "var(--panel-2)",
                   padding: "0.5rem",
                   borderRadius: "4px",
                 }}
@@ -107,7 +108,7 @@ export default function BatchResults({
                 <span style={{ fontSize: "1rem" }}>
                   {result.status === "running" ? "⏳" : "⏸️"}
                 </span>
-                <span style={{ fontWeight: "500", color: result.status === "running" ? "#1976d2" : "#999" }}>
+                <span style={{ fontWeight: "500", color: result.status === "running" ? "var(--accent)" : "var(--muted)" }}>
                   {result.status === "running" ? "Running" : "Queued"}
                 </span>
                 <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -124,9 +125,10 @@ export default function BatchResults({
         <div
           style={{
             padding: "1rem",
-            backgroundColor: "#ffebee",
+            backgroundColor: "color-mix(in srgb, var(--danger) 15%, transparent)",
             borderRadius: "4px",
             marginBottom: "1rem",
+            border: "1px solid var(--border)",
           }}
         >
           <div
@@ -137,7 +139,7 @@ export default function BatchResults({
               marginBottom: "0.5rem",
             }}
           >
-            <div style={{ color: "#c62828", fontWeight: "500" }}>
+            <div style={{ color: "var(--danger)", fontWeight: "500" }}>
               {failedResults.length} {failedResults.length === 1 ? "task" : "tasks"} failed
             </div>
             <button
@@ -145,8 +147,8 @@ export default function BatchResults({
               onClick={onRetryFailed}
               style={{
                 padding: "0.5rem 1rem",
-                backgroundColor: "#c62828",
-                color: "#fff",
+                backgroundColor: "var(--danger)",
+                color: "white",
                 border: "none",
                 borderRadius: "4px",
                 fontSize: "0.85rem",
@@ -161,7 +163,7 @@ export default function BatchResults({
               key={result.id}
               style={{
                 padding: "0.5rem",
-                backgroundColor: "#fff",
+                backgroundColor: "var(--panel-2)",
                 borderRadius: "4px",
                 marginTop: "0.5rem",
               }}
@@ -170,7 +172,7 @@ export default function BatchResults({
                 style={{
                   cursor: "pointer",
                   fontSize: "0.9rem",
-                  color: "#666",
+                  color: "var(--muted)",
                 }}
               >
                 {result.rawText.substring(0, 60)}
@@ -180,7 +182,7 @@ export default function BatchResults({
                 style={{
                   marginTop: "0.5rem",
                   fontSize: "0.85rem",
-                  color: "#c62828",
+                  color: "var(--danger)",
                   fontFamily: "monospace",
                   whiteSpace: "pre-wrap",
                 }}
@@ -220,12 +222,12 @@ export default function BatchResults({
                   checked={selectedIds.size === successResults.length && successResults.length > 0}
                   onChange={toggleSelectAll}
                 />
-                <span style={{ fontSize: "0.9rem", color: "#111" }}>
+                <span style={{ fontSize: "0.9rem", color: "var(--text)" }}>
                   Select all successes ({successResults.length})
                 </span>
               </label>
               {selectedIds.size > 0 && (
-                <span style={{ fontSize: "0.9rem", color: "#666" }}>
+                <span style={{ fontSize: "0.9rem", color: "var(--muted)" }}>
                   {selectedIds.size} selected
                 </span>
               )}
@@ -247,7 +249,7 @@ export default function BatchResults({
                   checked={destination === "inbox"}
                   onChange={() => setDestination("inbox")}
                 />
-                <span style={{ color: "#111" }}>Add to Inbox</span>
+                <span style={{ color: "var(--text)" }}>Add to Inbox</span>
               </label>
               <label
                 style={{
@@ -264,7 +266,7 @@ export default function BatchResults({
                   checked={destination === "active"}
                   onChange={() => setDestination("active")}
                 />
-                <span style={{ color: "#111" }}>Add to Active</span>
+                <span style={{ color: "var(--text)" }}>Add to Active</span>
               </label>
             </div>
           </div>
@@ -275,10 +277,10 @@ export default function BatchResults({
               <div
                 key={result.id}
                 style={{
-                  border: "1px solid #ddd",
+                  border: "1px solid var(--border)",
                   borderRadius: "8px",
                   padding: "1rem",
-                  backgroundColor: selectedIds.has(result.id) ? "#f0f7ff" : "#fff",
+                  backgroundColor: selectedIds.has(result.id) ? "color-mix(in srgb, var(--accent) 10%, transparent)" : "var(--panel-2)",
                   cursor: "pointer",
                 }}
                 onClick={() => toggleSelect(result.id)}
@@ -292,7 +294,7 @@ export default function BatchResults({
                     style={{ marginTop: "0.25rem", cursor: "pointer" }}
                   />
                   <div style={{ flex: 1 }}>
-                    <h4 style={{ margin: "0 0 0.5rem 0", color: "#111" }}>
+                    <h4 style={{ margin: "0 0 0.5rem 0", color: "var(--text)" }}>
                       {result.result?.title}
                     </h4>
                     <div
@@ -300,7 +302,7 @@ export default function BatchResults({
                         display: "flex",
                         gap: "0.75rem",
                         fontSize: "0.85rem",
-                        color: "#666",
+                        color: "var(--muted)",
                         flexWrap: "wrap",
                       }}
                     >
@@ -322,7 +324,7 @@ export default function BatchResults({
                         style={{
                           marginTop: "0.5rem",
                           fontSize: "0.85rem",
-                          color: "#1976d2",
+                          color: "var(--accent)",
                         }}
                       >
                         📂 {result.result.project}
@@ -335,10 +337,11 @@ export default function BatchResults({
                             key={tag}
                             style={{
                               padding: "0.25rem 0.5rem",
-                              backgroundColor: "#e0e0e0",
+                              backgroundColor: "var(--panel)",
                               borderRadius: "4px",
                               fontSize: "0.75rem",
-                              color: "#666",
+                              color: "var(--muted)",
+                              border: "1px solid var(--border)",
                             }}
                           >
                             {tag}
@@ -367,12 +370,13 @@ export default function BatchResults({
               disabled={selectedIds.size === 0}
               style={{
                 padding: "0.75rem 1.5rem",
-                backgroundColor: "#fff",
-                color: "#666",
-                border: "1px solid #ccc",
+                backgroundColor: "var(--panel-2)",
+                color: "var(--text)",
+                border: "1px solid var(--border)",
                 borderRadius: "4px",
                 fontSize: "1rem",
                 cursor: selectedIds.size === 0 ? "not-allowed" : "pointer",
+                opacity: selectedIds.size === 0 ? 0.5 : 1,
               }}
             >
               Discard Selected
@@ -383,8 +387,8 @@ export default function BatchResults({
               disabled={selectedIds.size === 0}
               style={{
                 padding: "0.75rem 1.5rem",
-                backgroundColor: selectedIds.size === 0 ? "#ccc" : "#4caf50",
-                color: "#fff",
+                backgroundColor: selectedIds.size === 0 ? "var(--muted)" : "var(--accent-2)",
+                color: "white",
                 border: "none",
                 borderRadius: "4px",
                 fontSize: "1rem",

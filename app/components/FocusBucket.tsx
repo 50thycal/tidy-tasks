@@ -61,11 +61,11 @@ export default function FocusBucket({
             <div
               key={item.id}
               style={{
-                border: "1px solid #ddd",
+                border: "1px solid var(--border)",
                 borderRadius: "8px",
                 padding: "1rem",
-                backgroundColor: "#fff",
-                color: "#111",
+                backgroundColor: "var(--panel-2)",
+                color: "var(--text)",
               }}
             >
               <div
@@ -76,7 +76,7 @@ export default function FocusBucket({
                   marginBottom: "0.5rem",
                 }}
               >
-                <h4 style={{ margin: 0, color: "#111", flex: 1 }}>
+                <h4 style={{ margin: 0, color: "var(--text)", flex: 1 }}>
                   {inboxItem.result.title}
                 </h4>
                 <span
@@ -94,7 +94,7 @@ export default function FocusBucket({
               <p
                 style={{
                   fontSize: "0.9rem",
-                  color: "#666",
+                  color: "var(--muted)",
                   margin: "0.5rem 0",
                   fontStyle: "italic",
                 }}
@@ -107,7 +107,7 @@ export default function FocusBucket({
                   display: "flex",
                   gap: "0.5rem",
                   fontSize: "0.85rem",
-                  color: "#666",
+                  color: "var(--muted)",
                   marginBottom: "0.75rem",
                 }}
               >
@@ -129,8 +129,8 @@ export default function FocusBucket({
                   onClick={() => onMarkDone(item.id)}
                   style={{
                     padding: "0.5rem 1rem",
-                    backgroundColor: "#4caf50",
-                    color: "#fff",
+                    backgroundColor: "var(--accent-2)",
+                    color: "white",
                     border: "none",
                     borderRadius: "4px",
                     fontSize: "0.85rem",
@@ -143,9 +143,9 @@ export default function FocusBucket({
                   onClick={() => onMoveToInbox(item.id)}
                   style={{
                     padding: "0.5rem 1rem",
-                    backgroundColor: "#fff",
-                    color: "#666",
-                    border: "1px solid #ccc",
+                    backgroundColor: "var(--panel-2)",
+                    color: "var(--text)",
+                    border: "1px solid var(--border)",
                     borderRadius: "4px",
                     fontSize: "0.85rem",
                     cursor: "pointer",

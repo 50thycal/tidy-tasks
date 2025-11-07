@@ -148,12 +148,12 @@ export default function ReviewPage() {
   }
 
   return (
-    <div style={{ padding: "2rem" }}>
+    <div style={{ padding: "2rem", minHeight: "100vh" }}>
       <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
         {/* Header */}
         <div style={{ marginBottom: "2rem" }}>
           <h1 style={{ marginBottom: "0.5rem" }}>Weekly Review & Reflection</h1>
-          <p style={{ color: "#666", marginBottom: "1.5rem" }}>
+          <p style={{ color: "var(--muted)", marginBottom: "1.5rem" }}>
             Review your tasks and keep your workflow tidy
           </p>
 
@@ -169,21 +169,22 @@ export default function ReviewPage() {
             <div
               style={{
                 padding: "0.75rem 1.25rem",
-                backgroundColor: sections.overdue.length > 0 ? "#ffebee" : "#f5f5f5",
+                backgroundColor: sections.overdue.length > 0 ? "color-mix(in srgb, var(--danger) 15%, transparent)" : "var(--panel-2)",
                 borderRadius: "8px",
                 display: "flex",
                 alignItems: "center",
                 gap: "0.5rem",
+                border: "1px solid var(--border)",
               }}
             >
               <span style={{ fontSize: "1.5rem" }}>⚠️</span>
               <div>
-                <div style={{ fontSize: "0.75rem", color: "#666" }}>Overdue</div>
+                <div style={{ fontSize: "0.75rem", color: "var(--muted)" }}>Overdue</div>
                 <div
                   style={{
                     fontSize: "1.25rem",
                     fontWeight: "600",
-                    color: sections.overdue.length > 0 ? "#c62828" : "#999",
+                    color: sections.overdue.length > 0 ? "var(--danger)" : "var(--muted)",
                   }}
                 >
                   {sections.overdue.length}
@@ -194,17 +195,18 @@ export default function ReviewPage() {
             <div
               style={{
                 padding: "0.75rem 1.25rem",
-                backgroundColor: "#e3f2fd",
+                backgroundColor: "color-mix(in srgb, var(--accent) 15%, transparent)",
                 borderRadius: "8px",
                 display: "flex",
                 alignItems: "center",
                 gap: "0.5rem",
+                border: "1px solid var(--border)",
               }}
             >
               <span style={{ fontSize: "1.5rem" }}>📅</span>
               <div>
-                <div style={{ fontSize: "0.75rem", color: "#666" }}>Due This Week</div>
-                <div style={{ fontSize: "1.25rem", fontWeight: "600", color: "#1976d2" }}>
+                <div style={{ fontSize: "0.75rem", color: "var(--muted)" }}>Due This Week</div>
+                <div style={{ fontSize: "1.25rem", fontWeight: "600", color: "var(--accent)" }}>
                   {sections.dueThisWeek.length}
                 </div>
               </div>
@@ -213,21 +215,22 @@ export default function ReviewPage() {
             <div
               style={{
                 padding: "0.75rem 1.25rem",
-                backgroundColor: sections.staleActive.length > 0 ? "#fff3e0" : "#f5f5f5",
+                backgroundColor: sections.staleActive.length > 0 ? "color-mix(in srgb, var(--warn) 15%, transparent)" : "var(--panel-2)",
                 borderRadius: "8px",
                 display: "flex",
                 alignItems: "center",
                 gap: "0.5rem",
+                border: "1px solid var(--border)",
               }}
             >
               <span style={{ fontSize: "1.5rem" }}>⏰</span>
               <div>
-                <div style={{ fontSize: "0.75rem", color: "#666" }}>Stale Active</div>
+                <div style={{ fontSize: "0.75rem", color: "var(--muted)" }}>Stale Active</div>
                 <div
                   style={{
                     fontSize: "1.25rem",
                     fontWeight: "600",
-                    color: sections.staleActive.length > 0 ? "#f57c00" : "#999",
+                    color: sections.staleActive.length > 0 ? "var(--warn)" : "var(--muted)",
                   }}
                 >
                   {sections.staleActive.length}
@@ -238,17 +241,18 @@ export default function ReviewPage() {
             <div
               style={{
                 padding: "0.75rem 1.25rem",
-                backgroundColor: "#e8f5e9",
+                backgroundColor: "color-mix(in srgb, var(--accent-2) 15%, transparent)",
                 borderRadius: "8px",
                 display: "flex",
                 alignItems: "center",
                 gap: "0.5rem",
+                border: "1px solid var(--border)",
               }}
             >
               <span style={{ fontSize: "1.5rem" }}>✓</span>
               <div>
-                <div style={{ fontSize: "0.75rem", color: "#666" }}>Done (7d)</div>
-                <div style={{ fontSize: "1.25rem", fontWeight: "600", color: "#4caf50" }}>
+                <div style={{ fontSize: "0.75rem", color: "var(--muted)" }}>Done (7d)</div>
+                <div style={{ fontSize: "1.25rem", fontWeight: "600", color: "var(--accent-2)" }}>
                   {sections.completedThisWeek.length}
                 </div>
               </div>
@@ -262,11 +266,12 @@ export default function ReviewPage() {
               justifyContent: "space-between",
               alignItems: "center",
               padding: "1rem",
-              backgroundColor: "#f5f5f5",
+              backgroundColor: "var(--panel-2)",
               borderRadius: "8px",
+              border: "1px solid var(--border)",
             }}
           >
-            <div style={{ fontSize: "0.9rem", color: "#666" }}>
+            <div style={{ fontSize: "0.9rem", color: "var(--muted)" }}>
               Week of {weekRange}
             </div>
             <div style={{ display: "flex", gap: "0.5rem" }}>
@@ -274,9 +279,9 @@ export default function ReviewPage() {
                 onClick={handleExpandAll}
                 style={{
                   padding: "0.5rem 1rem",
-                  backgroundColor: "#fff",
-                  color: "#666",
-                  border: "1px solid #ccc",
+                  backgroundColor: "var(--panel)",
+                  color: "var(--text)",
+                  border: "1px solid var(--border)",
                   borderRadius: "4px",
                   fontSize: "0.85rem",
                   cursor: "pointer",
@@ -288,9 +293,9 @@ export default function ReviewPage() {
                 onClick={handleCollapseAll}
                 style={{
                   padding: "0.5rem 1rem",
-                  backgroundColor: "#fff",
-                  color: "#666",
-                  border: "1px solid #ccc",
+                  backgroundColor: "var(--panel)",
+                  color: "var(--text)",
+                  border: "1px solid var(--border)",
                   borderRadius: "4px",
                   fontSize: "0.85rem",
                   cursor: "pointer",

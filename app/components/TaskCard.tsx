@@ -39,20 +39,20 @@ export default function TaskCard({
   return (
     <div
       style={{
-        border: "1px solid #ddd",
+        border: "1px solid var(--border)",
         borderRadius: "8px",
         padding: "1rem",
-        backgroundColor: "#fff",
-        color: "#111",
+        backgroundColor: "var(--panel-2)",
+        color: "var(--text)",
       }}
     >
       {/* Title */}
-      <h3 style={{ margin: "0 0 0.5rem 0", fontSize: "1.1rem", fontWeight: "600", color: "#111" }}>
+      <h3 style={{ margin: "0 0 0.5rem 0", fontSize: "1.1rem", fontWeight: "600", color: "var(--text)" }}>
         {result.title}
       </h3>
 
       {/* Due date */}
-      <div style={{ fontSize: "0.9rem", color: "#666", marginBottom: "0.75rem" }}>
+      <div style={{ fontSize: "0.9rem", color: "var(--muted)", marginBottom: "0.75rem" }}>
         <strong>Due:</strong> {formatDateTime(result.due_at)}
       </div>
 
@@ -75,22 +75,23 @@ export default function TaskCard({
 
       {/* Importance bar */}
       <div style={{ marginBottom: "0.75rem" }}>
-        <div style={{ fontSize: "0.85rem", marginBottom: "0.25rem", color: "#666" }}>
+        <div style={{ fontSize: "0.85rem", marginBottom: "0.25rem", color: "var(--muted)" }}>
           <strong>Importance:</strong> {result.importance}/100
         </div>
         <div
           style={{
             height: "6px",
-            backgroundColor: "#e0e0e0",
+            backgroundColor: "var(--panel)",
             borderRadius: "3px",
             overflow: "hidden",
+            border: "1px solid var(--border)",
           }}
         >
           <div
             style={{
               height: "100%",
               width: `${result.importance}%`,
-              backgroundColor: result.importance > 75 ? "#d32f2f" : result.importance > 50 ? "#ff9800" : "#4caf50",
+              backgroundColor: result.importance > 75 ? "var(--danger)" : result.importance > 50 ? "var(--warn)" : "var(--accent-2)",
             }}
           />
         </div>
@@ -111,10 +112,11 @@ export default function TaskCard({
               key={idx}
               style={{
                 padding: "0.25rem 0.5rem",
-                backgroundColor: "#e3f2fd",
-                color: "#1976d2",
+                backgroundColor: "color-mix(in srgb, var(--accent) 15%, transparent)",
+                color: "var(--accent)",
                 borderRadius: "4px",
                 fontSize: "0.85rem",
+                border: "1px solid var(--border)",
               }}
             >
               {tag}
@@ -140,10 +142,11 @@ export default function TaskCard({
         <div
           style={{
             padding: "0.5rem",
-            backgroundColor: "#fff9c4",
+            backgroundColor: "color-mix(in srgb, var(--warn) 15%, transparent)",
             borderRadius: "4px",
             fontSize: "0.85rem",
             marginBottom: "0.75rem",
+            border: "1px solid var(--border)",
           }}
         >
           <strong>Note:</strong> {result.notes_append}
@@ -158,8 +161,8 @@ export default function TaskCard({
               onClick={onMoveToActive}
               style={{
                 padding: "0.5rem 1rem",
-                backgroundColor: "#4caf50",
-                color: "#fff",
+                backgroundColor: "var(--accent-2)",
+                color: "white",
                 border: "none",
                 borderRadius: "4px",
                 cursor: "pointer",
@@ -174,8 +177,8 @@ export default function TaskCard({
               onClick={onDelete}
               style={{
                 padding: "0.5rem 1rem",
-                backgroundColor: "#f44336",
-                color: "#fff",
+                backgroundColor: "var(--danger)",
+                color: "white",
                 border: "none",
                 borderRadius: "4px",
                 cursor: "pointer",
@@ -189,13 +192,13 @@ export default function TaskCard({
       )}
 
       {/* Collapsible JSON */}
-      <div style={{ marginTop: "1rem", borderTop: "1px solid #ddd", paddingTop: "1rem" }}>
+      <div style={{ marginTop: "1rem", borderTop: "1px solid var(--border)", paddingTop: "1rem" }}>
         <button
           onClick={() => setShowJson(!showJson)}
           style={{
             background: "none",
             border: "none",
-            color: "#1976d2",
+            color: "var(--accent)",
             cursor: "pointer",
             fontSize: "0.85rem",
             padding: 0,
@@ -208,11 +211,12 @@ export default function TaskCard({
             style={{
               marginTop: "0.5rem",
               padding: "0.75rem",
-              backgroundColor: "#f5f5f5",
+              backgroundColor: "var(--panel)",
               borderRadius: "4px",
               fontSize: "0.75rem",
               overflow: "auto",
               maxHeight: "300px",
+              border: "1px solid var(--border)",
             }}
           >
             {JSON.stringify(result, null, 2)}

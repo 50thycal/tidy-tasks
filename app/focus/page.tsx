@@ -128,17 +128,17 @@ export default function FocusPage() {
   // Empty state
   if (activeItems.length === 0 && !loading) {
     return (
-      <div style={{ padding: "2rem" }}>
+      <div style={{ padding: "2rem", minHeight: "100vh" }}>
         <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
           <h1 style={{ marginBottom: "1rem" }}>Focus Queue</h1>
           <div
             style={{
-              backgroundColor: "#f5f5f5",
-              border: "1px solid #ddd",
+              backgroundColor: "var(--panel)",
+              border: "1px solid var(--border)",
               borderRadius: "8px",
               padding: "3rem",
               textAlign: "center",
-              color: "#666",
+              color: "var(--muted)",
             }}
           >
             <h3 style={{ marginBottom: "1rem" }}>No active tasks</h3>
@@ -150,8 +150,8 @@ export default function FocusPage() {
               style={{
                 display: "inline-block",
                 padding: "0.75rem 1.5rem",
-                backgroundColor: "#1976d2",
-                color: "#fff",
+                backgroundColor: "var(--accent)",
+                color: "white",
                 textDecoration: "none",
                 borderRadius: "4px",
                 fontSize: "1rem",
@@ -166,18 +166,18 @@ export default function FocusPage() {
   }
 
   return (
-    <div style={{ padding: "2rem" }}>
+    <div style={{ padding: "2rem", minHeight: "100vh" }}>
       <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
         <h1 style={{ marginBottom: "1rem" }}>Focus Queue</h1>
-        <p style={{ color: "#666", marginBottom: "2rem" }}>
+        <p style={{ color: "var(--muted)", marginBottom: "2rem" }}>
           AI-prioritized tasks for {new Date(date).toLocaleDateString()}
         </p>
 
         {/* Controls */}
         <div
           style={{
-            backgroundColor: "#fff",
-            border: "1px solid #ddd",
+            backgroundColor: "var(--panel)",
+            border: "1px solid var(--border)",
             borderRadius: "8px",
             padding: "1.5rem",
             marginBottom: "2rem",
@@ -194,7 +194,7 @@ export default function FocusPage() {
                 display: "block",
                 fontWeight: "500",
                 marginBottom: "0.5rem",
-                color: "#111",
+                color: "var(--text)",
               }}
             >
               Date
@@ -204,13 +204,7 @@ export default function FocusPage() {
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "0.5rem",
-                borderRadius: "4px",
-                border: "1px solid #ccc",
-                fontSize: "1rem",
-              }}
+              className="input"
             />
           </div>
 
@@ -221,7 +215,7 @@ export default function FocusPage() {
                 display: "block",
                 fontWeight: "500",
                 marginBottom: "0.5rem",
-                color: "#111",
+                color: "var(--text)",
               }}
             >
               Energy Level
@@ -230,13 +224,7 @@ export default function FocusPage() {
               id="energy"
               value={energy}
               onChange={(e) => setEnergy(e.target.value as EnergyLevel)}
-              style={{
-                width: "100%",
-                padding: "0.5rem",
-                borderRadius: "4px",
-                border: "1px solid #ccc",
-                fontSize: "1rem",
-              }}
+              className="input"
             >
               <option value="low">Low</option>
               <option value="med">Medium</option>
@@ -247,15 +235,11 @@ export default function FocusPage() {
           <button
             onClick={handlePrioritize}
             disabled={loading}
+            className="btn btn-primary"
             style={{
               padding: "0.5rem 1.5rem",
-              backgroundColor: loading ? "#ccc" : "#1976d2",
-              color: "#fff",
-              border: "none",
-              borderRadius: "4px",
-              fontSize: "1rem",
-              fontWeight: "500",
               cursor: loading ? "not-allowed" : "pointer",
+              opacity: loading ? 0.6 : 1,
             }}
           >
             {loading ? "Calculating..." : "Recalculate"}
@@ -267,10 +251,11 @@ export default function FocusPage() {
           <div
             style={{
               padding: "1rem",
-              backgroundColor: "#ffebee",
-              color: "#c62828",
+              backgroundColor: "color-mix(in srgb, var(--danger) 15%, transparent)",
+              color: "var(--danger)",
               borderRadius: "4px",
               marginBottom: "1.5rem",
+              border: "1px solid var(--border)",
             }}
           >
             <strong>Error:</strong> {error}
@@ -318,7 +303,7 @@ export default function FocusPage() {
 
         {/* Loading state for initial load */}
         {loading && prioritizedItems.length === 0 && (
-          <div style={{ textAlign: "center", padding: "3rem", color: "#666" }}>
+          <div style={{ textAlign: "center", padding: "3rem", color: "var(--muted)" }}>
             <p>Calculating priorities...</p>
           </div>
         )}

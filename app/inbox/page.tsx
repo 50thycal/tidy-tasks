@@ -90,10 +90,10 @@ export default function InboxPage() {
   }
 
   return (
-    <div style={{ padding: "2rem" }}>
+    <div style={{ padding: "2rem", minHeight: "100vh" }}>
       <div style={{ maxWidth: "800px", margin: "0 auto" }}>
         <h1 style={{ marginBottom: "1rem" }}>Inbox</h1>
-        <p style={{ color: "#666", marginBottom: "2rem" }}>
+        <p style={{ color: "var(--muted)", marginBottom: "2rem" }}>
           Paste a messy task description below and let AI clean it up.
         </p>
 
@@ -102,8 +102,8 @@ export default function InboxPage() {
           style={{
             marginBottom: "3rem",
             padding: "1.5rem",
-            backgroundColor: "#fff",
-            border: "1px solid #ddd",
+            backgroundColor: "var(--panel)",
+            border: "1px solid var(--border)",
             borderRadius: "8px",
           }}
         >
@@ -121,9 +121,9 @@ export default function InboxPage() {
               style={{
                 padding: "2rem",
                 textAlign: "center",
-                backgroundColor: "#f9f9f9",
+                backgroundColor: "var(--panel-2)",
                 borderRadius: "8px",
-                color: "#999",
+                color: "var(--muted)",
               }}
             >
               No tasks yet. Use the form above to clean your first task.
@@ -135,7 +135,7 @@ export default function InboxPage() {
                   <div
                     style={{
                       fontSize: "0.85rem",
-                      color: "#999",
+                      color: "var(--muted)",
                       marginBottom: "0.5rem",
                       display: "flex",
                       gap: "1rem",
@@ -148,8 +148,8 @@ export default function InboxPage() {
                     <span
                       style={{
                         padding: "0.25rem 0.5rem",
-                        backgroundColor: item.status === "active" ? "#4caf50" : "#ff9800",
-                        color: "#fff",
+                        backgroundColor: item.status === "active" ? "var(--accent-2)" : "var(--warn)",
+                        color: "white",
                         borderRadius: "4px",
                         fontSize: "0.75rem",
                         fontWeight: "500",

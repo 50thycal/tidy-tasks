@@ -33,8 +33,8 @@ export default function ReviewSection({
   return (
     <div
       style={{
-        backgroundColor: "#fff",
-        border: "1px solid #ddd",
+        backgroundColor: "var(--panel)",
+        border: "1px solid var(--border)",
         borderRadius: "8px",
         padding: "1.5rem",
         marginBottom: "1.5rem",
@@ -56,7 +56,7 @@ export default function ReviewSection({
             style={{
               margin: 0,
               fontSize: "1.25rem",
-              color: "#111",
+              color: "var(--text)",
               fontWeight: "600",
             }}
           >
@@ -65,8 +65,8 @@ export default function ReviewSection({
           <span
             style={{
               padding: "0.25rem 0.75rem",
-              backgroundColor: items.length > 0 ? "#e3f2fd" : "#f5f5f5",
-              color: items.length > 0 ? "#1976d2" : "#999",
+              backgroundColor: items.length > 0 ? "color-mix(in srgb, var(--accent) 15%, transparent)" : "var(--panel-2)",
+              color: items.length > 0 ? "var(--accent)" : "var(--muted)",
               borderRadius: "12px",
               fontSize: "0.85rem",
               fontWeight: "500",
@@ -78,7 +78,7 @@ export default function ReviewSection({
             <span
               style={{
                 fontSize: "0.85rem",
-                color: "#666",
+                color: "var(--muted)",
               }}
             >
               ⏱️ {totalEffort} min
@@ -95,7 +95,7 @@ export default function ReviewSection({
               style={{
                 padding: "2rem",
                 textAlign: "center",
-                color: "#999",
+                color: "var(--muted)",
                 fontSize: "0.9rem",
               }}
             >

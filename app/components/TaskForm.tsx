@@ -63,7 +63,7 @@ export default function TaskForm({ onSubmit, onSuccess }: TaskFormProps) {
     <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
       {/* Main textarea */}
       <div>
-        <label htmlFor="raw_text" style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>
+        <label htmlFor="raw_text" style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500", color: "var(--text)" }}>
           Task Description
         </label>
         <textarea
@@ -73,17 +73,13 @@ export default function TaskForm({ onSubmit, onSuccess }: TaskFormProps) {
           onKeyDown={handleKeyDown}
           placeholder="email brian about easement before Friday 30 min, attach grading sketch"
           rows={4}
+          className="textarea"
           style={{
-            width: "100%",
-            padding: "0.75rem",
-            fontSize: "1rem",
-            borderRadius: "4px",
-            border: "1px solid #ccc",
             fontFamily: "inherit",
             resize: "vertical",
           }}
         />
-        <div style={{ fontSize: "0.85rem", color: "#666", marginTop: "0.25rem" }}>
+        <div style={{ fontSize: "0.85rem", color: "var(--muted)", marginTop: "0.25rem" }}>
           Tip: Press Cmd/Ctrl + Enter to submit
         </div>
       </div>
@@ -96,7 +92,7 @@ export default function TaskForm({ onSubmit, onSuccess }: TaskFormProps) {
           style={{
             background: "none",
             border: "none",
-            color: "#1976d2",
+            color: "var(--accent)",
             cursor: "pointer",
             fontSize: "0.9rem",
             padding: 0,
@@ -110,7 +106,7 @@ export default function TaskForm({ onSubmit, onSuccess }: TaskFormProps) {
             style={{
               marginTop: "1rem",
               padding: "1rem",
-              backgroundColor: "#f9f9f9",
+              backgroundColor: "var(--panel-2)",
               borderRadius: "4px",
               display: "flex",
               flexDirection: "column",
@@ -119,7 +115,7 @@ export default function TaskForm({ onSubmit, onSuccess }: TaskFormProps) {
           >
             {/* Today */}
             <div>
-              <label htmlFor="today" style={{ display: "block", marginBottom: "0.25rem", fontSize: "0.9rem" }}>
+              <label htmlFor="today" style={{ display: "block", marginBottom: "0.25rem", fontSize: "0.9rem", color: "var(--text)" }}>
                 Today (for relative dates)
               </label>
               <input
@@ -127,18 +123,13 @@ export default function TaskForm({ onSubmit, onSuccess }: TaskFormProps) {
                 type="date"
                 value={today}
                 onChange={(e) => setToday(e.target.value)}
-                style={{
-                  padding: "0.5rem",
-                  borderRadius: "4px",
-                  border: "1px solid #ccc",
-                  fontSize: "0.9rem",
-                }}
+                className="input"
               />
             </div>
 
             {/* Timezone */}
             <div>
-              <label htmlFor="timezone" style={{ display: "block", marginBottom: "0.25rem", fontSize: "0.9rem" }}>
+              <label htmlFor="timezone" style={{ display: "block", marginBottom: "0.25rem", fontSize: "0.9rem", color: "var(--text)" }}>
                 Timezone
               </label>
               <input
@@ -147,19 +138,13 @@ export default function TaskForm({ onSubmit, onSuccess }: TaskFormProps) {
                 value={timezone}
                 onChange={(e) => setTimezone(e.target.value)}
                 placeholder="America/Phoenix"
-                style={{
-                  padding: "0.5rem",
-                  borderRadius: "4px",
-                  border: "1px solid #ccc",
-                  fontSize: "0.9rem",
-                  width: "100%",
-                }}
+                className="input"
               />
             </div>
 
             {/* Redaction */}
             <div>
-              <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.9rem" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.9rem", color: "var(--text)" }}>
                 <input
                   type="checkbox"
                   checked={redactionEnabled}
@@ -177,10 +162,11 @@ export default function TaskForm({ onSubmit, onSuccess }: TaskFormProps) {
         <div
           style={{
             padding: "0.75rem",
-            backgroundColor: "#ffebee",
-            color: "#c62828",
+            backgroundColor: "color-mix(in srgb, var(--danger) 15%, transparent)",
+            color: "var(--danger)",
             borderRadius: "4px",
             fontSize: "0.9rem",
+            border: "1px solid var(--border)",
           }}
         >
           {error}
@@ -192,15 +178,11 @@ export default function TaskForm({ onSubmit, onSuccess }: TaskFormProps) {
         <button
           type="submit"
           disabled={loading}
+          className="btn btn-primary"
           style={{
             padding: "0.75rem 1.5rem",
-            backgroundColor: loading ? "#ccc" : "#1976d2",
-            color: "#fff",
-            border: "none",
-            borderRadius: "4px",
-            fontSize: "1rem",
-            fontWeight: "500",
             cursor: loading ? "not-allowed" : "pointer",
+            opacity: loading ? 0.6 : 1,
           }}
         >
           {loading ? "Processing..." : "Clean with AI"}
@@ -215,9 +197,9 @@ export default function TaskForm({ onSubmit, onSuccess }: TaskFormProps) {
           disabled={loading}
           style={{
             padding: "0.75rem 1.5rem",
-            backgroundColor: "#fff",
-            color: "#666",
-            border: "1px solid #ccc",
+            backgroundColor: "var(--panel-2)",
+            color: "var(--text)",
+            border: "1px solid var(--border)",
             borderRadius: "4px",
             fontSize: "1rem",
             cursor: loading ? "not-allowed" : "pointer",

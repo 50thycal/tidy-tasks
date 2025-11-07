@@ -14,9 +14,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>
+      <body className="min-h-screen bg-[var(--bg)] text-[var(--text)] antialiased">
         <TopNav />
-        {children}
+        <div className="min-h-screen">{children}</div>
       </body>
     </html>
   );

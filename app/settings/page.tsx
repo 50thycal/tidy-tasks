@@ -93,25 +93,25 @@ export default function SettingsPage() {
   }
 
   return (
-    <div style={{ padding: "2rem" }}>
+    <div style={{ padding: "2rem", minHeight: "100vh" }}>
       <div style={{ maxWidth: "800px", margin: "0 auto" }}>
         <h1 style={{ marginBottom: "1rem" }}>Work Context Settings</h1>
-        <p style={{ color: "#666", marginBottom: "2rem" }}>
+        <p style={{ color: "var(--muted)", marginBottom: "2rem" }}>
           Configure your work schedule and timezone for smarter task parsing.
         </p>
 
         <div
           style={{
-            backgroundColor: "#fff",
-            border: "1px solid #ddd",
+            backgroundColor: "var(--panel)",
+            border: "1px solid var(--border)",
             borderRadius: "8px",
             padding: "2rem",
-            color: "#111",
+            color: "var(--text)",
           }}
         >
           {/* Timezone */}
           <div style={{ marginBottom: "1.5rem" }}>
-            <label htmlFor="timezone" style={{ display: "block", fontWeight: "500", marginBottom: "0.5rem" }}>
+            <label htmlFor="timezone" style={{ display: "block", fontWeight: "500", marginBottom: "0.5rem", color: "var(--text)" }}>
               Timezone (IANA)
             </label>
             <input
@@ -120,22 +120,16 @@ export default function SettingsPage() {
               value={work.timezone}
               onChange={(e) => setWork({ ...work, timezone: e.target.value })}
               placeholder="America/Phoenix"
-              style={{
-                width: "100%",
-                padding: "0.5rem",
-                borderRadius: "4px",
-                border: "1px solid #ccc",
-                fontSize: "1rem",
-              }}
+              className="input"
             />
-            <div style={{ fontSize: "0.85rem", color: "#666", marginTop: "0.25rem" }}>
+            <div style={{ fontSize: "0.85rem", color: "var(--muted)", marginTop: "0.25rem" }}>
               Examples: America/Phoenix, America/Chicago, America/New_York
             </div>
           </div>
 
           {/* Work Days */}
           <div style={{ marginBottom: "1.5rem" }}>
-            <label style={{ display: "block", fontWeight: "500", marginBottom: "0.5rem" }}>Work Days</label>
+            <label style={{ display: "block", fontWeight: "500", marginBottom: "0.5rem", color: "var(--text)" }}>Work Days</label>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
               {ALL_DAYS.map((day) => (
                 <label
@@ -145,10 +139,11 @@ export default function SettingsPage() {
                     alignItems: "center",
                     gap: "0.25rem",
                     padding: "0.5rem",
-                    border: "1px solid #ddd",
+                    border: "1px solid var(--border)",
                     borderRadius: "4px",
                     cursor: "pointer",
-                    backgroundColor: work.workDays.includes(day) ? "#e3f2fd" : "#fff",
+                    backgroundColor: work.workDays.includes(day) ? "color-mix(in srgb, var(--accent) 15%, transparent)" : "var(--panel-2)",
+                    color: "var(--text)",
                   }}
                 >
                   <input
@@ -164,7 +159,7 @@ export default function SettingsPage() {
 
           {/* End of Day */}
           <div style={{ marginBottom: "1.5rem" }}>
-            <label htmlFor="endOfDay" style={{ display: "block", fontWeight: "500", marginBottom: "0.5rem" }}>
+            <label htmlFor="endOfDay" style={{ display: "block", fontWeight: "500", marginBottom: "0.5rem", color: "var(--text)" }}>
               End of Day (HH:MM)
             </label>
             <input
@@ -172,33 +167,23 @@ export default function SettingsPage() {
               type="time"
               value={work.endOfDay}
               onChange={(e) => setWork({ ...work, endOfDay: e.target.value })}
-              style={{
-                padding: "0.5rem",
-                borderRadius: "4px",
-                border: "1px solid #ccc",
-                fontSize: "1rem",
-              }}
+              className="input"
             />
-            <div style={{ fontSize: "0.85rem", color: "#666", marginTop: "0.25rem" }}>
+            <div style={{ fontSize: "0.85rem", color: "var(--muted)", marginTop: "0.25rem" }}>
               Default deadline time when "end of day" is mentioned
             </div>
           </div>
 
           {/* End of Week Anchor */}
           <div style={{ marginBottom: "1.5rem" }}>
-            <label htmlFor="eowAnchor" style={{ display: "block", fontWeight: "500", marginBottom: "0.5rem" }}>
+            <label htmlFor="eowAnchor" style={{ display: "block", fontWeight: "500", marginBottom: "0.5rem", color: "var(--text)" }}>
               End of Week Anchor Day
             </label>
             <select
               id="eowAnchor"
               value={work.eowAnchor}
               onChange={(e) => setWork({ ...work, eowAnchor: e.target.value as DayOfWeek })}
-              style={{
-                padding: "0.5rem",
-                borderRadius: "4px",
-                border: "1px solid #ccc",
-                fontSize: "1rem",
-              }}
+              className="input"
             >
               {ALL_DAYS.map((day) => (
                 <option key={day} value={day}>
@@ -206,39 +191,33 @@ export default function SettingsPage() {
                 </option>
               ))}
             </select>
-            <div style={{ fontSize: "0.85rem", color: "#666", marginTop: "0.25rem" }}>
+            <div style={{ fontSize: "0.85rem", color: "var(--muted)", marginTop: "0.25rem" }}>
               When "end of week" is mentioned, use this day
             </div>
           </div>
 
           {/* Rollover Rule */}
           <div style={{ marginBottom: "1.5rem" }}>
-            <label htmlFor="eowRollover" style={{ display: "block", fontWeight: "500", marginBottom: "0.5rem" }}>
+            <label htmlFor="eowRollover" style={{ display: "block", fontWeight: "500", marginBottom: "0.5rem", color: "var(--text)" }}>
               End of Week Rollover
             </label>
             <select
               id="eowRollover"
               value={work.eowRollover}
               onChange={(e) => setWork({ ...work, eowRollover: e.target.value as any })}
-              style={{
-                padding: "0.5rem",
-                borderRadius: "4px",
-                border: "1px solid #ccc",
-                fontSize: "1rem",
-                width: "100%",
-              }}
+              className="input"
             >
               <option value="same-week">Same week (even if past EOD)</option>
               <option value="next-workweek-if-past-eod">Next workweek if past EOD</option>
             </select>
-            <div style={{ fontSize: "0.85rem", color: "#666", marginTop: "0.25rem" }}>
+            <div style={{ fontSize: "0.85rem", color: "var(--muted)", marginTop: "0.25rem" }}>
               If it's Friday 6 PM and anchor is Friday, should "EOW" mean today or next Friday?
             </div>
           </div>
 
           {/* Projects (Optional) */}
           <div style={{ marginBottom: "1.5rem" }}>
-            <label htmlFor="projects" style={{ display: "block", fontWeight: "500", marginBottom: "0.5rem" }}>
+            <label htmlFor="projects" style={{ display: "block", fontWeight: "500", marginBottom: "0.5rem", color: "var(--text)" }}>
               Project Context (Optional JSON)
             </label>
             <textarea
@@ -247,17 +226,13 @@ export default function SettingsPage() {
               onChange={(e) => setProjectsJson(e.target.value)}
               placeholder='[{"name": "Shawnee-Walker", "priority": 1}]'
               rows={5}
+              className="textarea"
               style={{
-                width: "100%",
-                padding: "0.5rem",
-                borderRadius: "4px",
-                border: "1px solid #ccc",
-                fontSize: "0.9rem",
                 fontFamily: "monospace",
                 resize: "vertical",
               }}
             />
-            <div style={{ fontSize: "0.85rem", color: "#666", marginTop: "0.25rem" }}>
+            <div style={{ fontSize: "0.85rem", color: "var(--muted)", marginTop: "0.25rem" }}>
               Optional: Provide project context for AI (must be valid JSON array)
             </div>
           </div>
@@ -267,11 +242,12 @@ export default function SettingsPage() {
             <div
               style={{
                 padding: "0.75rem",
-                backgroundColor: "#ffebee",
-                color: "#c62828",
+                backgroundColor: "color-mix(in srgb, var(--danger) 15%, transparent)",
+                color: "var(--danger)",
                 borderRadius: "4px",
                 marginBottom: "1rem",
                 fontSize: "0.9rem",
+                border: "1px solid var(--border)",
               }}
             >
               {error}
@@ -283,11 +259,12 @@ export default function SettingsPage() {
             <div
               style={{
                 padding: "0.75rem",
-                backgroundColor: "#e8f5e9",
-                color: "#2e7d32",
+                backgroundColor: "color-mix(in srgb, var(--accent-2) 15%, transparent)",
+                color: "var(--accent-2)",
                 borderRadius: "4px",
                 marginBottom: "1rem",
                 fontSize: "0.9rem",
+                border: "1px solid var(--border)",
               }}
             >
               ✓ Settings saved successfully!
@@ -298,15 +275,9 @@ export default function SettingsPage() {
           <div style={{ display: "flex", gap: "0.5rem" }}>
             <button
               onClick={handleSave}
+              className="btn btn-primary"
               style={{
                 padding: "0.75rem 1.5rem",
-                backgroundColor: "#1976d2",
-                color: "#fff",
-                border: "none",
-                borderRadius: "4px",
-                fontSize: "1rem",
-                fontWeight: "500",
-                cursor: "pointer",
               }}
             >
               Save Settings
@@ -316,9 +287,9 @@ export default function SettingsPage() {
               onClick={handleReset}
               style={{
                 padding: "0.75rem 1.5rem",
-                backgroundColor: "#fff",
-                color: "#666",
-                border: "1px solid #ccc",
+                backgroundColor: "var(--panel-2)",
+                color: "var(--text)",
+                border: "1px solid var(--border)",
                 borderRadius: "4px",
                 fontSize: "1rem",
                 cursor: "pointer",

@@ -41,8 +41,8 @@ export default function ActionBar({
           onClick={() => onMarkDone(itemId)}
           style={{
             padding: "0.375rem 0.75rem",
-            backgroundColor: "#4caf50",
-            color: "#fff",
+            backgroundColor: "var(--accent-2)",
+            color: "white",
             border: "none",
             borderRadius: "4px",
             fontSize: "0.85rem",
@@ -60,8 +60,8 @@ export default function ActionBar({
           onClick={() => onMoveToActive(itemId)}
           style={{
             padding: "0.375rem 0.75rem",
-            backgroundColor: "#1976d2",
-            color: "#fff",
+            backgroundColor: "var(--accent)",
+            color: "white",
             border: "none",
             borderRadius: "4px",
             fontSize: "0.85rem",
@@ -79,8 +79,8 @@ export default function ActionBar({
           onClick={() => onMoveToInbox(itemId)}
           style={{
             padding: "0.375rem 0.75rem",
-            backgroundColor: "#666",
-            color: "#fff",
+            backgroundColor: "var(--muted)",
+            color: "white",
             border: "none",
             borderRadius: "4px",
             fontSize: "0.85rem",
@@ -99,9 +99,9 @@ export default function ActionBar({
             onClick={() => setShowSnoozeOptions(!showSnoozeOptions)}
             style={{
               padding: "0.375rem 0.75rem",
-              backgroundColor: "#fff",
-              color: "#666",
-              border: "1px solid #ccc",
+              backgroundColor: "var(--panel-2)",
+              color: "var(--text)",
+              border: "1px solid var(--border)",
               borderRadius: "4px",
               fontSize: "0.85rem",
               cursor: "pointer",
@@ -117,10 +117,10 @@ export default function ActionBar({
                 top: "100%",
                 left: 0,
                 marginTop: "0.25rem",
-                backgroundColor: "#fff",
-                border: "1px solid #ccc",
+                backgroundColor: "var(--panel)",
+                border: "1px solid var(--border)",
                 borderRadius: "4px",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
                 zIndex: 10,
                 display: "flex",
                 flexDirection: "column",
@@ -132,8 +132,8 @@ export default function ActionBar({
                 onClick={() => handleSnooze(1)}
                 style={{
                   padding: "0.375rem 0.75rem",
-                  backgroundColor: "#fff",
-                  color: "#333",
+                  backgroundColor: "var(--panel-2)",
+                  color: "var(--text)",
                   border: "none",
                   borderRadius: "4px",
                   fontSize: "0.85rem",
@@ -149,8 +149,8 @@ export default function ActionBar({
                 onClick={() => handleSnooze(3)}
                 style={{
                   padding: "0.375rem 0.75rem",
-                  backgroundColor: "#fff",
-                  color: "#333",
+                  backgroundColor: "var(--panel-2)",
+                  color: "var(--text)",
                   border: "none",
                   borderRadius: "4px",
                   fontSize: "0.85rem",
@@ -166,8 +166,8 @@ export default function ActionBar({
                 onClick={() => handleSnooze(7)}
                 style={{
                   padding: "0.375rem 0.75rem",
-                  backgroundColor: "#fff",
-                  color: "#333",
+                  backgroundColor: "var(--panel-2)",
+                  color: "var(--text)",
                   border: "none",
                   borderRadius: "4px",
                   fontSize: "0.85rem",
@@ -190,8 +190,8 @@ export default function ActionBar({
           onClick={() => onUnsnooze(itemId)}
           style={{
             padding: "0.375rem 0.75rem",
-            backgroundColor: "#ff9800",
-            color: "#fff",
+            backgroundColor: "var(--warn)",
+            color: "white",
             border: "none",
             borderRadius: "4px",
             fontSize: "0.85rem",
