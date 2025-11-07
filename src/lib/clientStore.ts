@@ -1,4 +1,5 @@
 import type { CleanTaskRequest, CleanTaskResponse } from "@/src/types";
+import { inc } from "@/src/db/metrics";
 
 export type InboxItemStatus = "inbox" | "active" | "done" | "snoozed";
 
@@ -119,8 +120,9 @@ export function updateInboxItemStatus(id: string, status: InboxItemStatus): void
 /**
  * Mark an inbox item as done
  */
-export function markItemDone(id: string): void {
+export async function markItemDone(id: string): Promise<void> {
   updateInboxItemStatus(id, "done");
+  await inc('tasksCompleted');
 }
 
 /**

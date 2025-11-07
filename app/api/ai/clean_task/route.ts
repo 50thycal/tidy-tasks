@@ -6,6 +6,7 @@ import { normalizeCleanTaskResponse } from "@/src/lib/datetime";
 import { getSettingsFromRequest } from "@/src/lib/settings";
 import { endOfWeek, containsEOW, isPlainDate, toEndOfDayIso } from "@/src/lib/eow";
 import { normalizeSubtasks } from "@/src/lib/normalize";
+import { inc } from "@/src/db/metrics";
 import type { CleanTaskRequest } from "@/src/types";
 import requestSchema from "@/schema/clean_task.request.schema.json";
 import responseSchema from "@/schema/clean_task.response.schema.json";
@@ -151,6 +152,9 @@ export async function POST(request: NextRequest) {
         { status: 422 }
       );
     }
+
+    // Increment metrics on successful AI clean
+    await inc('aiCleans');
 
     // Return validated response
     return NextResponse.json(normalizedResponse, { status: 200 });

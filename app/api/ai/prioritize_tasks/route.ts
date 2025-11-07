@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Ajv from "ajv";
 import addFormats from "ajv-formats";
 import { getSettingsFromRequest } from "@/src/lib/settings";
+import { inc } from "@/src/db/metrics";
 import type { PrioritizeRequest } from "@/src/types";
 import requestSchema from "@/schema/prioritize.request.schema.json";
 import responseSchema from "@/schema/prioritize.response.schema.json";
@@ -160,6 +161,9 @@ export async function POST(request: NextRequest) {
         { status: 422 }
       );
     }
+
+    // Increment metrics on successful AI prioritization
+    await inc('aiPrioritizations');
 
     // Return validated response
     return NextResponse.json(prioritizedTasks, { status: 200 });

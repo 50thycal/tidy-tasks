@@ -20,11 +20,13 @@ import {
 import ReviewSection from "@/app/components/ReviewSection";
 import WeeklySummary from "@/app/components/WeeklySummary";
 import type { WeeklySummaryTask } from "@/src/types";
+import { useMetrics } from "@/src/hooks/useMetrics";
 
 export default function ReviewPage() {
   const [mounted, setMounted] = useState(false);
   const [items, setItems] = useState<InboxItem[]>([]);
   const [expandAll, setExpandAll] = useState(true);
+  const { metrics } = useMetrics();
 
   useEffect(() => {
     setMounted(true);
@@ -275,6 +277,19 @@ export default function ReviewPage() {
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Metrics totals strip */}
+          <div
+            style={{
+              padding: "0.75rem 1rem",
+              fontSize: "0.85rem",
+              color: "var(--muted)",
+              textAlign: "center",
+              marginBottom: "1rem",
+            }}
+          >
+            Totals — Created {metrics.tasksCreated} · Done {metrics.tasksCompleted} · AI Cleans {metrics.aiCleans} · AI Prioritizations {metrics.aiPrioritizations}
           </div>
 
           {/* Toolbar */}

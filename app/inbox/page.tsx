@@ -11,6 +11,7 @@ import {
   type InboxItem,
 } from "@/src/lib/clientStore";
 import { getWorkSettings } from "@/src/lib/settings";
+import { inc } from "@/src/db/metrics";
 import type { CleanTaskRequest, CleanTaskResponse } from "@/src/types";
 
 export default function InboxPage() {
@@ -52,7 +53,7 @@ export default function InboxPage() {
   };
 
   // Handle successful cleaning
-  const handleSuccess = (result: CleanTaskResponse, request: CleanTaskRequest) => {
+  const handleSuccess = async (result: CleanTaskResponse, request: CleanTaskRequest) => {
     const newItem: InboxItem = {
       id: crypto.randomUUID(),
       created_at: new Date().toISOString(),
@@ -62,6 +63,7 @@ export default function InboxPage() {
     };
 
     saveInboxItem(newItem);
+    await inc('tasksCreated');
     setItems(getInboxItems());
   };
 
