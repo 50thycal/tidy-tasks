@@ -18,6 +18,8 @@ import {
   formatWeekRange,
 } from "@/src/lib/reviewUtils";
 import ReviewSection from "@/app/components/ReviewSection";
+import WeeklySummary from "@/app/components/WeeklySummary";
+import type { WeeklySummaryTask } from "@/src/types";
 
 export default function ReviewPage() {
   const [mounted, setMounted] = useState(false);
@@ -74,6 +76,22 @@ export default function ReviewPage() {
     () => formatWeekRange(now, settings.eowAnchor || "Mon"),
     []
   );
+
+  // Convert items to WeeklySummaryTask format for summary API
+  const summaryTasks: WeeklySummaryTask[] = useMemo(() => {
+    return items.map((item) => ({
+      id: item.id,
+      title: item.result.title,
+      project: item.result.project,
+      effort_min: item.result.effort_min,
+      tags: item.result.tags,
+      importance: item.result.importance,
+      status: item.status,
+      due_at: item.result.due_at,
+      created_at: item.created_at,
+      updated_at: item.touched_at || item.created_at,
+    }));
+  }, [items]);
 
   // Filter items into sections
   const sections = useMemo(() => {
@@ -306,6 +324,9 @@ export default function ReviewPage() {
             </div>
           </div>
         </div>
+
+        {/* Weekly Summary */}
+        <WeeklySummary tasks={summaryTasks} />
 
         {/* Sections */}
         <ReviewSection

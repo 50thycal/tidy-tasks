@@ -12,6 +12,9 @@ export type {
   CalendarWindow,
   PrioritizeTaskInput,
   FocusQueueSummary,
+  WeeklySummaryRequest,
+  WeeklySummaryResponse,
+  WeeklySummaryTask,
   TidyApiClient,
 } from "@/types/api";
 

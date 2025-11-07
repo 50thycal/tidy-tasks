@@ -100,6 +100,34 @@ export interface FocusQueueSummary {
   alternates?: string[]; // task ids
 }
 
+// ---------- Weekly Summary ----------
+export interface WeeklySummaryTask {
+  id: string;
+  title: string;
+  project?: string | null;
+  effort_min?: number;
+  tags?: string[];
+  importance?: number;
+  status: TaskStatus;
+  due_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface WeeklySummaryRequest {
+  week_start: string;   // YYYY-MM-DD
+  week_end: string;     // YYYY-MM-DD  (inclusive)
+  timezone?: string;    // IANA TZ (defaults from settings/env)
+  tasks: WeeklySummaryTask[];  // All tasks to analyze
+}
+
+export interface WeeklySummaryResponse {
+  title: string;         // short heading for the week
+  wins: string;          // 1-3 short bullets in a single string
+  stuck: string;         // risks / blockers
+  next_focus: string;    // concrete plan for next week
+}
+
 // ---------- Minimal Client (optional) ----------
 export interface TidyApiClient {
   cleanTask(req: CleanTaskRequest, opts?: RequestInit): Promise<CleanTaskResponse>;
