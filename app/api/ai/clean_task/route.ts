@@ -5,6 +5,7 @@ import { redact } from "@/src/lib/redact";
 import { normalizeCleanTaskResponse } from "@/src/lib/datetime";
 import { getSettingsFromRequest } from "@/src/lib/settings";
 import { endOfWeek, containsEOW, isPlainDate, toEndOfDayIso } from "@/src/lib/eow";
+import { normalizeSubtasks } from "@/src/lib/normalize";
 import type { CleanTaskRequest } from "@/src/types";
 import requestSchema from "@/schema/clean_task.request.schema.json";
 import responseSchema from "@/schema/clean_task.response.schema.json";
@@ -132,6 +133,11 @@ export async function POST(request: NextRequest) {
     // Ensure notes_append is null if undefined
     if (normalizedResponse.notes_append === undefined) {
       normalizedResponse.notes_append = null;
+    }
+
+    // Normalize subtasks: coerce objects/arrays to strings before validation
+    if ("subtasks" in normalizedResponse) {
+      normalizedResponse.subtasks = normalizeSubtasks(normalizedResponse.subtasks);
     }
 
     // Validate response against schema
