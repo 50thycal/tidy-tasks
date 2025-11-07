@@ -118,6 +118,21 @@ export function updateInboxItemStatus(id: string, status: InboxItemStatus): void
 }
 
 /**
+ * Update an inbox item's result (task data)
+ */
+export function updateInboxItemResult(id: string, resultPatch: Partial<CleanTaskResponse>): void {
+  mutateInboxItem(id, (item) => ({
+    ...item,
+    result: {
+      ...item.result,
+      ...resultPatch,
+    },
+    updated_at: new Date().toISOString(),
+    touched_at: new Date().toISOString(),
+  }));
+}
+
+/**
  * Mark an inbox item as done
  */
 export async function markItemDone(id: string): Promise<void> {

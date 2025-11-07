@@ -161,10 +161,12 @@ export default function InboxPage() {
                     </span>
                   </div>
                   <TaskCard
+                    id={item.id}
                     result={item.result}
                     showActions={true}
                     onMoveToActive={() => handleMoveToActive(item.id)}
                     onDelete={() => handleDelete(item.id)}
+                    onChange={() => setItems(getInboxItems())}
                   />
                 </div>
               ))}

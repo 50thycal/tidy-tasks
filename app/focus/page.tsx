@@ -276,6 +276,7 @@ export default function FocusPage() {
               inboxItems={items}
               onMarkDone={handleMarkDone}
               onMoveToInbox={handleMoveToInbox}
+              onRefresh={() => setRefreshKey((prev) => prev + 1)}
             />
             <FocusBucket
               bucket="Next"
@@ -283,6 +284,7 @@ export default function FocusPage() {
               inboxItems={items}
               onMarkDone={handleMarkDone}
               onMoveToInbox={handleMoveToInbox}
+              onRefresh={() => setRefreshKey((prev) => prev + 1)}
             />
             <FocusBucket
               bucket="Later"
@@ -290,6 +292,7 @@ export default function FocusPage() {
               inboxItems={items}
               onMarkDone={handleMarkDone}
               onMoveToInbox={handleMoveToInbox}
+              onRefresh={() => setRefreshKey((prev) => prev + 1)}
             />
             <FocusBucket
               bucket="Backlog"
@@ -297,6 +300,7 @@ export default function FocusPage() {
               inboxItems={items}
               onMarkDone={handleMarkDone}
               onMoveToInbox={handleMoveToInbox}
+              onRefresh={() => setRefreshKey((prev) => prev + 1)}
             />
           </>
         )}

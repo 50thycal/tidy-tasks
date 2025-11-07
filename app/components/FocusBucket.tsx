@@ -1,5 +1,7 @@
 import type { PrioritizedItem } from "@/src/types";
 import type { InboxItem } from "@/src/lib/clientStore";
+import { getInboxItems } from "@/src/lib/clientStore";
+import TaskCard from "@/app/components/TaskCard";
 
 interface FocusBucketProps {
   bucket: "Now" | "Next" | "Later" | "Backlog";
@@ -7,6 +9,7 @@ interface FocusBucketProps {
   inboxItems: InboxItem[];
   onMarkDone: (id: string) => void;
   onMoveToInbox: (id: string) => void;
+  onRefresh?: () => void; // Optional callback to refresh parent data after edit
 }
 
 export default function FocusBucket({
@@ -15,6 +18,7 @@ export default function FocusBucket({
   inboxItems,
   onMarkDone,
   onMoveToInbox,
+  onRefresh,
 }: FocusBucketProps) {
   const bucketColors: Record<string, string> = {
     Now: "#4caf50",
@@ -58,73 +62,62 @@ export default function FocusBucket({
           if (!inboxItem) return null;
 
           return (
-            <div
-              key={item.id}
-              style={{
-                border: "1px solid var(--border)",
-                borderRadius: "8px",
-                padding: "1rem",
-                backgroundColor: "var(--panel-2)",
-                color: "var(--text)",
-              }}
-            >
+            <div key={item.id}>
+              {/* Priority score and rationale banner */}
               <div
                 style={{
+                  padding: "0.75rem 1rem",
+                  backgroundColor: "color-mix(in srgb, " + bucketColor + " 15%, transparent)",
+                  borderRadius: "8px 8px 0 0",
+                  border: "1px solid var(--border)",
+                  borderBottom: "none",
                   display: "flex",
                   justifyContent: "space-between",
-                  alignItems: "flex-start",
-                  marginBottom: "0.5rem",
+                  alignItems: "center",
                 }}
               >
-                <h4 style={{ margin: 0, color: "var(--text)", flex: 1 }}>
-                  {inboxItem.result.title}
-                </h4>
+                <p
+                  style={{
+                    fontSize: "0.9rem",
+                    color: "var(--muted)",
+                    margin: 0,
+                    fontStyle: "italic",
+                    flex: 1,
+                  }}
+                >
+                  {item.rationale}
+                </p>
                 <span
                   style={{
                     fontSize: "0.9rem",
                     fontWeight: "600",
                     color: bucketColor,
-                    marginLeft: "0.5rem",
+                    marginLeft: "1rem",
                   }}
                 >
-                  {item.priority_score}
+                  Score: {item.priority_score}
                 </span>
               </div>
 
-              <p
-                style={{
-                  fontSize: "0.9rem",
-                  color: "var(--muted)",
-                  margin: "0.5rem 0",
-                  fontStyle: "italic",
-                }}
-              >
-                {item.rationale}
-              </p>
+              {/* TaskCard with edit capability */}
+              <div style={{ borderRadius: "0 0 8px 8px", overflow: "hidden" }}>
+                <TaskCard
+                  id={inboxItem.id}
+                  result={inboxItem.result}
+                  showActions={false}
+                  onChange={() => onRefresh?.()}
+                />
+              </div>
 
+              {/* Focus-specific actions */}
               <div
                 style={{
                   display: "flex",
                   gap: "0.5rem",
-                  fontSize: "0.85rem",
-                  color: "var(--muted)",
-                  marginBottom: "0.75rem",
+                  marginTop: "0.5rem",
+                  paddingLeft: "1rem",
                 }}
               >
-                {inboxItem.result.effort_min && (
-                  <span>⏱️ {inboxItem.result.effort_min} min</span>
-                )}
-                {inboxItem.result.energy && (
-                  <span>⚡ {inboxItem.result.energy}</span>
-                )}
-                {inboxItem.result.due_at && (
-                  <span>
-                    📅 {new Date(inboxItem.result.due_at).toLocaleDateString()}
-                  </span>
-                )}
-              </div>
-
-              <div style={{ display: "flex", gap: "0.5rem" }}>
                 <button
                   onClick={() => onMarkDone(item.id)}
                   style={{
