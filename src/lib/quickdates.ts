@@ -1,4 +1,4 @@
-import type { WorkSettings, DayOfWeek } from "@/src/types";
+import type { WorkSettingsV1, DayOfWeek } from "@/src/types";
 import { toEndOfDayIso } from "@/src/lib/eow";
 
 /**
@@ -150,7 +150,7 @@ export function clearDueDate(): null {
 /**
  * Get all quick date options for a task
  */
-export function getQuickDateActions(settings: WorkSettings, currentDueAt: string | null) {
+export function getQuickDateActions(settings: WorkSettingsV1, currentDueAt: string | null) {
   return {
     today: () => todayISO(settings.endOfDay, settings.timezone),
     tomorrow: () => tomorrowISO(settings.endOfDay, settings.timezone),

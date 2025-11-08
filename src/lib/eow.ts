@@ -1,4 +1,4 @@
-import type { WorkSettings, DayOfWeek } from "@/src/types";
+import type { WorkSettingsV1, DayOfWeek } from "@/src/types";
 
 /**
  * Check if a string is a plain date (YYYY-MM-DD)
@@ -56,7 +56,7 @@ export function toEndOfDayIso(
  * @param work - Work settings
  * @returns ISO datetime string for end of week
  */
-export function endOfWeek(now: Date, work: WorkSettings): string {
+export function endOfWeek(now: Date, work: WorkSettingsV1): string {
   const { eowAnchor, endOfDay, eowRollover, workDays } = work;
 
   const anchorDay = DAY_MAP[eowAnchor];

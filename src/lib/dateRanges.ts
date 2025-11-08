@@ -1,4 +1,4 @@
-import type { WorkSettings } from "@/src/types";
+import type { WorkSettingsV1 } from "@/src/types";
 
 /**
  * Get start and end of today in ISO format
@@ -21,7 +21,7 @@ export function todayRange(now: Date, timezone: string, endOfDay: string): [stri
 /**
  * Get start and end of this week (Monday to end-of-week anchor)
  */
-export function thisWeekRange(now: Date, settings: WorkSettings): [string, string] {
+export function thisWeekRange(now: Date, settings: WorkSettingsV1): [string, string] {
   const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
 
   // Find Monday of this week
@@ -54,7 +54,7 @@ export function thisWeekRange(now: Date, settings: WorkSettings): [string, strin
 /**
  * Get start and end of next week (next Monday to next end-of-week anchor)
  */
-export function nextWeekRange(now: Date, settings: WorkSettings): [string, string] {
+export function nextWeekRange(now: Date, settings: WorkSettingsV1): [string, string] {
   const dayOfWeek = now.getDay();
 
   // Find next Monday

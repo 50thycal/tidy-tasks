@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import type { WorkSettings, DayOfWeek, TidySettingsDoc } from "@/src/types";
+import type { WorkSettingsV2, DayOfWeek, TidySettingsDocV2, ProjectMeta, USZoneKey } from "@/src/types";
 import {
-  getDefaultWorkSettings,
+  getDefaultWorkSettingsV2,
   getStoredSettings,
   saveSettings,
   resetSettings,
 } from "@/src/lib/settings";
+import ProjectsTable from "@/app/components/Settings/ProjectsTable";
 import { exportAndDownloadJson, exportAndDownloadCsv, type BackupDoc } from "@/src/lib/export";
 import { validateBackup, importBackup, getBackupPreview, type ImportResult } from "@/src/lib/import";
 import { reset as resetMetrics } from "@/src/db/metrics";
@@ -19,10 +20,16 @@ import { getInboxItems } from "@/src/lib/clientStore";
 import { invalidateAndReload } from "@/src/lib/sw-control";
 
 const ALL_DAYS: DayOfWeek[] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const US_ZONES: USZoneKey[] = ["Pacific", "Mountain", "Central", "Eastern"];
+const US_TZ: Record<USZoneKey, string> = {
+  Pacific: 'America/Los_Angeles',
+  Mountain: 'America/Denver',
+  Central: 'America/Chicago',
+  Eastern: 'America/New_York',
+};
 
 export default function SettingsPage() {
-  const [work, setWork] = useState<WorkSettings>(getDefaultWorkSettings());
-  const [projectsJson, setProjectsJson] = useState("");
+  const [work, setWork] = useState<WorkSettingsV2>(getDefaultWorkSettingsV2());
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -47,9 +54,6 @@ export default function SettingsPage() {
     const stored = getStoredSettings();
     if (stored?.work) {
       setWork(stored.work);
-      if (stored.work.projects && stored.work.projects.length > 0) {
-        setProjectsJson(JSON.stringify(stored.work.projects, null, 2));
-      }
       // Load notification settings
       if (stored.work.notifications) {
         setNotificationsEnabled(stored.work.notifications.enabled);
@@ -63,26 +67,10 @@ export default function SettingsPage() {
   const handleSave = () => {
     setError(null);
 
-    // Validate projects JSON if provided
-    let projects = work.projects || [];
-    if (projectsJson.trim()) {
-      try {
-        projects = JSON.parse(projectsJson);
-        if (!Array.isArray(projects)) {
-          setError("Projects must be a JSON array");
-          return;
-        }
-      } catch (e) {
-        setError("Invalid JSON in projects field");
-        return;
-      }
-    }
-
-    const doc: TidySettingsDoc = {
-      version: 1,
+    const doc: TidySettingsDocV2 = {
+      version: 2,
       work: {
         ...work,
-        projects,
         notifications: {
           enabled: notificationsEnabled,
           digestTime,
@@ -98,20 +86,20 @@ export default function SettingsPage() {
   const handleReset = () => {
     if (confirm("Reset all settings to defaults?")) {
       resetSettings();
-      const defaults = getDefaultWorkSettings();
+      const defaults = getDefaultWorkSettingsV2();
       setWork(defaults);
-      setProjectsJson("");
       setSaved(false);
       setError(null);
     }
   };
 
   const toggleWorkDay = (day: DayOfWeek) => {
-    const current = work.workDays || [];
-    if (current.includes(day)) {
-      setWork({ ...work, workDays: current.filter((d) => d !== day) });
+    const lowercaseDay = day.toLowerCase() as 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
+    const current = work.work_days || [];
+    if (current.includes(lowercaseDay)) {
+      setWork({ ...work, work_days: current.filter((d) => d !== lowercaseDay) });
     } else {
-      setWork({ ...work, workDays: [...current, day] });
+      setWork({ ...work, work_days: [...current, lowercaseDay] });
     }
   };
 
@@ -207,9 +195,6 @@ export default function SettingsPage() {
         const stored = getStoredSettings();
         if (stored?.work) {
           setWork(stored.work);
-          if (stored.work.projects && stored.work.projects.length > 0) {
-            setProjectsJson(JSON.stringify(stored.work.projects, null, 2));
-          }
         }
       }
 
@@ -305,18 +290,22 @@ export default function SettingsPage() {
           {/* Timezone */}
           <div style={{ marginBottom: "1.5rem" }}>
             <label htmlFor="timezone" style={{ display: "block", fontWeight: "500", marginBottom: "0.5rem", color: "var(--text)" }}>
-              Timezone (IANA)
+              Timezone
             </label>
-            <input
+            <select
               id="timezone"
-              type="text"
-              value={work.timezone}
-              onChange={(e) => setWork({ ...work, timezone: e.target.value })}
-              placeholder="America/Phoenix"
+              value={Object.keys(US_TZ).find(key => US_TZ[key as USZoneKey] === work.timezone) || "Pacific"}
+              onChange={(e) => setWork({ ...work, timezone: US_TZ[e.target.value as USZoneKey] })}
               className="input"
-            />
+            >
+              {US_ZONES.map((zone) => (
+                <option key={zone} value={zone}>
+                  {zone} ({US_TZ[zone]})
+                </option>
+              ))}
+            </select>
             <div style={{ fontSize: "0.85rem", color: "var(--muted)", marginTop: "0.25rem" }}>
-              Examples: America/Phoenix, America/Chicago, America/New_York
+              Select your US timezone
             </div>
           </div>
 
@@ -324,42 +313,45 @@ export default function SettingsPage() {
           <div style={{ marginBottom: "1.5rem" }}>
             <label style={{ display: "block", fontWeight: "500", marginBottom: "0.5rem", color: "var(--text)" }}>Work Days</label>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
-              {ALL_DAYS.map((day) => (
-                <label
-                  key={day}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.25rem",
-                    padding: "0.5rem",
-                    border: "1px solid var(--border)",
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                    backgroundColor: work.workDays.includes(day) ? "color-mix(in srgb, var(--accent) 15%, transparent)" : "var(--panel-2)",
-                    color: "var(--text)",
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={work.workDays.includes(day)}
-                    onChange={() => toggleWorkDay(day)}
-                  />
-                  {day}
-                </label>
-              ))}
+              {ALL_DAYS.map((day) => {
+                const lowercaseDay = day.toLowerCase() as 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
+                return (
+                  <label
+                    key={day}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.25rem",
+                      padding: "0.5rem",
+                      border: "1px solid var(--border)",
+                      borderRadius: "4px",
+                      cursor: "pointer",
+                      backgroundColor: work.work_days.includes(lowercaseDay) ? "color-mix(in srgb, var(--accent) 15%, transparent)" : "var(--panel-2)",
+                      color: "var(--text)",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={work.work_days.includes(lowercaseDay)}
+                      onChange={() => toggleWorkDay(day)}
+                    />
+                    {day}
+                  </label>
+                );
+              })}
             </div>
           </div>
 
           {/* End of Day */}
           <div style={{ marginBottom: "1.5rem" }}>
-            <label htmlFor="endOfDay" style={{ display: "block", fontWeight: "500", marginBottom: "0.5rem", color: "var(--text)" }}>
+            <label htmlFor="end_of_day" style={{ display: "block", fontWeight: "500", marginBottom: "0.5rem", color: "var(--text)" }}>
               End of Day (HH:MM)
             </label>
             <input
-              id="endOfDay"
+              id="end_of_day"
               type="time"
-              value={work.endOfDay}
-              onChange={(e) => setWork({ ...work, endOfDay: e.target.value })}
+              value={work.end_of_day}
+              onChange={(e) => setWork({ ...work, end_of_day: e.target.value })}
               className="input"
             />
             <div style={{ fontSize: "0.85rem", color: "var(--muted)", marginTop: "0.25rem" }}>
@@ -369,13 +361,13 @@ export default function SettingsPage() {
 
           {/* End of Week Anchor */}
           <div style={{ marginBottom: "1.5rem" }}>
-            <label htmlFor="eowAnchor" style={{ display: "block", fontWeight: "500", marginBottom: "0.5rem", color: "var(--text)" }}>
+            <label htmlFor="eow_anchor" style={{ display: "block", fontWeight: "500", marginBottom: "0.5rem", color: "var(--text)" }}>
               End of Week Anchor Day
             </label>
             <select
-              id="eowAnchor"
-              value={work.eowAnchor}
-              onChange={(e) => setWork({ ...work, eowAnchor: e.target.value as DayOfWeek })}
+              id="eow_anchor"
+              value={work.eow_anchor}
+              onChange={(e) => setWork({ ...work, eow_anchor: e.target.value as DayOfWeek })}
               className="input"
             >
               {ALL_DAYS.map((day) => (
@@ -389,44 +381,72 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          {/* Rollover Rule */}
+          {/* Role Section */}
           <div style={{ marginBottom: "1.5rem" }}>
-            <label htmlFor="eowRollover" style={{ display: "block", fontWeight: "500", marginBottom: "0.5rem", color: "var(--text)" }}>
-              End of Week Rollover
+            <label htmlFor="role_title" style={{ display: "block", fontWeight: "500", marginBottom: "0.5rem", color: "var(--text)" }}>
+              Job Title (Optional)
             </label>
-            <select
-              id="eowRollover"
-              value={work.eowRollover}
-              onChange={(e) => setWork({ ...work, eowRollover: e.target.value as any })}
+            <input
+              id="role_title"
+              type="text"
+              value={work.role?.title || ""}
+              onChange={(e) => setWork({ ...work, role: { ...work.role, title: e.target.value } })}
+              placeholder="e.g., Software Engineer"
               className="input"
-            >
-              <option value="same-week">Same week (even if past EOD)</option>
-              <option value="next-workweek-if-past-eod">Next workweek if past EOD</option>
-            </select>
+            />
             <div style={{ fontSize: "0.85rem", color: "var(--muted)", marginTop: "0.25rem" }}>
-              If it's Friday 6 PM and anchor is Friday, should "EOW" mean today or next Friday?
+              Your job title or role in the organization
             </div>
           </div>
 
-          {/* Projects (Optional) */}
           <div style={{ marginBottom: "1.5rem" }}>
-            <label htmlFor="projects" style={{ display: "block", fontWeight: "500", marginBottom: "0.5rem", color: "var(--text)" }}>
-              Project Context (Optional JSON)
+            <label htmlFor="role_context" style={{ display: "block", fontWeight: "500", marginBottom: "0.5rem", color: "var(--text)" }}>
+              Role Context (Optional)
             </label>
             <textarea
-              id="projects"
-              value={projectsJson}
-              onChange={(e) => setProjectsJson(e.target.value)}
-              placeholder='[{"name": "Shawnee-Walker", "priority": 1}]'
-              rows={5}
+              id="role_context"
+              value={work.role?.context || ""}
+              onChange={(e) => setWork({ ...work, role: { ...work.role, context: e.target.value } })}
+              placeholder="Describe your role, team, or responsibilities..."
+              rows={3}
               className="textarea"
-              style={{
-                fontFamily: "monospace",
-                resize: "vertical",
-              }}
+              style={{ resize: "vertical" }}
             />
             <div style={{ fontSize: "0.85rem", color: "var(--muted)", marginTop: "0.25rem" }}>
-              Optional: Provide project context for AI (must be valid JSON array)
+              Additional context about your role for AI task parsing
+            </div>
+          </div>
+
+          {/* Projects Table */}
+          <div style={{ marginBottom: "1.5rem" }}>
+            <label style={{ display: "block", fontWeight: "500", marginBottom: "0.5rem", color: "var(--text)" }}>
+              Projects
+            </label>
+            <ProjectsTable
+              value={work.projects || []}
+              onChange={(projects) => setWork({ ...work, projects })}
+            />
+            <div style={{ fontSize: "0.85rem", color: "var(--muted)", marginTop: "0.5rem" }}>
+              Track project milestones: LLMR (Last Responsible Moment Review), IFR (Incremental Funding Review), IFC (In-Flight Check-in)
+            </div>
+          </div>
+
+          {/* Work Context */}
+          <div style={{ marginBottom: "1.5rem" }}>
+            <label htmlFor="work_context" style={{ display: "block", fontWeight: "500", marginBottom: "0.5rem", color: "var(--text)" }}>
+              Work Context (Optional)
+            </label>
+            <textarea
+              id="work_context"
+              value={work.work_context || ""}
+              onChange={(e) => setWork({ ...work, work_context: e.target.value })}
+              placeholder="Additional work context, conventions, or notes..."
+              rows={4}
+              className="textarea"
+              style={{ resize: "vertical" }}
+            />
+            <div style={{ fontSize: "0.85rem", color: "var(--muted)", marginTop: "0.25rem" }}>
+              Freeform notes about your work environment, conventions, or anything else to help AI understand your tasks
             </div>
           </div>
 

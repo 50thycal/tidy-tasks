@@ -63,6 +63,43 @@ export async function POST(request: NextRequest) {
     // Get settings from request or use defaults
     const settings = getSettingsFromRequest(body);
 
+    // Extract work context from settings (v2 fields)
+    const settingsV2 = body.settings as any;
+    let contextSection = "";
+
+    if (settingsV2) {
+      // Build context from v2 fields
+      const contextParts: string[] = [];
+
+      if (settingsV2.role?.title || settingsV2.role?.context) {
+        const roleParts: string[] = [];
+        if (settingsV2.role.title) roleParts.push(`Title: ${settingsV2.role.title}`);
+        if (settingsV2.role.context) roleParts.push(settingsV2.role.context);
+        contextParts.push(`User's role: ${roleParts.join(". ")}`);
+      }
+
+      if (settingsV2.projects && settingsV2.projects.length > 0) {
+        const projectDetails = settingsV2.projects
+          .map((p: any) => {
+            const parts = [p.name];
+            if (p.llmr_due) parts.push(`LLMR: ${p.llmr_due}`);
+            if (p.ifr_due) parts.push(`IFR: ${p.ifr_due}`);
+            if (p.ifc_due) parts.push(`IFC: ${p.ifc_due}`);
+            return parts.join(" | ");
+          })
+          .join("; ");
+        contextParts.push(`Active projects: ${projectDetails}`);
+      }
+
+      if (settingsV2.work_context) {
+        contextParts.push(`Work context: ${settingsV2.work_context}`);
+      }
+
+      if (contextParts.length > 0) {
+        contextSection = ` ${contextParts.join(" ")}`;
+      }
+    }
+
     // Prepare system prompt from SPEC.md
     const systemPrompt = `You are a planning assistant. Given tasks + today's context (date: ${date}, energy: ${
       energy || "not specified"
@@ -70,7 +107,7 @@ export async function POST(request: NextRequest) {
       timezone || settings.timezone
     }), assign priority_score (0–100) and bucket ∈ {Now, Next, Later, Backlog}. Keep total planned focus time for "Now" bucket ≤ ${max_focus_minutes} minutes (about ${
       max_focus_minutes / 60
-    } hours). Consider urgency (time to deadline), importance, effort/energy fit, and momentum. Provide a short rationale for each task. Return STRICT JSON array with keys: id, priority_score, bucket, rationale.`;
+    } hours). Consider urgency (time to deadline), importance, effort/energy fit, and momentum.${contextSection} Provide a short rationale for each task. Return STRICT JSON array with keys: id, priority_score, bucket, rationale.`;
 
     // Build user prompt with task details
     const taskList = tasks

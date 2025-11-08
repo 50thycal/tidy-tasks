@@ -1,5 +1,5 @@
 import type { InboxItem, InboxItemStatus } from "@/src/lib/clientStore";
-import type { WorkSettings } from "@/src/types";
+import type { WorkSettingsV1 } from "@/src/types";
 import { todayRange, thisWeekRange, nextWeekRange, isOverdue, isInRange } from "@/src/lib/dateRanges";
 
 export interface Filters {
@@ -38,7 +38,7 @@ export const DEFAULT_FILTERS_FOCUS: Filters = {
 export function applyFilters(
   items: InboxItem[],
   filters: Filters,
-  settings: WorkSettings
+  settings: WorkSettingsV1
 ): InboxItem[] {
   let filtered = items;
 

@@ -61,10 +61,39 @@ export async function POST(request: NextRequest) {
     const shouldRedact = redaction?.enabled !== false;
     const textToSend = shouldRedact ? redact({ text: raw_text }).text : raw_text;
 
+    // Extract work context from settings (v2 fields)
+    const settingsV2 = body.settings as any;
+    let contextSection = "";
+
+    if (settingsV2) {
+      // Build context from v2 fields
+      const contextParts: string[] = [];
+
+      if (settingsV2.role?.title || settingsV2.role?.context) {
+        const roleParts: string[] = [];
+        if (settingsV2.role.title) roleParts.push(`Title: ${settingsV2.role.title}`);
+        if (settingsV2.role.context) roleParts.push(settingsV2.role.context);
+        contextParts.push(`Role: ${roleParts.join(". ")}`);
+      }
+
+      if (settingsV2.projects && settingsV2.projects.length > 0) {
+        const projectNames = settingsV2.projects.map((p: any) => p.name).join(", ");
+        contextParts.push(`Active projects: ${projectNames}`);
+      }
+
+      if (settingsV2.work_context) {
+        contextParts.push(`Work context: ${settingsV2.work_context}`);
+      }
+
+      if (contextParts.length > 0) {
+        contextSection = `\n\nUser's work context:\n${contextParts.join("\n")}`;
+      }
+    }
+
     // Prepare system prompt from SPEC.md
     let systemPrompt = `Normalize task text. Use verb-first titles. Parse natural language dates relative to ${
       today || new Date().toISOString().split("T")[0]
-    }. Estimate effort ∈ {5,15,30,60,120} and energy ∈ {low,med,high}. Infer importance (0–100), tags, and project if obvious. If compound, split into subtasks. Return STRICT JSON with keys: title, due_at (ISO 8601 or null), scheduled_for (ISO 8601 or null), effort_min, energy, tags[], project (or null), subtasks[], importance (0–100), notes_append (optional).`;
+    }. Estimate effort ∈ {5,15,30,60,120} and energy ∈ {low,med,high}. Infer importance (0–100), tags, and project if obvious. If compound, split into subtasks. Return STRICT JSON with keys: title, due_at (ISO 8601 or null), scheduled_for (ISO 8601 or null), effort_min, energy, tags[], project (or null), subtasks[], importance (0–100), notes_append (optional).${contextSection}`;
 
     // If strict mode, prepend stricter instructions
     if (mode === 'strict') {
