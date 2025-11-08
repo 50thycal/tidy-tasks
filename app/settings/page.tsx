@@ -16,6 +16,7 @@ import { buildDigest, formatNotificationTitle, formatNotificationBody } from "@/
 import { notify, showInAppToast } from "@/src/lib/notify";
 import { saveDigest } from "@/src/db/digest";
 import { getInboxItems } from "@/src/lib/clientStore";
+import { invalidateAndReload } from "@/src/lib/sw-control";
 
 const ALL_DAYS: DayOfWeek[] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -264,6 +265,12 @@ export default function SettingsPage() {
     } else {
       // Fallback to in-app toast
       showInAppToast(digest.text);
+    }
+  };
+
+  const handleInvalidateCache = async () => {
+    if (confirm("Clear all cached app data and reload? This will get the newest version.")) {
+      await invalidateAndReload();
     }
   };
 
@@ -838,6 +845,46 @@ export default function SettingsPage() {
             </button>
             <div style={{ fontSize: "0.85rem", color: "var(--muted)", marginTop: "0.5rem" }}>
               Clears all counters (tasks created, completed, AI cleans, prioritizations)
+            </div>
+          </div>
+        </div>
+
+        {/* Advanced Section */}
+        <div
+          style={{
+            backgroundColor: "var(--panel)",
+            border: "1px solid var(--border)",
+            borderRadius: "8px",
+            padding: "2rem",
+            color: "var(--text)",
+            marginTop: "2rem",
+          }}
+        >
+          <h2 style={{ marginBottom: "1rem", fontSize: "1.25rem" }}>Advanced</h2>
+          <p style={{ color: "var(--muted)", marginBottom: "1.5rem", fontSize: "0.9rem" }}>
+            Force refresh and clear cached app data.
+          </p>
+
+          <div>
+            <h3 style={{ fontSize: "1rem", marginBottom: "0.75rem", color: "var(--text)" }}>
+              Cache Management
+            </h3>
+            <button
+              onClick={handleInvalidateCache}
+              style={{
+                padding: "0.75rem 1.5rem",
+                backgroundColor: "var(--panel-2)",
+                color: "var(--text)",
+                border: "1px solid var(--border)",
+                borderRadius: "4px",
+                fontSize: "1rem",
+                cursor: "pointer",
+              }}
+            >
+              Invalidate cache & reload
+            </button>
+            <div style={{ fontSize: "0.85rem", color: "var(--muted)", marginTop: "0.5rem" }}>
+              Clears cached app shell. You'll get the newest version after deploying updates.
             </div>
           </div>
         </div>
