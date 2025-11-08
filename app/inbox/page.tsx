@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import TaskForm from "@/app/components/TaskForm";
 import TaskCard from "@/app/components/TaskCard";
+import SearchBar from "@/app/components/SearchBar";
 import {
   getInboxItems,
   saveInboxItem,
@@ -13,10 +14,13 @@ import {
 import { getWorkSettings } from "@/src/lib/settings";
 import { inc } from "@/src/db/metrics";
 import type { CleanTaskRequest, CleanTaskResponse } from "@/src/types";
+import { applyFilters, DEFAULT_FILTERS, type Filters } from "@/src/lib/filter";
+import { getDistinctProjects, getDistinctTags } from "@/src/db/queries";
 
 export default function InboxPage() {
   const [items, setItems] = useState<InboxItem[]>([]);
   const [mounted, setMounted] = useState(false);
+  const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
 
   // Load items from localStorage on mount
   useEffect(() => {
@@ -24,11 +28,20 @@ export default function InboxPage() {
     setItems(getInboxItems());
   }, []);
 
+  // Get work settings
+  const settings = getWorkSettings();
+
+  // Compute distinct values for filters
+  const projects = useMemo(() => getDistinctProjects(), [items]);
+  const tags = useMemo(() => getDistinctTags(), [items]);
+
+  // Apply filters to items
+  const filteredItems = useMemo(() => {
+    return applyFilters(items, filters, settings);
+  }, [items, filters, settings]);
+
   // Handle form submission
   const handleSubmit = async (request: CleanTaskRequest): Promise<CleanTaskResponse> => {
-    // Get current work settings
-    const settings = getWorkSettings();
-
     const response = await fetch("/api/ai/clean_task", {
       method: "POST",
       headers: {
@@ -118,6 +131,18 @@ export default function InboxPage() {
             Saved Tasks {items.length > 0 && `(${items.length})`}
           </h2>
 
+          {/* Search and Filter */}
+          {items.length > 0 && (
+            <SearchBar
+              value={filters}
+              onChange={setFilters}
+              projects={projects}
+              tags={tags}
+              context="inbox"
+              resultCount={filteredItems.length}
+            />
+          )}
+
           {items.length === 0 ? (
             <div
               style={{
@@ -130,9 +155,21 @@ export default function InboxPage() {
             >
               No tasks yet. Use the form above to clean your first task.
             </div>
+          ) : filteredItems.length === 0 ? (
+            <div
+              style={{
+                padding: "2rem",
+                textAlign: "center",
+                backgroundColor: "var(--panel-2)",
+                borderRadius: "8px",
+                color: "var(--muted)",
+              }}
+            >
+              No tasks match your filters. Try adjusting or clearing filters.
+            </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-              {items.map((item) => (
+              {filteredItems.map((item) => (
                 <div key={item.id}>
                   <div
                     style={{

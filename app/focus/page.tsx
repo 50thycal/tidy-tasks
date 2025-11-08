@@ -9,6 +9,9 @@ import { getLayout, upsertLayout } from "@/src/db/focus";
 import { mergeOrder, normalizeBucket } from "@/src/lib/focusMerge";
 import CapacityBar from "@/app/components/CapacityBar";
 import FocusBucket from "@/app/components/FocusBucket";
+import SearchBar from "@/app/components/SearchBar";
+import { applyFilters, DEFAULT_FILTERS_FOCUS, type Filters } from "@/src/lib/filter";
+import { getDistinctProjects, getDistinctTags } from "@/src/db/queries";
 
 export default function FocusPage() {
   const [mounted, setMounted] = useState(false);
@@ -18,6 +21,7 @@ export default function FocusPage() {
   const [error, setError] = useState<string | null>(null);
   const [prioritizedItems, setPrioritizedItems] = useState<PrioritizedItem[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS_FOCUS);
 
   // Local ordering overrides
   const [bucketIds, setBucketIds] = useState<{
@@ -60,9 +64,6 @@ export default function FocusPage() {
         setLoading(false);
         return;
       }
-
-      // Get current settings
-      const settings = getWorkSettings();
 
       // Build request payload
       const request: any = {
@@ -234,11 +235,56 @@ export default function FocusPage() {
     });
   };
 
+  // Get work settings
+  const settings = getWorkSettings();
+
   // Calculate capacity
   const items = getInboxItems();
   const activeItems = items.filter((item) => item.status === "active");
 
-  const usedMinutes = bucketIds.now.reduce((sum, taskId) => {
+  // Compute distinct values for filters (from active items only)
+  const projects = useMemo(() => {
+    const projectsSet = new Set<string>();
+    for (const item of activeItems) {
+      if (item.result.project) {
+        projectsSet.add(item.result.project);
+      }
+    }
+    return Array.from(projectsSet).sort((a, b) => a.localeCompare(b));
+  }, [activeItems]);
+
+  const tags = useMemo(() => {
+    const tagsSet = new Set<string>();
+    for (const item of activeItems) {
+      if (item.result.tags && item.result.tags.length > 0) {
+        for (const tag of item.result.tags) {
+          tagsSet.add(tag);
+        }
+      }
+    }
+    return Array.from(tagsSet).sort((a, b) => a.localeCompare(b));
+  }, [activeItems]);
+
+  // Apply filters to active items to get filtered IDs
+  const filteredActiveItems = useMemo(() => {
+    return applyFilters(activeItems, filters, settings);
+  }, [activeItems, filters, settings]);
+
+  const filteredIds = useMemo(() => {
+    return new Set(filteredActiveItems.map((item) => item.id));
+  }, [filteredActiveItems]);
+
+  // Filter bucket IDs to only include filtered items
+  const filteredBucketIds = useMemo(() => {
+    return {
+      now: bucketIds.now.filter((id) => filteredIds.has(id)),
+      next: bucketIds.next.filter((id) => filteredIds.has(id)),
+      later: bucketIds.later.filter((id) => filteredIds.has(id)),
+      backlog: bucketIds.backlog.filter((id) => filteredIds.has(id)),
+    };
+  }, [bucketIds, filteredIds]);
+
+  const usedMinutes = filteredBucketIds.now.reduce((sum, taskId) => {
     const inboxItem = items.find((i) => i.id === taskId);
     return sum + (inboxItem?.result.effort_min || 0);
   }, 0);
@@ -392,6 +438,18 @@ export default function FocusPage() {
             </div>
           )}
 
+          {/* Search and Filter */}
+          {activeItems.length > 0 && (
+            <SearchBar
+              value={filters}
+              onChange={setFilters}
+              projects={projects}
+              tags={tags}
+              context="focus"
+              resultCount={filteredActiveItems.length}
+            />
+          )}
+
           {/* Capacity bar */}
           {prioritizedItems.length > 0 && (
             <CapacityBar usedMinutes={usedMinutes} maxMinutes={240} />
@@ -402,7 +460,7 @@ export default function FocusPage() {
             <>
               <FocusBucket
                 bucket="Now"
-                itemIds={bucketIds.now}
+                itemIds={filteredBucketIds.now}
                 prioritizedItems={prioritizedItems}
                 inboxItems={items}
                 onMarkDone={handleMarkDone}
@@ -413,7 +471,7 @@ export default function FocusPage() {
               />
               <FocusBucket
                 bucket="Next"
-                itemIds={bucketIds.next}
+                itemIds={filteredBucketIds.next}
                 prioritizedItems={prioritizedItems}
                 inboxItems={items}
                 onMarkDone={handleMarkDone}
@@ -424,7 +482,7 @@ export default function FocusPage() {
               />
               <FocusBucket
                 bucket="Later"
-                itemIds={bucketIds.later}
+                itemIds={filteredBucketIds.later}
                 prioritizedItems={prioritizedItems}
                 inboxItems={items}
                 onMarkDone={handleMarkDone}
@@ -435,7 +493,7 @@ export default function FocusPage() {
               />
               <FocusBucket
                 bucket="Backlog"
-                itemIds={bucketIds.backlog}
+                itemIds={filteredBucketIds.backlog}
                 prioritizedItems={prioritizedItems}
                 inboxItems={items}
                 onMarkDone={handleMarkDone}
