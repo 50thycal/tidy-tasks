@@ -7,6 +7,7 @@ import { getWorkSettings } from "@/src/lib/settings";
 import { validateTask } from "@/src/lib/validate";
 import { coerceTags, coerceSubtasks, nullIfEmpty, clampEnum } from "@/src/lib/uiCoerce";
 import { toIsoFromDateTime, splitIso, formatFriendly } from "@/src/lib/date";
+import { getQuickDateActions } from "@/src/lib/quickdates";
 
 interface TaskCardProps {
   id?: string; // InboxItem ID for persistence
@@ -156,6 +157,27 @@ export default function TaskCard({
     return formatFriendly(isoString, settings.timezone) || isoString;
   };
 
+  // Handle quick date actions
+  const handleQuickDate = (action: () => string | null) => {
+    if (!id) return; // Only works if we have an ID
+
+    try {
+      const newDueAt = action();
+
+      // Update the task
+      updateInboxItemResult(id, { due_at: newDueAt });
+
+      // Notify parent to refresh
+      if (onChange) {
+        onChange({ due_at: newDueAt });
+      }
+
+      console.log("Updated due date:", newDueAt);
+    } catch (error) {
+      console.error("Error updating due date:", error);
+    }
+  };
+
   // View mode
   if (!isEditMode) {
     return (
@@ -172,6 +194,141 @@ export default function TaskCard({
         <h3 style={{ margin: "0 0 0.5rem 0", fontSize: "1.1rem", fontWeight: "600", color: "var(--text)" }}>
           {result.title}
         </h3>
+
+        {/* Quick date chips */}
+        {id && (
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "0.5rem",
+              marginBottom: "0.75rem",
+              paddingBottom: "0.75rem",
+              borderBottom: "1px solid var(--border)",
+            }}
+          >
+            {(() => {
+              const actions = getQuickDateActions(settings, result.due_at);
+              const chipStyle = {
+                padding: "0.25rem 0.75rem",
+                backgroundColor: "var(--panel)",
+                color: "var(--text)",
+                border: "1px solid var(--border)",
+                borderRadius: "4px",
+                fontSize: "0.75rem",
+                cursor: "pointer",
+                transition: "all 0.2s",
+              };
+
+              return (
+                <>
+                  <button
+                    onClick={() => handleQuickDate(actions.today)}
+                    style={chipStyle}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = "var(--accent)";
+                      e.currentTarget.style.color = "white";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = "var(--panel)";
+                      e.currentTarget.style.color = "var(--text)";
+                    }}
+                  >
+                    Today
+                  </button>
+                  <button
+                    onClick={() => handleQuickDate(actions.tomorrow)}
+                    style={chipStyle}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = "var(--accent)";
+                      e.currentTarget.style.color = "white";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = "var(--panel)";
+                      e.currentTarget.style.color = "var(--text)";
+                    }}
+                  >
+                    Tomorrow
+                  </button>
+                  <button
+                    onClick={() => handleQuickDate(actions.nextFriday)}
+                    style={chipStyle}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = "var(--accent)";
+                      e.currentTarget.style.color = "white";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = "var(--panel)";
+                      e.currentTarget.style.color = "var(--text)";
+                    }}
+                  >
+                    Next {settings.eowAnchor}
+                  </button>
+                  <button
+                    onClick={() => handleQuickDate(actions.nextWeek)}
+                    style={chipStyle}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = "var(--accent)";
+                      e.currentTarget.style.color = "white";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = "var(--panel)";
+                      e.currentTarget.style.color = "var(--text)";
+                    }}
+                  >
+                    Next Week
+                  </button>
+                  <button
+                    onClick={() => handleQuickDate(actions.plusOneWeek)}
+                    style={chipStyle}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = "var(--accent)";
+                      e.currentTarget.style.color = "white";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = "var(--panel)";
+                      e.currentTarget.style.color = "var(--text)";
+                    }}
+                  >
+                    +1w
+                  </button>
+                  <button
+                    onClick={() => handleQuickDate(actions.plusTwoWeeks)}
+                    style={chipStyle}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = "var(--accent)";
+                      e.currentTarget.style.color = "white";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = "var(--panel)";
+                      e.currentTarget.style.color = "var(--text)";
+                    }}
+                  >
+                    +2w
+                  </button>
+                  <button
+                    onClick={() => handleQuickDate(actions.clear)}
+                    style={{
+                      ...chipStyle,
+                      color: "var(--danger)",
+                      borderColor: "var(--danger)",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = "var(--danger)";
+                      e.currentTarget.style.color = "white";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = "var(--panel)";
+                      e.currentTarget.style.color = "var(--danger)";
+                    }}
+                  >
+                    Clear
+                  </button>
+                </>
+              );
+            })()}
+          </div>
+        )}
 
         {/* Due date */}
         <div style={{ fontSize: "0.9rem", color: "var(--muted)", marginBottom: "0.75rem" }}>
