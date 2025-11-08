@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import TopNav from "./components/TopNav";
 import DigestScheduler from "./components/DigestScheduler";
 import RegisterSW from "./register-sw";
+import SwListener from "./sw-listener";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -31,6 +32,7 @@ export default function RootLayout({
     <html lang="en">
       <body className="min-h-screen bg-[var(--bg)] text-[var(--text)] antialiased">
         <RegisterSW />
+        <SwListener />
         <DigestScheduler />
         <TopNav />
         <div className="min-h-screen">{children}</div>
