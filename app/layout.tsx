@@ -1,11 +1,25 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import TopNav from "./components/TopNav";
 import DigestScheduler from "./components/DigestScheduler";
+import RegisterSW from "./register-sw";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Tidy",
   description: "Lightweight AI-assisted task tracking app",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Tidy",
+  },
+  icons: {
+    apple: "/icons/icon-192.png",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0b0b0d",
 };
 
 export default function RootLayout({
@@ -16,6 +30,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="min-h-screen bg-[var(--bg)] text-[var(--text)] antialiased">
+        <RegisterSW />
         <DigestScheduler />
         <TopNav />
         <div className="min-h-screen">{children}</div>
