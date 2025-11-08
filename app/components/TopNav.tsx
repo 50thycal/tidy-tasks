@@ -37,6 +37,10 @@ export default function TopNav() {
             textDecoration: "none",
             color: "color-mix(in srgb, var(--text) 90%, transparent)",
             transition: "color 0.2s",
+            minHeight: "44px",
+            display: "flex",
+            alignItems: "center",
+            fontWeight: "500",
           }}
         >
           Home
@@ -47,6 +51,10 @@ export default function TopNav() {
             textDecoration: "none",
             color: "color-mix(in srgb, var(--text) 90%, transparent)",
             transition: "color 0.2s",
+            minHeight: "44px",
+            display: "flex",
+            alignItems: "center",
+            fontWeight: "500",
           }}
         >
           Inbox
@@ -57,6 +65,10 @@ export default function TopNav() {
             textDecoration: "none",
             color: "color-mix(in srgb, var(--text) 90%, transparent)",
             transition: "color 0.2s",
+            minHeight: "44px",
+            display: "flex",
+            alignItems: "center",
+            fontWeight: "500",
           }}
         >
           Capture
@@ -67,6 +79,10 @@ export default function TopNav() {
             textDecoration: "none",
             color: "color-mix(in srgb, var(--text) 90%, transparent)",
             transition: "color 0.2s",
+            minHeight: "44px",
+            display: "flex",
+            alignItems: "center",
+            fontWeight: "500",
           }}
         >
           Focus
@@ -77,6 +93,10 @@ export default function TopNav() {
             textDecoration: "none",
             color: "color-mix(in srgb, var(--text) 90%, transparent)",
             transition: "color 0.2s",
+            minHeight: "44px",
+            display: "flex",
+            alignItems: "center",
+            fontWeight: "500",
           }}
         >
           Review
@@ -87,6 +107,10 @@ export default function TopNav() {
             textDecoration: "none",
             color: "color-mix(in srgb, var(--text) 90%, transparent)",
             transition: "color 0.2s",
+            minHeight: "44px",
+            display: "flex",
+            alignItems: "center",
+            fontWeight: "500",
           }}
         >
           Settings
@@ -97,6 +121,10 @@ export default function TopNav() {
             textDecoration: "none",
             color: "color-mix(in srgb, var(--text) 90%, transparent)",
             transition: "color 0.2s",
+            minHeight: "44px",
+            display: "flex",
+            alignItems: "center",
+            fontWeight: "500",
           }}
         >
           About
