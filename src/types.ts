@@ -34,6 +34,11 @@ export interface WorkSettings {
     priority?: number;
     deadline?: string | null;
   }>;
+  notifications?: {
+    enabled: boolean;
+    digestTime: string; // HH:MM format
+    lastDigestDate?: string; // YYYY-MM-DD
+  };
 }
 
 export interface TidySettingsDoc {

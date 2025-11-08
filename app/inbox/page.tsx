@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import TaskForm from "@/app/components/TaskForm";
 import TaskCard from "@/app/components/TaskCard";
 import SearchBar from "@/app/components/SearchBar";
+import NotifyBanner from "@/app/components/NotifyBanner";
 import {
   getInboxItems,
   saveInboxItem,
@@ -107,6 +108,9 @@ export default function InboxPage() {
   return (
     <div style={{ padding: "2rem", minHeight: "100vh" }}>
       <div style={{ maxWidth: "800px", margin: "0 auto" }}>
+        {/* Notification Banner */}
+        <NotifyBanner />
+
         <h1 style={{ marginBottom: "1rem" }}>Inbox</h1>
         <p style={{ color: "var(--muted)", marginBottom: "2rem" }}>
           Paste a messy task description below and let AI clean it up.

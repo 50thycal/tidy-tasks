@@ -19,18 +19,40 @@ import {
 } from "@/src/lib/reviewUtils";
 import ReviewSection from "@/app/components/ReviewSection";
 import WeeklySummary from "@/app/components/WeeklySummary";
+import NotifyBanner from "@/app/components/NotifyBanner";
 import type { WeeklySummaryTask } from "@/src/types";
 import { useMetrics } from "@/src/hooks/useMetrics";
+import { buildDigest, formatNotificationTitle, formatNotificationBody, type Digest } from "@/src/lib/digest";
+import { notify, showInAppToast, getPermission } from "@/src/lib/notify";
+import { saveDigest, getTodayDigest, markSeen } from "@/src/db/digest";
 
 export default function ReviewPage() {
   const [mounted, setMounted] = useState(false);
   const [items, setItems] = useState<InboxItem[]>([]);
   const [expandAll, setExpandAll] = useState(true);
   const { metrics } = useMetrics();
+  const [todayDigest, setTodayDigest] = useState<Digest | null>(null);
 
   useEffect(() => {
     setMounted(true);
     loadItems();
+    // Load today's digest if exists
+    const settings = getWorkSettings();
+    const digest = getTodayDigest(settings.timezone);
+    if (digest) {
+      setTodayDigest({
+        ts: digest.createdAt,
+        date: digest.id,
+        label: `Daily Digest — ${new Date(digest.createdAt).toLocaleDateString("en-US", {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+        })}`,
+        counts: digest.counts,
+        examples: { overdue: [], dueToday: [] },
+        text: digest.text,
+      });
+    }
   }, []);
 
   const loadItems = () => {
@@ -69,6 +91,29 @@ export default function ReviewPage() {
 
   const handleCollapseAll = () => {
     setExpandAll(false);
+  };
+
+  const handleSendDigestNow = () => {
+    const settings = getWorkSettings();
+    const now = new Date();
+    const digest = buildDigest(now, settings, items);
+
+    // Save digest
+    saveDigest(digest);
+    setTodayDigest(digest);
+
+    // Show notification if permission granted
+    const permission = getPermission();
+    if (permission === "granted" && settings.notifications?.enabled) {
+      const title = formatNotificationTitle(digest);
+      const body = formatNotificationBody(digest);
+      notify(title, body, {
+        data: { url: "/review?digest=today" },
+      });
+    } else {
+      // Fallback to in-app toast
+      showInAppToast(digest.text);
+    }
   };
 
   // Get work settings for week anchor
@@ -170,6 +215,9 @@ export default function ReviewPage() {
   return (
     <div style={{ padding: "2rem", minHeight: "100vh" }}>
       <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
+        {/* Notification Banner */}
+        <NotifyBanner />
+
         {/* Header */}
         <div style={{ marginBottom: "2rem" }}>
           <h1 style={{ marginBottom: "0.5rem" }}>Weekly Review & Reflection</h1>
@@ -339,6 +387,66 @@ export default function ReviewPage() {
             </div>
           </div>
         </div>
+
+        {/* Daily Digest */}
+        {todayDigest && (
+          <div
+            style={{
+              backgroundColor: "var(--panel)",
+              border: "1px solid var(--border)",
+              borderRadius: "8px",
+              padding: "1.5rem",
+              marginBottom: "2rem",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+              <h2 style={{ fontSize: "1.25rem", color: "var(--text)", margin: 0 }}>
+                {todayDigest.label}
+              </h2>
+              <button
+                onClick={handleSendDigestNow}
+                style={{
+                  padding: "0.5rem 1rem",
+                  backgroundColor: "var(--panel-2)",
+                  color: "var(--text)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "4px",
+                  fontSize: "0.85rem",
+                  cursor: "pointer",
+                }}
+              >
+                Refresh Digest
+              </button>
+            </div>
+
+            <div style={{ fontSize: "0.95rem", color: "var(--text)", marginBottom: "1rem" }}>
+              {todayDigest.text}
+            </div>
+
+            <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+              {todayDigest.counts.overdue > 0 && (
+                <div style={{ padding: "0.5rem 1rem", backgroundColor: "color-mix(in srgb, var(--danger) 15%, transparent)", borderRadius: "4px", border: "1px solid var(--danger)", fontSize: "0.85rem" }}>
+                  <strong>{todayDigest.counts.overdue}</strong> overdue
+                </div>
+              )}
+              {todayDigest.counts.dueToday > 0 && (
+                <div style={{ padding: "0.5rem 1rem", backgroundColor: "color-mix(in srgb, var(--accent) 15%, transparent)", borderRadius: "4px", border: "1px solid var(--accent)", fontSize: "0.85rem" }}>
+                  <strong>{todayDigest.counts.dueToday}</strong> due today
+                </div>
+              )}
+              {todayDigest.counts.dueNext7 > 0 && (
+                <div style={{ padding: "0.5rem 1rem", backgroundColor: "color-mix(in srgb, var(--accent-2) 15%, transparent)", borderRadius: "4px", border: "1px solid var(--accent-2)", fontSize: "0.85rem" }}>
+                  <strong>{todayDigest.counts.dueNext7}</strong> due next 7 days
+                </div>
+              )}
+              {todayDigest.counts.staleActive > 0 && (
+                <div style={{ padding: "0.5rem 1rem", backgroundColor: "color-mix(in srgb, var(--warn) 15%, transparent)", borderRadius: "4px", border: "1px solid var(--warn)", fontSize: "0.85rem" }}>
+                  <strong>{todayDigest.counts.staleActive}</strong> stale active
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Weekly Summary */}
         <WeeklySummary tasks={summaryTasks} />
