@@ -7,6 +7,7 @@ import { bulkAddInboxItems, type InboxItem } from "@/src/lib/clientStore";
 import { getWorkSettings } from "@/src/lib/settings";
 import { runWithPool, splitTasks } from "@/src/lib/batchRunner";
 import type { CleanTaskRequest, CleanTaskResponse } from "@/src/types";
+import { Skeleton } from "@/src/ui/Skeleton";
 
 export default function CapturePage() {
   const [mounted, setMounted] = useState(false);
@@ -227,6 +228,27 @@ export default function CapturePage() {
         </p>
 
         <BatchForm onClean={handleClean} isProcessing={isProcessing} />
+
+        {/* Skeleton placeholders while initial processing */}
+        {isProcessing && results.length === 0 && (
+          <div style={{ marginTop: "2rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div
+                key={i}
+                className="card"
+                style={{ padding: "1rem" }}
+              >
+                <Skeleton h={16} w="70%" />
+                <div style={{ marginTop: "0.75rem" }}>
+                  <Skeleton h={12} w="100%" />
+                </div>
+                <div style={{ marginTop: "0.5rem" }}>
+                  <Skeleton h={12} w="85%" />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
         {hasAnyResults && (
           <BatchResults

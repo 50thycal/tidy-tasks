@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { CleanTaskRequest, CleanTaskResponse } from "@/src/types";
+import { SkeletonLines } from "@/src/ui/Skeleton";
 
 interface TaskFormProps {
   onSubmit: (request: CleanTaskRequest) => Promise<CleanTaskResponse>;
@@ -208,6 +209,20 @@ export default function TaskForm({ onSubmit, onSuccess }: TaskFormProps) {
           Clear
         </button>
       </div>
+
+      {/* Loading skeleton */}
+      {loading && (
+        <div
+          style={{
+            padding: "1rem",
+            backgroundColor: "var(--panel-2)",
+            borderRadius: "8px",
+            border: "1px solid var(--border)",
+          }}
+        >
+          <SkeletonLines lines={5} />
+        </div>
+      )}
     </form>
   );
 }

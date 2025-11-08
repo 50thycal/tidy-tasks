@@ -120,10 +120,10 @@ export default function InboxPage() {
         <div
           style={{
             marginBottom: "3rem",
-            padding: "1.5rem",
+            padding: "1rem",
             backgroundColor: "var(--panel)",
             border: "1px solid var(--border)",
-            borderRadius: "8px",
+            borderRadius: "12px",
           }}
         >
           <TaskForm onSubmit={handleSubmit} onSuccess={handleSuccess} />
@@ -172,7 +172,7 @@ export default function InboxPage() {
               No tasks match your filters. Try adjusting or clearing filters.
             </div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
               {filteredItems.map((item) => (
                 <div key={item.id}>
                   <div
