@@ -211,11 +211,13 @@ a:focus-visible,
 input:focus-visible,
 textarea:focus-visible,
 select:focus-visible {
-  outline: none;
-  ring: 2px;
-  ring-color: var(--ring);
-  ring-offset: 2px;
-  ring-offset-color: var(--bg);
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.focus-ring {
+  outline: 2px solid #2b74ff;
+  outline-offset: 2px;
 }
 
 /* Typography */

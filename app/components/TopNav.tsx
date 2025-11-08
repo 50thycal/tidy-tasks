@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useMetrics } from "@/src/hooks/useMetrics";
 
 export default function TopNav() {
   const { metrics, loading } = useMetrics();
+  const pathname = usePathname();
 
   return (
     <nav
@@ -33,6 +35,7 @@ export default function TopNav() {
         <div style={{ display: "flex", gap: "1.5rem" }}>
         <Link
           href="/"
+          aria-current={pathname === "/" ? "page" : undefined}
           style={{
             textDecoration: "none",
             color: "color-mix(in srgb, var(--text) 90%, transparent)",
@@ -47,6 +50,7 @@ export default function TopNav() {
         </Link>
         <Link
           href="/inbox"
+          aria-current={pathname === "/inbox" ? "page" : undefined}
           style={{
             textDecoration: "none",
             color: "color-mix(in srgb, var(--text) 90%, transparent)",
@@ -61,6 +65,7 @@ export default function TopNav() {
         </Link>
         <Link
           href="/capture"
+          aria-current={pathname === "/capture" ? "page" : undefined}
           style={{
             textDecoration: "none",
             color: "color-mix(in srgb, var(--text) 90%, transparent)",
@@ -75,6 +80,7 @@ export default function TopNav() {
         </Link>
         <Link
           href="/focus"
+          aria-current={pathname === "/focus" ? "page" : undefined}
           style={{
             textDecoration: "none",
             color: "color-mix(in srgb, var(--text) 90%, transparent)",
@@ -89,6 +95,7 @@ export default function TopNav() {
         </Link>
         <Link
           href="/review"
+          aria-current={pathname === "/review" ? "page" : undefined}
           style={{
             textDecoration: "none",
             color: "color-mix(in srgb, var(--text) 90%, transparent)",
@@ -103,6 +110,7 @@ export default function TopNav() {
         </Link>
         <Link
           href="/settings"
+          aria-current={pathname === "/settings" ? "page" : undefined}
           style={{
             textDecoration: "none",
             color: "color-mix(in srgb, var(--text) 90%, transparent)",
@@ -117,6 +125,7 @@ export default function TopNav() {
         </Link>
         <Link
           href="/about"
+          aria-current={pathname === "/about" ? "page" : undefined}
           style={{
             textDecoration: "none",
             color: "color-mix(in srgb, var(--text) 90%, transparent)",
