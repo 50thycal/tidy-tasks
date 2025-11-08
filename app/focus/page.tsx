@@ -12,6 +12,7 @@ import FocusBucket from "@/app/components/FocusBucket";
 import SearchBar from "@/app/components/SearchBar";
 import { applyFilters, DEFAULT_FILTERS_FOCUS, type Filters } from "@/src/lib/filter";
 import { getDistinctProjects, getDistinctTags } from "@/src/db/queries";
+import { Skeleton } from "@/src/ui/Skeleton";
 
 export default function FocusPage() {
   const [mounted, setMounted] = useState(false);
@@ -507,8 +508,33 @@ export default function FocusPage() {
 
           {/* Loading state for initial load */}
           {loading && prioritizedItems.length === 0 && (
-            <div style={{ textAlign: "center", padding: "3rem", color: "var(--muted)" }}>
-              <p>Calculating priorities...</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i}>
+                  <Skeleton h={20} w="120px" />
+                  <div style={{ marginTop: "1rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                    {Array.from({ length: 2 }).map((_, j) => (
+                      <div
+                        key={j}
+                        style={{
+                          border: "1px solid var(--border)",
+                          borderRadius: "8px",
+                          padding: "1rem",
+                          backgroundColor: "var(--panel-2)",
+                        }}
+                      >
+                        <Skeleton h={16} w="70%" />
+                        <div style={{ marginTop: "0.75rem" }}>
+                          <Skeleton h={12} w="100%" />
+                        </div>
+                        <div style={{ marginTop: "0.5rem" }}>
+                          <Skeleton h={12} w="85%" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>

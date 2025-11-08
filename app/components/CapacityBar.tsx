@@ -12,31 +12,32 @@ export default function CapacityBar({ usedMinutes, maxMinutes }: CapacityBarProp
       <div
         style={{
           display: "flex",
-          justifyContent: "space-between",
+          alignItems: "center",
           marginBottom: "0.5rem",
-          fontSize: "0.9rem",
-          color: "#666",
+          fontSize: "0.85rem",
+          opacity: 0.7,
         }}
       >
-        <span>Focus Capacity</span>
-        <span>
-          {usedMinutes} / {maxMinutes} min ({Math.round(percentage)}%)
+        <span style={{ flex: 1 }}>Focus Capacity</span>
+        <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
+          {usedMinutes} / {maxMinutes} min
         </span>
       </div>
       <div
         style={{
           width: "100%",
-          height: "8px",
-          backgroundColor: "#e0e0e0",
-          borderRadius: "4px",
+          height: "6px",
+          backgroundColor: "var(--panel-2)",
+          borderRadius: "8px",
           overflow: "hidden",
+          border: "1px solid var(--border)",
         }}
       >
         <div
           style={{
             width: `${percentage}%`,
             height: "100%",
-            backgroundColor: isOverCapacity ? "#f44336" : "#4caf50",
+            backgroundColor: isOverCapacity ? "var(--danger)" : "var(--accent-2)",
             transition: "width 0.3s ease",
           }}
         />
@@ -44,9 +45,9 @@ export default function CapacityBar({ usedMinutes, maxMinutes }: CapacityBarProp
       {isOverCapacity && (
         <div
           style={{
-            marginTop: "0.25rem",
+            marginTop: "0.5rem",
             fontSize: "0.85rem",
-            color: "#f44336",
+            color: "var(--danger)",
           }}
         >
           ⚠️ Over capacity - consider moving tasks to Next
