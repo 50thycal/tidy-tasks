@@ -233,3 +233,47 @@ export function bulkAddInboxItems(items: InboxItem[]): void {
     throw error;
   }
 }
+
+/**
+ * Bulk mark items as done
+ */
+export async function bulkMarkDone(ids: string[]): Promise<void> {
+  bulkMutateInboxItems(ids, (item) => ({
+    ...item,
+    status: "done",
+    touched_at: new Date().toISOString(),
+  }));
+
+  // Increment metrics for each completed task
+  for (let i = 0; i < ids.length; i++) {
+    await inc('tasksCompleted');
+  }
+}
+
+/**
+ * Bulk update bucket for items
+ */
+export function bulkMoveToBucket(ids: string[], bucket: string): void {
+  bulkMutateInboxItems(ids, (item) => ({
+    ...item,
+    result: {
+      ...item.result,
+      bucket,
+    },
+    updated_at: new Date().toISOString(),
+  }));
+}
+
+/**
+ * Bulk set due date
+ */
+export function bulkSetDue(ids: string[], dueAt: string | null): void {
+  bulkMutateInboxItems(ids, (item) => ({
+    ...item,
+    result: {
+      ...item.result,
+      due_at: dueAt,
+    },
+    updated_at: new Date().toISOString(),
+  }));
+}

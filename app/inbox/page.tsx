@@ -6,11 +6,15 @@ import TaskCard from "@/app/components/TaskCard";
 import SearchBar from "@/app/components/SearchBar";
 import NotifyBanner from "@/app/components/NotifyBanner";
 import InstallCTA from "@/app/components/InstallCTA";
+import BulkBar from "@/app/components/BulkBar";
 import {
   getInboxItems,
   saveInboxItem,
   updateInboxItemStatus,
   deleteInboxItem,
+  bulkMarkDone,
+  bulkMoveToBucket,
+  bulkSetDue,
   type InboxItem,
 } from "@/src/lib/clientStore";
 import { getWorkSettings } from "@/src/lib/settings";
@@ -18,11 +22,13 @@ import { inc } from "@/src/db/metrics";
 import type { CleanTaskRequest, CleanTaskResponse } from "@/src/types";
 import { applyFilters, DEFAULT_FILTERS, type Filters } from "@/src/lib/filter";
 import { getDistinctProjects, getDistinctTags } from "@/src/db/queries";
+import { getQuickDateActions } from "@/src/lib/quickdates";
 
 export default function InboxPage() {
   const [items, setItems] = useState<InboxItem[]>([]);
   const [mounted, setMounted] = useState(false);
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // Load items from localStorage on mount
   useEffect(() => {
@@ -92,6 +98,49 @@ export default function InboxPage() {
   const handleDelete = (id: string) => {
     deleteInboxItem(id);
     setItems(getInboxItems());
+  };
+
+  // Bulk selection handlers
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const handleBulkDone = async () => {
+    await bulkMarkDone(Array.from(selectedIds));
+    setSelectedIds(new Set());
+    setItems(getInboxItems());
+  };
+
+  const handleBulkMove = (bucket: 'now' | 'next' | 'later' | 'backlog') => {
+    bulkMoveToBucket(Array.from(selectedIds), bucket);
+    setSelectedIds(new Set());
+    setItems(getInboxItems());
+  };
+
+  const handleBulkDue = (preset: 'today' | 'tomorrow' | 'nextFriday' | 'clear') => {
+    const actions = getQuickDateActions(settings, null);
+    let dueAt: string | null = null;
+
+    if (preset === 'today') dueAt = actions.today();
+    else if (preset === 'tomorrow') dueAt = actions.tomorrow();
+    else if (preset === 'nextFriday') dueAt = actions.nextFriday();
+    else if (preset === 'clear') dueAt = null;
+
+    bulkSetDue(Array.from(selectedIds), dueAt);
+    setSelectedIds(new Set());
+    setItems(getInboxItems());
+  };
+
+  const handleBulkCancel = () => {
+    setSelectedIds(new Set());
   };
 
   // Don't render until mounted (to avoid hydration mismatch)
@@ -212,6 +261,9 @@ export default function InboxPage() {
                     onMoveToActive={() => handleMoveToActive(item.id)}
                     onDelete={() => handleDelete(item.id)}
                     onChange={() => setItems(getInboxItems())}
+                    selectable={true}
+                    isSelected={selectedIds.has(item.id)}
+                    onToggleSelect={() => toggleSelect(item.id)}
                   />
                 </div>
               ))}
@@ -219,6 +271,15 @@ export default function InboxPage() {
           )}
         </div>
       </div>
+
+      {/* Bulk selection bar */}
+      <BulkBar
+        count={selectedIds.size}
+        onDone={handleBulkDone}
+        onMove={handleBulkMove}
+        onDue={handleBulkDue}
+        onCancel={handleBulkCancel}
+      />
     </div>
   );
 }

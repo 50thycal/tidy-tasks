@@ -17,6 +17,9 @@ interface TaskCardProps {
   onMoveToActive?: () => void;
   onDelete?: () => void;
   onChange?: (patch: Partial<CleanTaskResponse>) => void; // Optional callback for parent updates
+  selectable?: boolean; // Show checkbox for bulk selection
+  isSelected?: boolean; // Whether this card is selected
+  onToggleSelect?: () => void; // Callback when checkbox is toggled
 }
 
 export default function TaskCard({
@@ -26,6 +29,9 @@ export default function TaskCard({
   onMoveToActive,
   onDelete,
   onChange,
+  selectable = false,
+  isSelected = false,
+  onToggleSelect,
 }: TaskCardProps) {
   const [showJson, setShowJson] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -183,8 +189,35 @@ export default function TaskCard({
           padding: "1rem",
           backgroundColor: "var(--panel-2)",
           color: "var(--text)",
+          display: "flex",
+          gap: "0.75rem",
         }}
       >
+        {/* Selection checkbox */}
+        {selectable && (
+          <div style={{ display: "flex", alignItems: "flex-start", paddingTop: "0.125rem" }}>
+            <input
+              type="checkbox"
+              checked={isSelected}
+              onChange={() => onToggleSelect?.()}
+              onKeyDown={(e) => {
+                if (e.key === ' ') {
+                  e.preventDefault();
+                  onToggleSelect?.();
+                }
+              }}
+              style={{
+                width: "18px",
+                height: "18px",
+                cursor: "pointer",
+                accentColor: "var(--accent)",
+              }}
+              aria-label={`Select ${result.title}`}
+            />
+          </div>
+        )}
+
+        <div style={{ flex: 1, minWidth: 0 }}>
         {/* Title */}
         <h3 style={{ margin: "0 0 0.5rem 0", fontSize: "1.1rem", fontWeight: "600", color: "var(--text)" }}>
           {result.title}
@@ -429,7 +462,7 @@ export default function TaskCard({
         )}
 
         {/* Edit button */}
-        {id && (
+        {id && !selectable && (
           <div style={{ marginBottom: "0.75rem" }}>
             <button
               onClick={handleEdit}
@@ -517,6 +550,7 @@ export default function TaskCard({
               {JSON.stringify(result, null, 2)}
             </pre>
           )}
+        </div>
         </div>
       </div>
     );
