@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import type { WeeklySummaryResponse, WeeklySummaryTask } from "@/src/types";
+import { SkeletonLines } from "@/src/ui/Skeleton";
 
 interface WeeklySummaryProps {
   tasks: WeeklySummaryTask[];
@@ -185,6 +186,13 @@ export default function WeeklySummary({
           >
             Retry
           </button>
+        </div>
+      )}
+
+      {/* Loading skeleton */}
+      {loading && (
+        <div style={{ padding: "1rem" }}>
+          <SkeletonLines lines={8} />
         </div>
       )}
 

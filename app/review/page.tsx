@@ -220,7 +220,7 @@ export default function ReviewPage() {
 
         {/* Header */}
         <div style={{ marginBottom: "2rem" }}>
-          <h1 style={{ marginBottom: "0.5rem" }}>Weekly Review & Reflection</h1>
+          <h1 style={{ marginBottom: "0.5rem", fontSize: "1.875rem" }}>Weekly Review & Reflection</h1>
           <p style={{ color: "var(--muted)", marginBottom: "1.5rem" }}>
             Review your tasks and keep your workflow tidy
           </p>
@@ -400,7 +400,7 @@ export default function ReviewPage() {
             }}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-              <h2 style={{ fontSize: "1.25rem", color: "var(--text)", margin: 0 }}>
+              <h2 style={{ fontSize: "1.25rem", fontWeight: "600", color: "var(--text)", margin: 0 }}>
                 {todayDigest.label}
               </h2>
               <button
