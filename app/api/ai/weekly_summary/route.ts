@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { hit, clientKey } from "@/src/lib/ratelimit";
 import type { WeeklySummaryRequest, WeeklySummaryResponse, WeeklySummaryTask } from "@/src/types";
 
 export async function POST(request: NextRequest) {
@@ -7,6 +8,22 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { error: 'Server not configured: OPENAI_API_KEY missing.' },
       { status: 503 }
+    );
+  }
+
+  // Rate limiting
+  const key = `${clientKey(request)}:/api/ai/weekly_summary`;
+  const { allowed, resetMs } = hit(key, 10, 60_000);
+  if (!allowed) {
+    return new Response(
+      JSON.stringify({ error: 'Rate limit: try again shortly.' }),
+      {
+        status: 429,
+        headers: {
+          'content-type': 'application/json',
+          'retry-after': String(Math.ceil(resetMs / 1000))
+        }
+      }
     );
   }
 

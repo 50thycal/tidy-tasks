@@ -7,6 +7,7 @@ import { getSettingsFromRequest } from "@/src/lib/settings";
 import { endOfWeek, containsEOW, isPlainDate, toEndOfDayIso } from "@/src/lib/eow";
 import { normalizeSubtasks } from "@/src/lib/normalize";
 import { inc } from "@/src/db/metrics";
+import { hit, clientKey } from "@/src/lib/ratelimit";
 import type { CleanTaskRequest } from "@/src/types";
 import requestSchema from "@/schema/clean_task.request.schema.json";
 import responseSchema from "@/schema/clean_task.response.schema.json";
@@ -23,6 +24,22 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { error: 'Server not configured: OPENAI_API_KEY missing.' },
       { status: 503 }
+    );
+  }
+
+  // Rate limiting
+  const key = `${clientKey(request)}:/api/ai/clean_task`;
+  const { allowed, resetMs } = hit(key, 10, 60_000);
+  if (!allowed) {
+    return new Response(
+      JSON.stringify({ error: 'Rate limit: try again shortly.' }),
+      {
+        status: 429,
+        headers: {
+          'content-type': 'application/json',
+          'retry-after': String(Math.ceil(resetMs / 1000))
+        }
+      }
     );
   }
 
