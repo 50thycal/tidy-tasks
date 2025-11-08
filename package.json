@@ -9,6 +9,9 @@
     "types:gen": "typescript-json-schema \"schema/**/*.json\" \"*\" --out types/generated.d.ts"
   },
   "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
     "next": "14.2.5",

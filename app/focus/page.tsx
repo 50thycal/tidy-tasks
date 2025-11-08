@@ -1,9 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { DndContext, DragEndEvent, closestCenter } from "@dnd-kit/core";
 import type { PrioritizeRequest, PrioritizeResponse, PrioritizedItem, EnergyLevel } from "@/src/types";
 import { getInboxItems, markItemDone, moveItemToInbox } from "@/src/lib/clientStore";
 import { getWorkSettings } from "@/src/lib/settings";
+import { getLayout, upsertLayout } from "@/src/db/focus";
+import { mergeOrder, normalizeBucket } from "@/src/lib/focusMerge";
 import CapacityBar from "@/app/components/CapacityBar";
 import FocusBucket from "@/app/components/FocusBucket";
 
@@ -15,6 +18,19 @@ export default function FocusPage() {
   const [error, setError] = useState<string | null>(null);
   const [prioritizedItems, setPrioritizedItems] = useState<PrioritizedItem[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
+
+  // Local ordering overrides
+  const [bucketIds, setBucketIds] = useState<{
+    now: string[];
+    next: string[];
+    later: string[];
+    backlog: string[];
+  }>({
+    now: [],
+    next: [],
+    later: [],
+    backlog: [],
+  });
 
   // Initialize date to today
   useEffect(() => {
@@ -40,6 +56,7 @@ export default function FocusPage() {
 
       if (activeItems.length === 0) {
         setPrioritizedItems([]);
+        setBucketIds({ now: [], next: [], later: [], backlog: [] });
         setLoading(false);
         return;
       }
@@ -47,7 +64,7 @@ export default function FocusPage() {
       // Get current settings
       const settings = getWorkSettings();
 
-      // Build request payload (settings will be extracted server-side)
+      // Build request payload
       const request: any = {
         date,
         timezone: settings.timezone,
@@ -65,7 +82,7 @@ export default function FocusPage() {
           project: item.result.project,
           tags: item.result.tags,
         })),
-        settings, // Pass settings to server for context
+        settings,
       };
 
       // Call API
@@ -80,8 +97,32 @@ export default function FocusPage() {
         throw new Error(errorData.error || `HTTP ${response.status}`);
       }
 
-      const data: PrioritizeResponse = await response.json();
-      setPrioritizedItems(data);
+      const aiData: PrioritizeResponse = await response.json();
+      setPrioritizedItems(aiData);
+
+      // Group AI results by bucket
+      const aiNow = aiData.filter((item) => item.bucket === "Now").map((i) => i.id);
+      const aiNext = aiData.filter((item) => item.bucket === "Next").map((i) => i.id);
+      const aiLater = aiData.filter((item) => item.bucket === "Later").map((i) => i.id);
+      const aiBacklog = aiData.filter((item) => item.bucket === "Backlog").map((i) => i.id);
+
+      // Load saved layout for this date
+      const savedLayout = await getLayout(date);
+
+      // Merge saved order with AI order for each bucket
+      const mergedNow = savedLayout?.lists.now ? mergeOrder(savedLayout.lists.now, aiNow) : aiNow;
+      const mergedNext = savedLayout?.lists.next ? mergeOrder(savedLayout.lists.next, aiNext) : aiNext;
+      const mergedLater = savedLayout?.lists.later ? mergeOrder(savedLayout.lists.later, aiLater) : aiLater;
+      const mergedBacklog = savedLayout?.lists.backlog
+        ? mergeOrder(savedLayout.lists.backlog, aiBacklog)
+        : aiBacklog;
+
+      setBucketIds({
+        now: mergedNow,
+        next: mergedNext,
+        later: mergedLater,
+        backlog: mergedBacklog,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to prioritize tasks");
       console.error("Error prioritizing tasks:", err);
@@ -90,8 +131,8 @@ export default function FocusPage() {
     }
   };
 
-  const handleMarkDone = (id: string) => {
-    markItemDone(id);
+  const handleMarkDone = async (id: string) => {
+    await markItemDone(id);
     setRefreshKey((prev) => prev + 1);
   };
 
@@ -100,17 +141,105 @@ export default function FocusPage() {
     setRefreshKey((prev) => prev + 1);
   };
 
+  // Handle drag end within a bucket
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (!over || active.id === over.id) return;
+
+    // Find which bucket contains the active item
+    let sourceBucket: "now" | "next" | "later" | "backlog" | null = null;
+    for (const [bucket, ids] of Object.entries(bucketIds)) {
+      if (ids.includes(active.id as string)) {
+        sourceBucket = bucket as "now" | "next" | "later" | "backlog";
+        break;
+      }
+    }
+
+    if (!sourceBucket) return;
+
+    // Reorder within the source bucket
+    const sourceIds = [...bucketIds[sourceBucket]];
+    const oldIndex = sourceIds.indexOf(active.id as string);
+    const newIndex = sourceIds.indexOf(over.id as string);
+
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    // Remove from old position and insert at new position
+    sourceIds.splice(oldIndex, 1);
+    sourceIds.splice(newIndex, 0, active.id as string);
+
+    // Update state
+    const newBucketIds = {
+      ...bucketIds,
+      [sourceBucket]: sourceIds,
+    };
+    setBucketIds(newBucketIds);
+
+    // Persist to localStorage
+    await upsertLayout(date, (lists) => {
+      lists[sourceBucket!] = sourceIds;
+    });
+  };
+
+  // Handle "Send to..." bucket move
+  const handleSendTo = async (taskId: string, targetBucket: "now" | "next" | "later" | "backlog") => {
+    // Find current bucket
+    let sourceBucket: "now" | "next" | "later" | "backlog" | null = null;
+    for (const [bucket, ids] of Object.entries(bucketIds)) {
+      if (ids.includes(taskId)) {
+        sourceBucket = bucket as "now" | "next" | "later" | "backlog";
+        break;
+      }
+    }
+
+    if (!sourceBucket || sourceBucket === targetBucket) return;
+
+    // Remove from source bucket
+    const newSourceIds = bucketIds[sourceBucket].filter((id) => id !== taskId);
+
+    // Add to target bucket (at the end)
+    const newTargetIds = [...bucketIds[targetBucket], taskId];
+
+    // Update state
+    const newBucketIds = {
+      ...bucketIds,
+      [sourceBucket]: newSourceIds,
+      [targetBucket]: newTargetIds,
+    };
+    setBucketIds(newBucketIds);
+
+    // Persist to localStorage
+    await upsertLayout(date, (lists) => {
+      lists[sourceBucket!] = newSourceIds;
+      lists[targetBucket] = newTargetIds;
+    });
+  };
+
+  // Handle reset to AI order for a specific bucket
+  const handleResetBucket = async (bucket: "now" | "next" | "later" | "backlog") => {
+    // Get AI order for this bucket
+    const bucketName = bucket.charAt(0).toUpperCase() + bucket.slice(1);
+    const aiIds = prioritizedItems.filter((item) => item.bucket === bucketName).map((i) => i.id);
+
+    // Update state
+    setBucketIds({
+      ...bucketIds,
+      [bucket]: aiIds,
+    });
+
+    // Clear saved order for this bucket (set to empty, will use AI order on next load)
+    await upsertLayout(date, (lists) => {
+      lists[bucket] = [];
+    });
+  };
+
   // Calculate capacity
   const items = getInboxItems();
   const activeItems = items.filter((item) => item.status === "active");
 
-  const nowItems = prioritizedItems.filter((item) => item.bucket === "Now");
-  const nextItems = prioritizedItems.filter((item) => item.bucket === "Next");
-  const laterItems = prioritizedItems.filter((item) => item.bucket === "Later");
-  const backlogItems = prioritizedItems.filter((item) => item.bucket === "Backlog");
-
-  const usedMinutes = nowItems.reduce((sum, item) => {
-    const inboxItem = items.find((i) => i.id === item.id);
+  const usedMinutes = bucketIds.now.reduce((sum, taskId) => {
+    const inboxItem = items.find((i) => i.id === taskId);
     return sum + (inboxItem?.result.effort_min || 0);
   }, 0);
 
@@ -166,152 +295,166 @@ export default function FocusPage() {
   }
 
   return (
-    <div style={{ padding: "2rem", minHeight: "100vh" }}>
-      <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
-        <h1 style={{ marginBottom: "1rem" }}>Focus Queue</h1>
-        <p style={{ color: "var(--muted)", marginBottom: "2rem" }}>
-          AI-prioritized tasks for {new Date(date).toLocaleDateString()}
-        </p>
+    <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <div style={{ padding: "2rem", minHeight: "100vh" }}>
+        <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
+          <h1 style={{ marginBottom: "1rem" }}>Focus Queue</h1>
+          <p style={{ color: "var(--muted)", marginBottom: "2rem" }}>
+            AI-prioritized tasks for {new Date(date).toLocaleDateString()}. Drag to reorder within buckets.
+          </p>
 
-        {/* Controls */}
-        <div
-          style={{
-            backgroundColor: "var(--panel)",
-            border: "1px solid var(--border)",
-            borderRadius: "8px",
-            padding: "1.5rem",
-            marginBottom: "2rem",
-            display: "flex",
-            gap: "1rem",
-            alignItems: "flex-end",
-            flexWrap: "wrap",
-          }}
-        >
-          <div style={{ flex: "1", minWidth: "150px" }}>
-            <label
-              htmlFor="date"
-              style={{
-                display: "block",
-                fontWeight: "500",
-                marginBottom: "0.5rem",
-                color: "var(--text)",
-              }}
-            >
-              Date
-            </label>
-            <input
-              id="date"
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="input"
-            />
-          </div>
-
-          <div style={{ flex: "1", minWidth: "150px" }}>
-            <label
-              htmlFor="energy"
-              style={{
-                display: "block",
-                fontWeight: "500",
-                marginBottom: "0.5rem",
-                color: "var(--text)",
-              }}
-            >
-              Energy Level
-            </label>
-            <select
-              id="energy"
-              value={energy}
-              onChange={(e) => setEnergy(e.target.value as EnergyLevel)}
-              className="input"
-            >
-              <option value="low">Low</option>
-              <option value="med">Medium</option>
-              <option value="high">High</option>
-            </select>
-          </div>
-
-          <button
-            onClick={handlePrioritize}
-            disabled={loading}
-            className="btn btn-primary"
-            style={{
-              padding: "0.5rem 1.5rem",
-              cursor: loading ? "not-allowed" : "pointer",
-              opacity: loading ? 0.6 : 1,
-            }}
-          >
-            {loading ? "Calculating..." : "Recalculate"}
-          </button>
-        </div>
-
-        {/* Error message */}
-        {error && (
+          {/* Controls */}
           <div
             style={{
-              padding: "1rem",
-              backgroundColor: "color-mix(in srgb, var(--danger) 15%, transparent)",
-              color: "var(--danger)",
-              borderRadius: "4px",
-              marginBottom: "1.5rem",
+              backgroundColor: "var(--panel)",
               border: "1px solid var(--border)",
+              borderRadius: "8px",
+              padding: "1.5rem",
+              marginBottom: "2rem",
+              display: "flex",
+              gap: "1rem",
+              alignItems: "flex-end",
+              flexWrap: "wrap",
             }}
           >
-            <strong>Error:</strong> {error}
+            <div style={{ flex: "1", minWidth: "150px" }}>
+              <label
+                htmlFor="date"
+                style={{
+                  display: "block",
+                  fontWeight: "500",
+                  marginBottom: "0.5rem",
+                  color: "var(--text)",
+                }}
+              >
+                Date
+              </label>
+              <input
+                id="date"
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="input"
+              />
+            </div>
+
+            <div style={{ flex: "1", minWidth: "150px" }}>
+              <label
+                htmlFor="energy"
+                style={{
+                  display: "block",
+                  fontWeight: "500",
+                  marginBottom: "0.5rem",
+                  color: "var(--text)",
+                }}
+              >
+                Energy Level
+              </label>
+              <select
+                id="energy"
+                value={energy}
+                onChange={(e) => setEnergy(e.target.value as EnergyLevel)}
+                className="input"
+              >
+                <option value="low">Low</option>
+                <option value="med">Medium</option>
+                <option value="high">High</option>
+              </select>
+            </div>
+
+            <button
+              onClick={handlePrioritize}
+              disabled={loading}
+              className="btn btn-primary"
+              style={{
+                padding: "0.5rem 1.5rem",
+                cursor: loading ? "not-allowed" : "pointer",
+                opacity: loading ? 0.6 : 1,
+              }}
+            >
+              {loading ? "Calculating..." : "Recalculate"}
+            </button>
           </div>
-        )}
 
-        {/* Capacity bar */}
-        {prioritizedItems.length > 0 && (
-          <CapacityBar usedMinutes={usedMinutes} maxMinutes={240} />
-        )}
+          {/* Error message */}
+          {error && (
+            <div
+              style={{
+                padding: "1rem",
+                backgroundColor: "color-mix(in srgb, var(--danger) 15%, transparent)",
+                color: "var(--danger)",
+                borderRadius: "4px",
+                marginBottom: "1.5rem",
+                border: "1px solid var(--border)",
+              }}
+            >
+              <strong>Error:</strong> {error}
+            </div>
+          )}
 
-        {/* Buckets */}
-        {prioritizedItems.length > 0 && (
-          <>
-            <FocusBucket
-              bucket="Now"
-              items={nowItems}
-              inboxItems={items}
-              onMarkDone={handleMarkDone}
-              onMoveToInbox={handleMoveToInbox}
-              onRefresh={() => setRefreshKey((prev) => prev + 1)}
-            />
-            <FocusBucket
-              bucket="Next"
-              items={nextItems}
-              inboxItems={items}
-              onMarkDone={handleMarkDone}
-              onMoveToInbox={handleMoveToInbox}
-              onRefresh={() => setRefreshKey((prev) => prev + 1)}
-            />
-            <FocusBucket
-              bucket="Later"
-              items={laterItems}
-              inboxItems={items}
-              onMarkDone={handleMarkDone}
-              onMoveToInbox={handleMoveToInbox}
-              onRefresh={() => setRefreshKey((prev) => prev + 1)}
-            />
-            <FocusBucket
-              bucket="Backlog"
-              items={backlogItems}
-              inboxItems={items}
-              onMarkDone={handleMarkDone}
-              onMoveToInbox={handleMoveToInbox}
-              onRefresh={() => setRefreshKey((prev) => prev + 1)}
-            />
-          </>
-        )}
+          {/* Capacity bar */}
+          {prioritizedItems.length > 0 && (
+            <CapacityBar usedMinutes={usedMinutes} maxMinutes={240} />
+          )}
 
-        {/* Loading state for initial load */}
-        {loading && prioritizedItems.length === 0 && (
-          <div style={{ textAlign: "center", padding: "3rem", color: "var(--muted)" }}>
-            <p>Calculating priorities...</p>
-          </div>
-        )}
+          {/* Buckets */}
+          {prioritizedItems.length > 0 && (
+            <>
+              <FocusBucket
+                bucket="Now"
+                itemIds={bucketIds.now}
+                prioritizedItems={prioritizedItems}
+                inboxItems={items}
+                onMarkDone={handleMarkDone}
+                onMoveToInbox={handleMoveToInbox}
+                onRefresh={() => setRefreshKey((prev) => prev + 1)}
+                onSendTo={handleSendTo}
+                onResetToAI={() => handleResetBucket("now")}
+              />
+              <FocusBucket
+                bucket="Next"
+                itemIds={bucketIds.next}
+                prioritizedItems={prioritizedItems}
+                inboxItems={items}
+                onMarkDone={handleMarkDone}
+                onMoveToInbox={handleMoveToInbox}
+                onRefresh={() => setRefreshKey((prev) => prev + 1)}
+                onSendTo={handleSendTo}
+                onResetToAI={() => handleResetBucket("next")}
+              />
+              <FocusBucket
+                bucket="Later"
+                itemIds={bucketIds.later}
+                prioritizedItems={prioritizedItems}
+                inboxItems={items}
+                onMarkDone={handleMarkDone}
+                onMoveToInbox={handleMoveToInbox}
+                onRefresh={() => setRefreshKey((prev) => prev + 1)}
+                onSendTo={handleSendTo}
+                onResetToAI={() => handleResetBucket("later")}
+              />
+              <FocusBucket
+                bucket="Backlog"
+                itemIds={bucketIds.backlog}
+                prioritizedItems={prioritizedItems}
+                inboxItems={items}
+                onMarkDone={handleMarkDone}
+                onMoveToInbox={handleMoveToInbox}
+                onRefresh={() => setRefreshKey((prev) => prev + 1)}
+                onSendTo={handleSendTo}
+                onResetToAI={() => handleResetBucket("backlog")}
+              />
+            </>
+          )}
+
+          {/* Loading state for initial load */}
+          {loading && prioritizedItems.length === 0 && (
+            <div style={{ textAlign: "center", padding: "3rem", color: "var(--muted)" }}>
+              <p>Calculating priorities...</p>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </DndContext>
   );
 }
