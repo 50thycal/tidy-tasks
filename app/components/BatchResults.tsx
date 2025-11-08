@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { CleanTaskResponse, CleanTaskRequest } from "@/src/types";
+import { extractErrorMessage } from "@/src/lib/errors";
 
 export interface BatchTaskResult {
   id: string;
@@ -15,6 +16,7 @@ interface BatchResultsProps {
   onAddSelected: (selectedIds: string[], destination: "inbox" | "active") => void;
   onDiscardSelected: (selectedIds: string[]) => void;
   onRetryFailed: () => void;
+  onRetryOne?: (id: string) => void;
 }
 
 export default function BatchResults({
@@ -22,6 +24,7 @@ export default function BatchResults({
   onAddSelected,
   onDiscardSelected,
   onRetryFailed,
+  onRetryOne,
 }: BatchResultsProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [destination, setDestination] = useState<"inbox" | "active">("inbox");
@@ -136,11 +139,11 @@ export default function BatchResults({
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
-              marginBottom: "0.5rem",
+              marginBottom: "0.75rem",
             }}
           >
             <div style={{ color: "var(--danger)", fontWeight: "500" }}>
-              {failedResults.length} {failedResults.length === 1 ? "task" : "tasks"} failed
+              Failed ({failedResults.length})
             </div>
             <button
               type="button"
@@ -153,44 +156,72 @@ export default function BatchResults({
                 borderRadius: "4px",
                 fontSize: "0.85rem",
                 cursor: "pointer",
+                fontWeight: "500",
               }}
             >
-              Retry Failed
+              Retry all failed (Strict)
             </button>
           </div>
-          {failedResults.map((result) => (
-            <details
-              key={result.id}
-              style={{
-                padding: "0.5rem",
-                backgroundColor: "var(--panel-2)",
-                borderRadius: "4px",
-                marginTop: "0.5rem",
-              }}
-            >
-              <summary
-                style={{
-                  cursor: "pointer",
-                  fontSize: "0.9rem",
-                  color: "var(--muted)",
-                }}
-              >
-                {result.rawText.substring(0, 60)}
-                {result.rawText.length > 60 ? "..." : ""}
-              </summary>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+            {failedResults.map((result) => (
               <div
+                key={result.id}
                 style={{
-                  marginTop: "0.5rem",
-                  fontSize: "0.85rem",
-                  color: "var(--danger)",
-                  fontFamily: "monospace",
-                  whiteSpace: "pre-wrap",
+                  padding: "0.75rem",
+                  backgroundColor: "var(--panel-2)",
+                  borderRadius: "4px",
+                  border: "1px solid var(--border)",
                 }}
               >
-                {result.error || "Unknown error"}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "1rem" }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
+                      style={{
+                        fontSize: "0.9rem",
+                        color: "var(--text)",
+                        marginBottom: "0.5rem",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                      title={result.rawText}
+                    >
+                      {result.rawText}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "0.8rem",
+                        color: "var(--danger)",
+                        fontFamily: "monospace",
+                      }}
+                      title={extractErrorMessage(result.error)}
+                    >
+                      {extractErrorMessage(result.error).substring(0, 100)}
+                      {extractErrorMessage(result.error).length > 100 ? "..." : ""}
+                    </div>
+                  </div>
+                  {onRetryOne && (
+                    <button
+                      type="button"
+                      onClick={() => onRetryOne(result.id)}
+                      style={{
+                        padding: "0.25rem 0.75rem",
+                        backgroundColor: "var(--panel)",
+                        color: "var(--text)",
+                        border: "1px solid var(--border)",
+                        borderRadius: "4px",
+                        fontSize: "0.75rem",
+                        cursor: "pointer",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      Retry (Strict)
+                    </button>
+                  )}
+                </div>
               </div>
-            </details>
-          ))}
+            ))}
+          </div>
         </div>
       )}
 

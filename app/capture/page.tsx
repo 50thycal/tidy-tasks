@@ -26,8 +26,8 @@ export default function CapturePage() {
     }
   }, [toast]);
 
-  const handleClean = async (lines: string[], options: BatchCleanOptions) => {
-    console.log(`[Capture] Starting batch clean for ${lines.length} tasks`);
+  const handleClean = async (lines: string[], options: BatchCleanOptions, strictMode = false) => {
+    console.log(`[Capture] Starting batch clean for ${lines.length} tasks${strictMode ? ' (strict mode)' : ''}`);
     setIsProcessing(true);
 
     // Initialize all tasks as queued
@@ -47,7 +47,7 @@ export default function CapturePage() {
     const worker = async (line: string, index: number): Promise<CleanTaskResponse> => {
       console.log(`[Capture] Processing task ${index}: ${line.substring(0, 40)}...`);
 
-      const request: CleanTaskRequest = {
+      const request: CleanTaskRequest & { mode?: 'default' | 'strict' } = {
         raw_text: line,
         today,
         timezone: settings.timezone,
@@ -55,6 +55,7 @@ export default function CapturePage() {
           enabled: options.redactionEnabled,
           entities: options.redactionEntities,
         },
+        ...(strictMode && { mode: 'strict' }),
       };
 
       const response = await fetch("/api/ai/clean_task", {
@@ -169,7 +170,7 @@ export default function CapturePage() {
 
     if (lines.length === 0) return;
 
-    console.log(`[Capture] Retrying ${lines.length} failed tasks`);
+    console.log(`[Capture] Retrying ${lines.length} failed tasks with strict mode`);
 
     // Get options from first failed result (use defaults)
     const options: BatchCleanOptions = {
@@ -180,8 +181,27 @@ export default function CapturePage() {
     // Remove failed tasks from results
     setResults((prev) => prev.filter((r) => r.status !== "failed"));
 
-    // Re-process
-    handleClean(lines, options);
+    // Re-process with strict mode
+    handleClean(lines, options, true);
+  };
+
+  const handleRetryOne = (id: string) => {
+    const failedResult = results.find((r) => r.id === id && r.status === "failed");
+    if (!failedResult) return;
+
+    console.log(`[Capture] Retrying one failed task with strict mode: ${failedResult.rawText.substring(0, 40)}`);
+
+    // Get options (use defaults)
+    const options: BatchCleanOptions = {
+      redactionEnabled: true,
+      redactionEntities: ["emails", "phones"],
+    };
+
+    // Remove this failed task from results
+    setResults((prev) => prev.filter((r) => r.id !== id));
+
+    // Re-process just this one with strict mode
+    handleClean([failedResult.rawText], options, true);
   };
 
   if (!mounted) {
@@ -214,6 +234,7 @@ export default function CapturePage() {
             onAddSelected={handleAddSelected}
             onDiscardSelected={handleDiscardSelected}
             onRetryFailed={handleRetryFailed}
+            onRetryOne={handleRetryOne}
           />
         )}
 

@@ -30,16 +30,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { raw_text, today, timezone, redaction } = body as unknown as CleanTaskRequest;
+    const { raw_text, today, timezone, redaction, mode } = body as unknown as CleanTaskRequest & { mode?: 'default' | 'strict' };
 
     // Apply redaction if enabled
     const shouldRedact = redaction?.enabled !== false;
     const textToSend = shouldRedact ? redact({ text: raw_text }).text : raw_text;
 
     // Prepare system prompt from SPEC.md
-    const systemPrompt = `Normalize task text. Use verb-first titles. Parse natural language dates relative to ${
+    let systemPrompt = `Normalize task text. Use verb-first titles. Parse natural language dates relative to ${
       today || new Date().toISOString().split("T")[0]
     }. Estimate effort ∈ {5,15,30,60,120} and energy ∈ {low,med,high}. Infer importance (0–100), tags, and project if obvious. If compound, split into subtasks. Return STRICT JSON with keys: title, due_at (ISO 8601 or null), scheduled_for (ISO 8601 or null), effort_min, energy, tags[], project (or null), subtasks[], importance (0–100), notes_append (optional).`;
+
+    // If strict mode, prepend stricter instructions
+    if (mode === 'strict') {
+      systemPrompt = `STRICT MODE: Return the absolute minimal valid JSON for CleanTaskResponse. Enforce:
+- subtasks: string[] only (max 3); if unsure, []
+- tags: string[] only (max 5, lowercase); if unsure, []
+- energy ∈ {low,med,high}; effort_min ∈ {5,15,30,60,120}
+- importance: integer 0–100
+- due_at/scheduled_for: ISO 8601 or null; never plain words
+If any field is uncertain, omit or use null/[] rather than inventing values.
+
+${systemPrompt}`;
+    }
 
     // Call OpenAI API
     const openaiApiKey = process.env.OPENAI_API_KEY;
