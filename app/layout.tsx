@@ -3,6 +3,7 @@ import TopNav from "./components/TopNav";
 import DigestScheduler from "./components/DigestScheduler";
 import RegisterSW from "./register-sw";
 import SwListener from "./sw-listener";
+import EnvBanner from "./components/EnvBanner";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -34,6 +35,7 @@ export default function RootLayout({
         <RegisterSW />
         <SwListener />
         <DigestScheduler />
+        <EnvBanner />
         <TopNav />
         <div className="min-h-screen">{children}</div>
       </body>

@@ -2,6 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import type { WeeklySummaryRequest, WeeklySummaryResponse, WeeklySummaryTask } from "@/src/types";
 
 export async function POST(request: NextRequest) {
+  // Check for API key
+  if (!process.env.OPENAI_API_KEY) {
+    return NextResponse.json(
+      { error: 'Server not configured: OPENAI_API_KEY missing.' },
+      { status: 503 }
+    );
+  }
+
   try {
     // Parse request body
     const body = await request.json() as WeeklySummaryRequest;
