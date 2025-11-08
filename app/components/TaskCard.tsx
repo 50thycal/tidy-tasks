@@ -6,8 +6,9 @@ import { updateInboxItemResult } from "@/src/lib/clientStore";
 import { getWorkSettings } from "@/src/lib/settings";
 import { validateTask } from "@/src/lib/validate";
 import { coerceTags, coerceSubtasks, nullIfEmpty, clampEnum } from "@/src/lib/uiCoerce";
-import { toIsoFromDateTime, splitIso, formatFriendly } from "@/src/lib/date";
+import { toIsoFromDateTime, splitIso } from "@/src/lib/date";
 import { getQuickDateActions } from "@/src/lib/quickdates";
+import { DateText } from "@/src/ui/DateText";
 
 interface TaskCardProps {
   id?: string; // InboxItem ID for persistence
@@ -149,12 +150,6 @@ export default function TaskCard({
       e.preventDefault();
       handleSave();
     }
-  };
-
-  // Format date-time for display
-  const formatDateTime = (isoString: string | null) => {
-    if (!isoString) return "No deadline";
-    return formatFriendly(isoString, settings.timezone) || isoString;
   };
 
   // Handle quick date actions
@@ -331,8 +326,8 @@ export default function TaskCard({
         )}
 
         {/* Due date */}
-        <div style={{ fontSize: "0.9rem", color: "var(--muted)", marginBottom: "0.75rem" }}>
-          <strong>Due:</strong> {formatDateTime(result.due_at)}
+        <div style={{ fontSize: "0.9rem", opacity: 0.7, marginBottom: "0.75rem" }}>
+          <strong>Due:</strong> <DateText value={result.due_at} tz={settings.timezone} variant="long" />
         </div>
 
         {/* Effort & Energy */}
@@ -342,6 +337,7 @@ export default function TaskCard({
             gap: "1rem",
             marginBottom: "0.75rem",
             fontSize: "0.9rem",
+            opacity: 0.9,
           }}
         >
           <span>
@@ -378,7 +374,7 @@ export default function TaskCard({
 
         {/* Project */}
         {result.project && (
-          <div style={{ fontSize: "0.9rem", marginBottom: "0.75rem" }}>
+          <div style={{ fontSize: "0.9rem", marginBottom: "0.75rem", opacity: 0.9 }}>
             <strong>Project:</strong> {result.project}
           </div>
         )}
@@ -390,11 +386,11 @@ export default function TaskCard({
               <span
                 key={idx}
                 style={{
-                  padding: "0.25rem 0.5rem",
+                  padding: "2px 8px",
                   backgroundColor: "color-mix(in srgb, var(--accent) 15%, transparent)",
                   color: "var(--accent)",
                   borderRadius: "4px",
-                  fontSize: "0.85rem",
+                  fontSize: "12px",
                   border: "1px solid var(--border)",
                 }}
               >
@@ -406,7 +402,7 @@ export default function TaskCard({
 
         {/* Subtasks */}
         {result.subtasks && result.subtasks.length > 0 && (
-          <div style={{ marginBottom: "0.75rem" }}>
+          <div style={{ marginBottom: "0.75rem", opacity: 0.9 }}>
             <strong style={{ fontSize: "0.9rem" }}>Subtasks:</strong>
             <ul style={{ margin: "0.25rem 0 0 1.5rem", padding: 0, fontSize: "0.9rem" }}>
               {result.subtasks.map((subtask, idx) => (
