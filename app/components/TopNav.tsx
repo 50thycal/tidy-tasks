@@ -91,6 +91,16 @@ export default function TopNav() {
         >
           Settings
         </Link>
+        <Link
+          href="/about"
+          style={{
+            textDecoration: "none",
+            color: "color-mix(in srgb, var(--text) 90%, transparent)",
+            transition: "color 0.2s",
+          }}
+        >
+          About
+        </Link>
         </div>
       </div>
 
