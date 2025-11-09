@@ -9,10 +9,12 @@ import { getLayout, upsertLayout } from "@/src/db/focus";
 import { mergeOrder, normalizeBucket } from "@/src/lib/focusMerge";
 import CapacityBar from "@/app/components/CapacityBar";
 import FocusBucket from "@/app/components/FocusBucket";
+import FocusControls from "@/app/components/FocusControls";
 import SearchBar from "@/app/components/SearchBar";
 import { applyFilters, DEFAULT_FILTERS_FOCUS, type Filters } from "@/src/lib/filter";
 import { getDistinctProjects, getDistinctTags } from "@/src/db/queries";
 import { Skeleton } from "@/src/ui/Skeleton";
+import { loadCapacity, saveCapacity, getEffectiveMinutes } from "@/src/lib/focusState";
 
 export default function FocusPage() {
   const [mounted, setMounted] = useState(false);
@@ -23,6 +25,9 @@ export default function FocusPage() {
   const [prioritizedItems, setPrioritizedItems] = useState<PrioritizedItem[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS_FOCUS);
+  const [dirty, setDirty] = useState(false);
+  const [capacity, setCapacity] = useState(60);
+  const [capacityPlus2h, setCapacityPlus2h] = useState(false);
 
   // Local ordering overrides
   const [bucketIds, setBucketIds] = useState<{
@@ -37,19 +42,17 @@ export default function FocusPage() {
     backlog: [],
   });
 
-  // Initialize date to today
+  // Initialize date and load capacity on mount
   useEffect(() => {
     setMounted(true);
     const today = new Date().toISOString().split("T")[0];
     setDate(today);
-  }, []);
 
-  // Load and prioritize on mount
-  useEffect(() => {
-    if (mounted && date) {
-      handlePrioritize();
-    }
-  }, [mounted, refreshKey]);
+    // Load saved capacity
+    const savedCapacity = loadCapacity();
+    setCapacity(savedCapacity.minutes);
+    setCapacityPlus2h(savedCapacity.plus2h);
+  }, []);
 
   const handlePrioritize = async () => {
     setLoading(true);
@@ -63,15 +66,19 @@ export default function FocusPage() {
         setPrioritizedItems([]);
         setBucketIds({ now: [], next: [], later: [], backlog: [] });
         setLoading(false);
+        setDirty(false);
         return;
       }
+
+      // Get effective capacity
+      const effectiveCapacity = getEffectiveMinutes({ minutes: capacity, plus2h: capacityPlus2h });
 
       // Build request payload
       const request: any = {
         date,
         timezone: settings.timezone,
         energy,
-        max_focus_minutes: 240,
+        max_focus_minutes: effectiveCapacity,
         tasks: activeItems.map((item) => ({
           id: item.id,
           title: item.result.title,
@@ -125,6 +132,9 @@ export default function FocusPage() {
         later: mergedLater,
         backlog: mergedBacklog,
       });
+
+      // Clear dirty flag on successful calculation
+      setDirty(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to prioritize tasks");
       console.error("Error prioritizing tasks:", err);
@@ -133,14 +143,23 @@ export default function FocusPage() {
     }
   };
 
+  // Save capacity to localStorage when it changes
+  useEffect(() => {
+    if (mounted) {
+      saveCapacity(capacity, capacityPlus2h);
+    }
+  }, [capacity, capacityPlus2h, mounted]);
+
   const handleMarkDone = async (id: string) => {
     await markItemDone(id);
     setRefreshKey((prev) => prev + 1);
+    setDirty(true);
   };
 
   const handleMoveToInbox = (id: string) => {
     moveItemToInbox(id);
     setRefreshKey((prev) => prev + 1);
+    setDirty(true);
   };
 
   // Handle drag end within a bucket
@@ -216,6 +235,9 @@ export default function FocusPage() {
       lists[sourceBucket!] = newSourceIds;
       lists[targetBucket] = newTargetIds;
     });
+
+    // Mark as dirty since bucket assignments changed
+    setDirty(true);
   };
 
   // Handle reset to AI order for a specific bucket
@@ -350,78 +372,16 @@ export default function FocusPage() {
             AI-prioritized tasks for {new Date(date).toLocaleDateString()}. Drag to reorder within buckets.
           </p>
 
-          {/* Controls */}
-          <div
-            style={{
-              backgroundColor: "var(--panel)",
-              border: "1px solid var(--border)",
-              borderRadius: "8px",
-              padding: "1.5rem",
-              marginBottom: "2rem",
-              display: "flex",
-              gap: "1rem",
-              alignItems: "flex-end",
-              flexWrap: "wrap",
-            }}
-          >
-            <div style={{ flex: "1", minWidth: "150px" }}>
-              <label
-                htmlFor="date"
-                style={{
-                  display: "block",
-                  fontWeight: "500",
-                  marginBottom: "0.5rem",
-                  color: "var(--text)",
-                }}
-              >
-                Date
-              </label>
-              <input
-                id="date"
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="input"
-              />
-            </div>
-
-            <div style={{ flex: "1", minWidth: "150px" }}>
-              <label
-                htmlFor="energy"
-                style={{
-                  display: "block",
-                  fontWeight: "500",
-                  marginBottom: "0.5rem",
-                  color: "var(--text)",
-                }}
-              >
-                Energy Level
-              </label>
-              <select
-                id="energy"
-                value={energy}
-                onChange={(e) => setEnergy(e.target.value as EnergyLevel)}
-                className="input"
-              >
-                <option value="low">Low</option>
-                <option value="med">Medium</option>
-                <option value="high">High</option>
-              </select>
-            </div>
-
-            <button
-              onClick={handlePrioritize}
-              disabled={loading}
-              className="btn btn-primary"
-              style={{
-                padding: "0.5rem 1.5rem",
-                cursor: loading ? "not-allowed" : "pointer",
-                opacity: loading ? 0.6 : 1,
-              }}
-            >
-              {loading ? "Calculating..." : "Recalculate"}
-            </button>
-          </div>
+          {/* Focus Controls */}
+          <FocusControls
+            capacity={capacity}
+            setCapacity={setCapacity}
+            capacityPlus2h={capacityPlus2h}
+            setCapacityPlus2h={setCapacityPlus2h}
+            dirty={dirty}
+            calculating={loading}
+            onCalculate={handlePrioritize}
+          />
 
           {/* Error message */}
           {error && (
@@ -453,7 +413,10 @@ export default function FocusPage() {
 
           {/* Capacity bar */}
           {prioritizedItems.length > 0 && (
-            <CapacityBar usedMinutes={usedMinutes} maxMinutes={240} />
+            <CapacityBar
+              usedMinutes={usedMinutes}
+              maxMinutes={getEffectiveMinutes({ minutes: capacity, plus2h: capacityPlus2h })}
+            />
           )}
 
           {/* Buckets */}
