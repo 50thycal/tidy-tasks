@@ -67,7 +67,7 @@ export default function BatchForm({ onClean, isProcessing }: BatchFormProps) {
           className="textarea"
           value={rawText}
           onChange={(e) => setRawText(e.target.value)}
-          placeholder="Email Brian about easement before Friday&#10;Review RDR package 2 hours&#10;Call contractor re: grading sketch&#10;Prep weekly progress email..."
+          placeholder="Write out task&#10;Use spaces for additional tasks"
           disabled={isProcessing}
           style={{
             minHeight: "200px",

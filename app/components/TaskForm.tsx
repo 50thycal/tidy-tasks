@@ -72,7 +72,7 @@ export default function TaskForm({ onSubmit, onSuccess }: TaskFormProps) {
           value={rawText}
           onChange={(e) => setRawText(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="email brian about easement before Friday 30 min, attach grading sketch"
+          placeholder="Write out task…"
           rows={4}
           className="textarea"
           style={{
