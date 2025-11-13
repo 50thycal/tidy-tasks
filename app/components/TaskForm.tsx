@@ -13,7 +13,7 @@ export default function TaskForm({ onSubmit, onSuccess }: TaskFormProps) {
   const [rawText, setRawText] = useState("");
   const [today, setToday] = useState(() => new Date().toISOString().split("T")[0]);
   const [timezone, setTimezone] = useState("America/Phoenix");
-  const [redactionEnabled, setRedactionEnabled] = useState(true);
+  const [redactionEnabled, setRedactionEnabled] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
 
   const [loading, setLoading] = useState(false);

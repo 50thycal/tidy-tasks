@@ -13,7 +13,7 @@ export interface BatchCleanOptions {
 export default function BatchForm({ onClean, isProcessing }: BatchFormProps) {
   const [rawText, setRawText] = useState("");
   const [showOptions, setShowOptions] = useState(false);
-  const [redactionEnabled, setRedactionEnabled] = useState(true);
+  const [redactionEnabled, setRedactionEnabled] = useState(false);
   const [redactionEntities, setRedactionEntities] = useState<Array<"emails" | "phones" | "proper_names">>(
     ["emails", "phones"]
   );
