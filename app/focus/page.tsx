@@ -54,6 +54,36 @@ export default function FocusPage() {
     setCapacityPlus2h(savedCapacity.plus2h);
   }, []);
 
+  // Load saved layout on mount
+  useEffect(() => {
+    if (!mounted || !date) return;
+
+    const loadSavedLayout = async () => {
+      const savedLayout = await getLayout(date);
+      if (savedLayout) {
+        // Filter to only include tasks that still exist
+        const items = getInboxItems();
+        const activeIds = new Set(items.filter(i => i.status === "active").map(i => i.id));
+
+        const filteredNow = savedLayout.lists.now.filter(id => activeIds.has(id));
+        const filteredNext = savedLayout.lists.next.filter(id => activeIds.has(id));
+        const filteredLater = savedLayout.lists.later.filter(id => activeIds.has(id));
+        const filteredBacklog = savedLayout.lists.backlog.filter(id => activeIds.has(id));
+
+        setBucketIds({
+          now: filteredNow,
+          next: filteredNext,
+          later: filteredLater,
+          backlog: filteredBacklog,
+        });
+
+        setDirty(false);
+      }
+    };
+
+    loadSavedLayout();
+  }, [mounted, date]);
+
   const handlePrioritize = async () => {
     setLoading(true);
     setError(null);
@@ -131,6 +161,14 @@ export default function FocusPage() {
         next: mergedNext,
         later: mergedLater,
         backlog: mergedBacklog,
+      });
+
+      // Persist the layout to localStorage
+      await upsertLayout(date, (lists) => {
+        lists.now = mergedNow;
+        lists.next = mergedNext;
+        lists.later = mergedLater;
+        lists.backlog = mergedBacklog;
       });
 
       // Clear dirty flag on successful calculation
