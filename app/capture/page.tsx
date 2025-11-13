@@ -205,6 +205,23 @@ export default function CapturePage() {
     handleClean([failedResult.rawText], options, true);
   };
 
+  const handleUpdateResult = (id: string, patch: Partial<CleanTaskResponse>) => {
+    setResults((prev) =>
+      prev.map((r) => {
+        if (r.id === id && r.result) {
+          return {
+            ...r,
+            result: {
+              ...r.result,
+              ...patch,
+            },
+          };
+        }
+        return r;
+      })
+    );
+  };
+
   if (!mounted) {
     return (
       <div style={{ padding: "2rem" }}>
@@ -257,6 +274,7 @@ export default function CapturePage() {
             onDiscardSelected={handleDiscardSelected}
             onRetryFailed={handleRetryFailed}
             onRetryOne={handleRetryOne}
+            onUpdateResult={handleUpdateResult}
           />
         )}
 

@@ -13,7 +13,7 @@ export default function TaskForm({ onSubmit, onSuccess }: TaskFormProps) {
   const [rawText, setRawText] = useState("");
   const [today, setToday] = useState(() => new Date().toISOString().split("T")[0]);
   const [timezone, setTimezone] = useState("America/Phoenix");
-  const [redactionEnabled, setRedactionEnabled] = useState(true);
+  const [redactionEnabled, setRedactionEnabled] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
 
   const [loading, setLoading] = useState(false);
@@ -72,7 +72,7 @@ export default function TaskForm({ onSubmit, onSuccess }: TaskFormProps) {
           value={rawText}
           onChange={(e) => setRawText(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="email brian about easement before Friday 30 min, attach grading sketch"
+          placeholder="Write out task…"
           rows={4}
           className="textarea"
           style={{

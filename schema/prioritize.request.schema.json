@@ -22,7 +22,7 @@
     },
     "max_focus_minutes": {
       "type": "integer",
-      "minimum": 30,
+      "minimum": 5,
       "maximum": 600,
       "default": 240,
       "description": "Cap for total 'Now' bucket planned time (minutes)."

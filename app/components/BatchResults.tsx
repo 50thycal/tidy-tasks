@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { CleanTaskResponse, CleanTaskRequest } from "@/src/types";
 import { extractErrorMessage } from "@/src/lib/errors";
+import TaskCard from "@/app/components/TaskCard";
 
 export interface BatchTaskResult {
   id: string;
@@ -17,6 +18,7 @@ interface BatchResultsProps {
   onDiscardSelected: (selectedIds: string[]) => void;
   onRetryFailed: () => void;
   onRetryOne?: (id: string) => void;
+  onUpdateResult?: (id: string, patch: Partial<CleanTaskResponse>) => void;
 }
 
 export default function BatchResults({
@@ -25,6 +27,7 @@ export default function BatchResults({
   onDiscardSelected,
   onRetryFailed,
   onRetryOne,
+  onUpdateResult,
 }: BatchResultsProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [destination, setDestination] = useState<"inbox" | "active">("inbox");
@@ -305,83 +308,18 @@ export default function BatchResults({
           {/* Results list */}
           <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
             {successResults.map((result) => (
-              <div
-                key={result.id}
-                style={{
-                  border: "1px solid var(--border)",
-                  borderRadius: "8px",
-                  padding: "1rem",
-                  backgroundColor: selectedIds.has(result.id) ? "color-mix(in srgb, var(--accent) 10%, transparent)" : "var(--panel-2)",
-                  cursor: "pointer",
-                }}
-                onClick={() => toggleSelect(result.id)}
-              >
-                <div style={{ display: "flex", gap: "0.75rem", alignItems: "flex-start" }}>
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.has(result.id)}
-                    onChange={() => toggleSelect(result.id)}
-                    onClick={(e) => e.stopPropagation()}
-                    style={{ marginTop: "0.25rem", cursor: "pointer" }}
+              <div key={result.id}>
+                {result.result && (
+                  <TaskCard
+                    id={result.id}
+                    result={result.result}
+                    showActions={false}
+                    selectable={true}
+                    isSelected={selectedIds.has(result.id)}
+                    onToggleSelect={() => toggleSelect(result.id)}
+                    onChange={onUpdateResult ? (patch) => onUpdateResult(result.id, patch) : undefined}
                   />
-                  <div style={{ flex: 1 }}>
-                    <h4 style={{ margin: "0 0 0.5rem 0", color: "var(--text)" }}>
-                      {result.result?.title}
-                    </h4>
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: "0.75rem",
-                        fontSize: "0.85rem",
-                        color: "var(--muted)",
-                        flexWrap: "wrap",
-                      }}
-                    >
-                      {result.result?.effort_min && (
-                        <span>⏱️ {result.result.effort_min} min</span>
-                      )}
-                      {result.result?.energy && <span>⚡ {result.result.energy}</span>}
-                      {result.result?.importance !== undefined && (
-                        <span>🎯 {result.result.importance}</span>
-                      )}
-                      {result.result?.due_at && (
-                        <span>
-                          📅 {new Date(result.result.due_at).toLocaleDateString()}
-                        </span>
-                      )}
-                    </div>
-                    {result.result?.project && (
-                      <div
-                        style={{
-                          marginTop: "0.5rem",
-                          fontSize: "0.85rem",
-                          color: "var(--accent)",
-                        }}
-                      >
-                        📂 {result.result.project}
-                      </div>
-                    )}
-                    {result.result?.tags && result.result.tags.length > 0 && (
-                      <div style={{ marginTop: "0.5rem", display: "flex", gap: "0.5rem" }}>
-                        {result.result.tags.map((tag) => (
-                          <span
-                            key={tag}
-                            style={{
-                              padding: "0.25rem 0.5rem",
-                              backgroundColor: "var(--panel)",
-                              borderRadius: "4px",
-                              fontSize: "0.75rem",
-                              color: "var(--muted)",
-                              border: "1px solid var(--border)",
-                            }}
-                          >
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
+                )}
               </div>
             ))}
           </div>
