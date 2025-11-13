@@ -44,11 +44,14 @@ export default function DraggableTaskCard({
     opacity: isDragging ? 0.5 : 1,
   };
 
+  // Only show banner if we have meaningful AI metadata
+  const showBanner = (rationale && rationale.trim().length > 0) || (priorityScore !== undefined && priorityScore > 0);
+
   return (
     <div ref={setNodeRef} style={style}>
       <div>
         {/* Priority score and rationale banner */}
-        {(rationale || priorityScore !== undefined) && (
+        {showBanner && (
           <div
             style={{
               padding: "0.75rem 1rem",
@@ -142,7 +145,7 @@ export default function DraggableTaskCard({
         )}
 
         {/* TaskCard */}
-        <div style={{ borderRadius: rationale || priorityScore !== undefined ? "0 0 8px 8px" : "8px", overflow: "hidden" }}>
+        <div style={{ borderRadius: showBanner ? "0 0 8px 8px" : "8px", overflow: "hidden" }}>
           <TaskCard
             id={inboxItem.id}
             result={inboxItem.result}

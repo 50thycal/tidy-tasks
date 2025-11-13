@@ -60,25 +60,68 @@ export default function FocusPage() {
 
     const loadSavedLayout = async () => {
       const savedLayout = await getLayout(date);
-      if (savedLayout) {
-        // Filter to only include tasks that still exist
-        const items = getInboxItems();
-        const activeIds = new Set(items.filter(i => i.status === "active").map(i => i.id));
+      if (!savedLayout) return;
 
-        const filteredNow = savedLayout.lists.now.filter(id => activeIds.has(id));
-        const filteredNext = savedLayout.lists.next.filter(id => activeIds.has(id));
-        const filteredLater = savedLayout.lists.later.filter(id => activeIds.has(id));
-        const filteredBacklog = savedLayout.lists.backlog.filter(id => activeIds.has(id));
+      // Filter to only include tasks that still exist
+      const items = getInboxItems();
+      const activeItems = items.filter((i) => i.status === "active");
+      const activeIds = new Set(activeItems.map((i) => i.id));
 
-        setBucketIds({
-          now: filteredNow,
-          next: filteredNext,
-          later: filteredLater,
-          backlog: filteredBacklog,
-        });
+      const filteredNow = savedLayout.lists.now.filter(id => activeIds.has(id));
+      const filteredNext = savedLayout.lists.next.filter(id => activeIds.has(id));
+      const filteredLater = savedLayout.lists.later.filter(id => activeIds.has(id));
+      const filteredBacklog = savedLayout.lists.backlog.filter(id => activeIds.has(id));
 
-        setDirty(false);
+      // If everything is empty, don't force-render empty buckets
+      if (
+        filteredNow.length === 0 &&
+        filteredNext.length === 0 &&
+        filteredLater.length === 0 &&
+        filteredBacklog.length === 0
+      ) {
+        return;
       }
+
+      // Set bucket IDs from saved layout
+      setBucketIds({
+        now: filteredNow,
+        next: filteredNext,
+        later: filteredLater,
+        backlog: filteredBacklog,
+      });
+
+      // Build a minimal PrioritizedItem array so FocusBucket can render
+      // without requiring an AI call on load
+      const synthetic: PrioritizedItem[] = [
+        ...filteredNow.map((id) => ({
+          id,
+          bucket: "Now" as const,
+          priority_score: 0,
+          rationale: "", // empty rationale = no banner
+        })),
+        ...filteredNext.map((id) => ({
+          id,
+          bucket: "Next" as const,
+          priority_score: 0,
+          rationale: "",
+        })),
+        ...filteredLater.map((id) => ({
+          id,
+          bucket: "Later" as const,
+          priority_score: 0,
+          rationale: "",
+        })),
+        ...filteredBacklog.map((id) => ({
+          id,
+          bucket: "Backlog" as const,
+          priority_score: 0,
+          rationale: "",
+        })),
+      ];
+
+      setPrioritizedItems(synthetic);
+      // This is the last known clean layout, so not dirty
+      setDirty(false);
     };
 
     loadSavedLayout();
