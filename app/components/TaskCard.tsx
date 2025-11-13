@@ -462,7 +462,7 @@ export default function TaskCard({
         )}
 
         {/* Edit button */}
-        {id && (
+        {(id || onChange) && (
           <div style={{ marginBottom: "0.75rem" }}>
             <button
               onClick={handleEdit}

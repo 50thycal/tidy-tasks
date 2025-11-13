@@ -308,14 +308,10 @@ export default function BatchResults({
           {/* Results list */}
           <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
             {successResults.map((result) => (
-              <div
-                key={result.id}
-                style={{
-                  backgroundColor: selectedIds.has(result.id) ? "color-mix(in srgb, var(--accent) 10%, transparent)" : "transparent",
-                }}
-              >
+              <div key={result.id}>
                 {result.result && (
                   <TaskCard
+                    id={result.id}
                     result={result.result}
                     showActions={false}
                     selectable={true}
