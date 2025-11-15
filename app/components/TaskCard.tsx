@@ -35,6 +35,7 @@ export default function TaskCard({
 }: TaskCardProps) {
   const [showJson, setShowJson] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
+  const [quickEditMode, setQuickEditMode] = useState<"importance" | "effort" | "due">("importance");
   const [isEditMode, setIsEditMode] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -180,6 +181,52 @@ export default function TaskCard({
     }
   };
 
+  // Handle quick importance update
+  const handleQuickImportance = (value: number) => {
+    if (!id && !onChange) return;
+
+    try {
+      const patch = { importance: value };
+
+      // Update the task if we have an ID
+      if (id) {
+        updateInboxItemResult(id, patch);
+      }
+
+      // Notify parent to refresh
+      if (onChange) {
+        onChange(patch);
+      }
+
+      console.log("Updated importance:", value);
+    } catch (error) {
+      console.error("Error updating importance:", error);
+    }
+  };
+
+  // Handle quick effort update
+  const handleQuickEffort = (value: number) => {
+    if (!id && !onChange) return;
+
+    try {
+      const patch = { effort_min: value as 5 | 15 | 30 | 60 | 120 };
+
+      // Update the task if we have an ID
+      if (id) {
+        updateInboxItemResult(id, patch);
+      }
+
+      // Notify parent to refresh
+      if (onChange) {
+        onChange(patch);
+      }
+
+      console.log("Updated effort:", value);
+    } catch (error) {
+      console.error("Error updating effort:", error);
+    }
+  };
+
   // View mode
   if (!isEditMode) {
     return (
@@ -223,6 +270,252 @@ export default function TaskCard({
         <h3 style={{ margin: "0 0 0.75rem 0", fontSize: "1.1rem", fontWeight: "600", color: "var(--text)" }}>
           {result.title}
         </h3>
+
+        {/* Quick Edit section */}
+        {(id || onChange) && (
+          <div
+            style={{
+              marginBottom: "0.75rem",
+              padding: "0.75rem",
+              backgroundColor: "var(--panel)",
+              borderRadius: "6px",
+              border: "1px solid var(--border)",
+            }}
+          >
+            {/* Mode selector */}
+            <div style={{ marginBottom: "0.75rem" }}>
+              <select
+                value={quickEditMode}
+                onChange={(e) => setQuickEditMode(e.target.value as "importance" | "effort" | "due")}
+                style={{
+                  width: "100%",
+                  padding: "0.5rem",
+                  backgroundColor: "var(--panel-2)",
+                  color: "var(--text)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "4px",
+                  fontSize: "0.9rem",
+                  cursor: "pointer",
+                }}
+              >
+                <option value="importance">Quick Edit: Importance</option>
+                <option value="effort">Quick Edit: Effort</option>
+                <option value="due">Quick Edit: Due Date</option>
+              </select>
+            </div>
+
+            {/* Importance mode - slider 0-100 */}
+            {quickEditMode === "importance" && (
+              <div>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: "0.5rem",
+                  }}
+                >
+                  <span style={{ fontSize: "0.85rem", color: "var(--muted)" }}>Importance</span>
+                  <span style={{ fontSize: "0.85rem", fontWeight: "600" }}>{result.importance}/100</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="1"
+                  value={result.importance}
+                  onChange={(e) => handleQuickImportance(Number(e.target.value))}
+                  style={{
+                    width: "100%",
+                    cursor: "pointer",
+                    accentColor: "var(--accent)",
+                  }}
+                />
+              </div>
+            )}
+
+            {/* Effort mode - slider with stops */}
+            {quickEditMode === "effort" && (
+              <div>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: "0.5rem",
+                  }}
+                >
+                  <span style={{ fontSize: "0.85rem", color: "var(--muted)" }}>Effort</span>
+                  <span style={{ fontSize: "0.85rem", fontWeight: "600" }}>{result.effort_min} min</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="4"
+                  step="1"
+                  value={[5, 15, 30, 60, 120].indexOf(result.effort_min)}
+                  onChange={(e) => {
+                    const efforts = [5, 15, 30, 60, 120];
+                    handleQuickEffort(efforts[Number(e.target.value)]);
+                  }}
+                  style={{
+                    width: "100%",
+                    cursor: "pointer",
+                    accentColor: "var(--accent)",
+                  }}
+                />
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    fontSize: "0.7rem",
+                    color: "var(--muted)",
+                    marginTop: "0.25rem",
+                  }}
+                >
+                  <span>5m</span>
+                  <span>15m</span>
+                  <span>30m</span>
+                  <span>1h</span>
+                  <span>2h</span>
+                </div>
+              </div>
+            )}
+
+            {/* Due date mode - business day buttons */}
+            {quickEditMode === "due" && id && (
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: "0.5rem",
+                }}
+              >
+                {(() => {
+                  const actions = getQuickDateActions(settings, result.due_at);
+                  const chipStyle = {
+                    padding: "0.4rem 0.75rem",
+                    backgroundColor: "var(--panel-2)",
+                    color: "var(--text)",
+                    border: "1px solid var(--border)",
+                    borderRadius: "4px",
+                    fontSize: "0.8rem",
+                    cursor: "pointer",
+                    transition: "all 0.2s",
+                    fontWeight: "500" as const,
+                  };
+
+                  return (
+                    <>
+                      <button
+                        onClick={() => handleQuickDate(actions.today)}
+                        style={chipStyle}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = "var(--accent)";
+                          e.currentTarget.style.color = "white";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = "var(--panel-2)";
+                          e.currentTarget.style.color = "var(--text)";
+                        }}
+                      >
+                        Today
+                      </button>
+                      <button
+                        onClick={() => handleQuickDate(actions.tomorrow)}
+                        style={chipStyle}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = "var(--accent)";
+                          e.currentTarget.style.color = "white";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = "var(--panel-2)";
+                          e.currentTarget.style.color = "var(--text)";
+                        }}
+                      >
+                        Tomorrow
+                      </button>
+                      <button
+                        onClick={() => handleQuickDate(actions.nextFriday)}
+                        style={chipStyle}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = "var(--accent)";
+                          e.currentTarget.style.color = "white";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = "var(--panel-2)";
+                          e.currentTarget.style.color = "var(--text)";
+                        }}
+                      >
+                        Next {settings.eowAnchor}
+                      </button>
+                      <button
+                        onClick={() => handleQuickDate(actions.nextWeek)}
+                        style={chipStyle}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = "var(--accent)";
+                          e.currentTarget.style.color = "white";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = "var(--panel-2)";
+                          e.currentTarget.style.color = "var(--text)";
+                        }}
+                      >
+                        Next Week
+                      </button>
+                      <button
+                        onClick={() => handleQuickDate(actions.plusOneWeek)}
+                        style={chipStyle}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = "var(--accent)";
+                          e.currentTarget.style.color = "white";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = "var(--panel-2)";
+                          e.currentTarget.style.color = "var(--text)";
+                        }}
+                      >
+                        +1w
+                      </button>
+                      <button
+                        onClick={() => handleQuickDate(actions.plusTwoWeeks)}
+                        style={chipStyle}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = "var(--accent)";
+                          e.currentTarget.style.color = "white";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = "var(--panel-2)";
+                          e.currentTarget.style.color = "var(--text)";
+                        }}
+                      >
+                        +2w
+                      </button>
+                      <button
+                        onClick={() => handleQuickDate(actions.clear)}
+                        style={{
+                          ...chipStyle,
+                          color: "var(--danger)",
+                          borderColor: "var(--danger)",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = "var(--danger)";
+                          e.currentTarget.style.color = "white";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = "var(--panel-2)";
+                          e.currentTarget.style.color = "var(--danger)";
+                        }}
+                      >
+                        Clear
+                      </button>
+                    </>
+                  );
+                })()}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Project pill (no label) */}
         {result.project && (
