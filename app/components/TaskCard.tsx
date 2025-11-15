@@ -271,6 +271,46 @@ export default function TaskCard({
           {result.title}
         </h3>
 
+        {/* Project pill (no label) */}
+        {result.project && (
+          <div style={{ marginBottom: "0.75rem" }}>
+            <span
+              style={{
+                display: "inline-block",
+                padding: "0.25rem 0.75rem",
+                backgroundColor: "color-mix(in srgb, var(--accent-2) 20%, transparent)",
+                color: "var(--accent-2)",
+                borderRadius: "12px",
+                fontSize: "0.85rem",
+                border: "1px solid var(--border)",
+                fontWeight: "500",
+              }}
+            >
+              {result.project}
+            </span>
+          </div>
+        )}
+
+        {/* Due + Duration row */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: "0.75rem",
+            fontSize: "0.9rem",
+            opacity: 0.85,
+          }}
+        >
+          <div>
+            <strong>Due:</strong>{" "}
+            <DateText value={result.due_at} tz={settings.timezone} variant="long" />
+          </div>
+          <div>
+            <strong>Duration:</strong> {result.effort_min} min
+          </div>
+        </div>
+
         {/* Quick Edit section */}
         {(id || onChange) && (
           <div
@@ -516,46 +556,6 @@ export default function TaskCard({
             )}
           </div>
         )}
-
-        {/* Project pill (no label) */}
-        {result.project && (
-          <div style={{ marginBottom: "0.75rem" }}>
-            <span
-              style={{
-                display: "inline-block",
-                padding: "0.25rem 0.75rem",
-                backgroundColor: "color-mix(in srgb, var(--accent-2) 20%, transparent)",
-                color: "var(--accent-2)",
-                borderRadius: "12px",
-                fontSize: "0.85rem",
-                border: "1px solid var(--border)",
-                fontWeight: "500",
-              }}
-            >
-              {result.project}
-            </span>
-          </div>
-        )}
-
-        {/* Due + Duration row */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: "0.75rem",
-            fontSize: "0.9rem",
-            opacity: 0.85,
-          }}
-        >
-          <div>
-            <strong>Due:</strong>{" "}
-            <DateText value={result.due_at} tz={settings.timezone} variant="long" />
-          </div>
-          <div>
-            <strong>Duration:</strong> {result.effort_min} min
-          </div>
-        </div>
 
         {/* Importance bar + Energy pill row */}
         <div
