@@ -34,6 +34,7 @@ export default function TaskCard({
   onToggleSelect,
 }: TaskCardProps) {
   const [showJson, setShowJson] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -219,251 +220,215 @@ export default function TaskCard({
 
         <div style={{ flex: 1, minWidth: 0 }}>
         {/* Title */}
-        <h3 style={{ margin: "0 0 0.5rem 0", fontSize: "1.1rem", fontWeight: "600", color: "var(--text)" }}>
+        <h3 style={{ margin: "0 0 0.75rem 0", fontSize: "1.1rem", fontWeight: "600", color: "var(--text)" }}>
           {result.title}
         </h3>
 
-        {/* Quick date chips */}
-        {id && (
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: "0.5rem",
-              marginBottom: "0.75rem",
-              paddingBottom: "0.75rem",
-              borderBottom: "1px solid var(--border)",
-            }}
-          >
-            {(() => {
-              const actions = getQuickDateActions(settings, result.due_at);
-              const chipStyle = {
+        {/* Project pill (no label) */}
+        {result.project && (
+          <div style={{ marginBottom: "0.75rem" }}>
+            <span
+              style={{
+                display: "inline-block",
                 padding: "0.25rem 0.75rem",
-                backgroundColor: "var(--panel)",
-                color: "var(--text)",
+                backgroundColor: "color-mix(in srgb, var(--accent-2) 20%, transparent)",
+                color: "var(--accent-2)",
+                borderRadius: "12px",
+                fontSize: "0.85rem",
                 border: "1px solid var(--border)",
-                borderRadius: "4px",
-                fontSize: "0.75rem",
-                cursor: "pointer",
-                transition: "all 0.2s",
-              };
-
-              return (
-                <>
-                  <button
-                    onClick={() => handleQuickDate(actions.today)}
-                    style={chipStyle}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = "var(--accent)";
-                      e.currentTarget.style.color = "white";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = "var(--panel)";
-                      e.currentTarget.style.color = "var(--text)";
-                    }}
-                  >
-                    Today
-                  </button>
-                  <button
-                    onClick={() => handleQuickDate(actions.tomorrow)}
-                    style={chipStyle}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = "var(--accent)";
-                      e.currentTarget.style.color = "white";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = "var(--panel)";
-                      e.currentTarget.style.color = "var(--text)";
-                    }}
-                  >
-                    Tomorrow
-                  </button>
-                  <button
-                    onClick={() => handleQuickDate(actions.nextFriday)}
-                    style={chipStyle}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = "var(--accent)";
-                      e.currentTarget.style.color = "white";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = "var(--panel)";
-                      e.currentTarget.style.color = "var(--text)";
-                    }}
-                  >
-                    Next {settings.eowAnchor}
-                  </button>
-                  <button
-                    onClick={() => handleQuickDate(actions.nextWeek)}
-                    style={chipStyle}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = "var(--accent)";
-                      e.currentTarget.style.color = "white";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = "var(--panel)";
-                      e.currentTarget.style.color = "var(--text)";
-                    }}
-                  >
-                    Next Week
-                  </button>
-                  <button
-                    onClick={() => handleQuickDate(actions.plusOneWeek)}
-                    style={chipStyle}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = "var(--accent)";
-                      e.currentTarget.style.color = "white";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = "var(--panel)";
-                      e.currentTarget.style.color = "var(--text)";
-                    }}
-                  >
-                    +1w
-                  </button>
-                  <button
-                    onClick={() => handleQuickDate(actions.plusTwoWeeks)}
-                    style={chipStyle}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = "var(--accent)";
-                      e.currentTarget.style.color = "white";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = "var(--panel)";
-                      e.currentTarget.style.color = "var(--text)";
-                    }}
-                  >
-                    +2w
-                  </button>
-                  <button
-                    onClick={() => handleQuickDate(actions.clear)}
-                    style={{
-                      ...chipStyle,
-                      color: "var(--danger)",
-                      borderColor: "var(--danger)",
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = "var(--danger)";
-                      e.currentTarget.style.color = "white";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = "var(--panel)";
-                      e.currentTarget.style.color = "var(--danger)";
-                    }}
-                  >
-                    Clear
-                  </button>
-                </>
-              );
-            })()}
+                fontWeight: "500",
+              }}
+            >
+              {result.project}
+            </span>
           </div>
         )}
 
-        {/* Due date */}
-        <div style={{ fontSize: "0.9rem", opacity: 0.7, marginBottom: "0.75rem" }}>
-          <strong>Due:</strong> <DateText value={result.due_at} tz={settings.timezone} variant="long" />
-        </div>
-
-        {/* Effort & Energy */}
+        {/* Due + Duration row */}
         <div
           style={{
             display: "flex",
-            gap: "1rem",
+            justifyContent: "space-between",
+            alignItems: "center",
             marginBottom: "0.75rem",
             fontSize: "0.9rem",
-            opacity: 0.9,
+            opacity: 0.85,
           }}
         >
-          <span>
-            <strong>Effort:</strong> {result.effort_min} min
-          </span>
-          <span>
-            <strong>Energy:</strong> {result.energy}
-          </span>
+          <div>
+            <strong>Due:</strong>{" "}
+            <DateText value={result.due_at} tz={settings.timezone} variant="long" />
+          </div>
+          <div>
+            <strong>Duration:</strong> {result.effort_min} min
+          </div>
         </div>
 
-        {/* Importance bar */}
-        <div style={{ marginBottom: "0.75rem" }}>
-          <div style={{ fontSize: "0.85rem", marginBottom: "0.25rem", color: "var(--muted)" }}>
-            <strong>Importance:</strong> {result.importance}/100
-          </div>
-          <div
-            style={{
-              height: "6px",
-              backgroundColor: "var(--panel)",
-              borderRadius: "3px",
-              overflow: "hidden",
-              border: "1px solid var(--border)",
-            }}
-          >
+        {/* Importance bar + Energy pill row */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "1rem",
+            marginBottom: "0.75rem",
+          }}
+        >
+          {/* Importance bar */}
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: "0.85rem", marginBottom: "0.25rem", color: "var(--muted)" }}>
+              <strong>Importance:</strong> {result.importance}/100
+            </div>
             <div
               style={{
-                height: "100%",
-                width: `${result.importance}%`,
-                backgroundColor: result.importance > 75 ? "var(--danger)" : result.importance > 50 ? "var(--warn)" : "var(--accent-2)",
+                height: "6px",
+                backgroundColor: "var(--panel)",
+                borderRadius: "3px",
+                overflow: "hidden",
+                border: "1px solid var(--border)",
               }}
-            />
+            >
+              <div
+                style={{
+                  height: "100%",
+                  width: `${result.importance}%`,
+                  backgroundColor:
+                    result.importance > 75
+                      ? "var(--danger)"
+                      : result.importance > 50
+                      ? "var(--warn)"
+                      : "var(--accent-2)",
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Energy pill */}
+          <div>
+            <span
+              style={{
+                display: "inline-block",
+                padding: "0.35rem 0.75rem",
+                backgroundColor:
+                  result.energy === "high"
+                    ? "color-mix(in srgb, var(--danger) 20%, transparent)"
+                    : result.energy === "med"
+                    ? "color-mix(in srgb, var(--warn) 20%, transparent)"
+                    : "color-mix(in srgb, var(--accent) 20%, transparent)",
+                color:
+                  result.energy === "high"
+                    ? "var(--danger)"
+                    : result.energy === "med"
+                    ? "var(--warn)"
+                    : "var(--accent)",
+                borderRadius: "12px",
+                fontSize: "0.75rem",
+                border: "1px solid var(--border)",
+                fontWeight: "600",
+                textTransform: "uppercase",
+              }}
+            >
+              {result.energy}
+            </span>
           </div>
         </div>
 
-        {/* Project */}
-        {result.project && (
-          <div style={{ fontSize: "0.9rem", marginBottom: "0.75rem", opacity: 0.9 }}>
-            <strong>Project:</strong> {result.project}
-          </div>
-        )}
+        {/* Collapsible More info section */}
+        {((result.tags && result.tags.length > 0) ||
+          (result.subtasks && result.subtasks.length > 0) ||
+          result.notes_append) && (
+          <div style={{ marginBottom: "0.75rem" }}>
+            <button
+              onClick={() => setShowDetails(!showDetails)}
+              style={{
+                background: "none",
+                border: "none",
+                color: "var(--accent)",
+                cursor: "pointer",
+                fontSize: "0.85rem",
+                padding: "0.25rem 0",
+                fontWeight: "500",
+              }}
+            >
+              {showDetails ? "▼ Hide Details" : "▶ More Info"}
+            </button>
 
-        {/* Tags */}
-        {result.tags && result.tags.length > 0 && (
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginBottom: "0.75rem" }}>
-            {result.tags.map((tag, idx) => (
-              <span
-                key={idx}
+            {showDetails && (
+              <div
                 style={{
-                  padding: "2px 8px",
-                  backgroundColor: "color-mix(in srgb, var(--accent) 15%, transparent)",
-                  color: "var(--accent)",
-                  borderRadius: "4px",
-                  fontSize: "12px",
+                  marginTop: "0.5rem",
+                  padding: "0.75rem",
+                  backgroundColor: "var(--panel)",
+                  borderRadius: "6px",
                   border: "1px solid var(--border)",
                 }}
               >
-                {tag}
-              </span>
-            ))}
+                {/* Tags */}
+                {result.tags && result.tags.length > 0 && (
+                  <div style={{ marginBottom: result.subtasks || result.notes_append ? "0.75rem" : "0" }}>
+                    <strong style={{ fontSize: "0.85rem", color: "var(--muted)", display: "block", marginBottom: "0.5rem" }}>
+                      Tags
+                    </strong>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+                      {result.tags.map((tag, idx) => (
+                        <span
+                          key={idx}
+                          style={{
+                            padding: "2px 8px",
+                            backgroundColor: "color-mix(in srgb, var(--accent) 15%, transparent)",
+                            color: "var(--accent)",
+                            borderRadius: "4px",
+                            fontSize: "0.75rem",
+                            border: "1px solid var(--border)",
+                          }}
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Subtasks */}
+                {result.subtasks && result.subtasks.length > 0 && (
+                  <div style={{ marginBottom: result.notes_append ? "0.75rem" : "0" }}>
+                    <strong style={{ fontSize: "0.85rem", color: "var(--muted)", display: "block", marginBottom: "0.5rem" }}>
+                      Subtasks
+                    </strong>
+                    <ul style={{ margin: 0, padding: "0 0 0 1.25rem", fontSize: "0.85rem" }}>
+                      {result.subtasks.map((subtask, idx) => (
+                        <li key={idx} style={{ marginBottom: "0.25rem" }}>{subtask}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Notes */}
+                {result.notes_append && (
+                  <div>
+                    <strong style={{ fontSize: "0.85rem", color: "var(--muted)", display: "block", marginBottom: "0.5rem" }}>
+                      Note
+                    </strong>
+                    <div
+                      style={{
+                        padding: "0.5rem",
+                        backgroundColor: "color-mix(in srgb, var(--warn) 10%, transparent)",
+                        borderRadius: "4px",
+                        fontSize: "0.85rem",
+                        border: "1px solid var(--border)",
+                      }}
+                    >
+                      {result.notes_append}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
-        {/* Subtasks */}
-        {result.subtasks && result.subtasks.length > 0 && (
-          <div style={{ marginBottom: "0.75rem", opacity: 0.9 }}>
-            <strong style={{ fontSize: "0.9rem" }}>Subtasks:</strong>
-            <ul style={{ margin: "0.25rem 0 0 1.5rem", padding: 0, fontSize: "0.9rem" }}>
-              {result.subtasks.map((subtask, idx) => (
-                <li key={idx}>{subtask}</li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {/* Notes append */}
-        {result.notes_append && (
-          <div
-            style={{
-              padding: "0.5rem",
-              backgroundColor: "color-mix(in srgb, var(--warn) 15%, transparent)",
-              borderRadius: "4px",
-              fontSize: "0.85rem",
-              marginBottom: "0.75rem",
-              border: "1px solid var(--border)",
-            }}
-          >
-            <strong>Note:</strong> {result.notes_append}
-          </div>
-        )}
-
-        {/* Edit button */}
-        {(id || onChange) && (
-          <div style={{ marginBottom: "0.75rem" }}>
+        {/* Actions row (Edit + Actions) */}
+        <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem", paddingTop: "0.75rem", borderTop: "1px solid var(--border)" }}>
+          {(id || onChange) && (
             <button
               onClick={handleEdit}
               style={{
@@ -478,46 +443,42 @@ export default function TaskCard({
             >
               Edit
             </button>
-          </div>
-        )}
+          )}
 
-        {/* Actions */}
-        {showActions && (
-          <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
-            {onMoveToActive && (
-              <button
-                onClick={onMoveToActive}
-                style={{
-                  padding: "0.5rem 1rem",
-                  backgroundColor: "var(--accent-2)",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "4px",
-                  cursor: "pointer",
-                  fontSize: "0.9rem",
-                }}
-              >
-                Move to Active
-              </button>
-            )}
-            {onDelete && (
-              <button
-                onClick={onDelete}
-                style={{
-                  padding: "0.5rem 1rem",
-                  backgroundColor: "var(--danger)",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "4px",
-                  cursor: "pointer",
-                  fontSize: "0.9rem",
-                }}
-              >
-                Delete
-              </button>
-            )}
-          </div>
-        )}
+          {showActions && onMoveToActive && (
+            <button
+              onClick={onMoveToActive}
+              style={{
+                padding: "0.5rem 1rem",
+                backgroundColor: "var(--accent-2)",
+                color: "white",
+                border: "none",
+                borderRadius: "4px",
+                cursor: "pointer",
+                fontSize: "0.9rem",
+              }}
+            >
+              Move to Active
+            </button>
+          )}
+
+          {showActions && onDelete && (
+            <button
+              onClick={onDelete}
+              style={{
+                padding: "0.5rem 1rem",
+                backgroundColor: "var(--danger)",
+                color: "white",
+                border: "none",
+                borderRadius: "4px",
+                cursor: "pointer",
+                fontSize: "0.9rem",
+              }}
+            >
+              Delete
+            </button>
+          )}
+        </div>
 
         {/* Collapsible JSON */}
         <div style={{ marginTop: "1rem", borderTop: "1px solid var(--border)", paddingTop: "1rem" }}>
