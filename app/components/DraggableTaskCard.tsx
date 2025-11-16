@@ -144,57 +144,16 @@ export default function DraggableTaskCard({
           </div>
         )}
 
-        {/* TaskCard */}
+        {/* TaskCard with actions inside */}
         <div style={{ borderRadius: showBanner ? "0 0 8px 8px" : "8px", overflow: "hidden" }}>
           <TaskCard
             id={inboxItem.id}
             result={inboxItem.result}
-            showActions={false}
+            status={inboxItem.status}
+            onToggleDone={onMarkDone}
+            onMove={onMoveToInbox}
             onChange={onRefresh}
           />
-        </div>
-
-        {/* Focus-specific actions */}
-        <div
-          style={{
-            display: "flex",
-            gap: "0.5rem",
-            marginTop: "0.5rem",
-            paddingLeft: "1rem",
-          }}
-        >
-          {onMarkDone && (
-            <button
-              onClick={onMarkDone}
-              style={{
-                padding: "0.5rem 1rem",
-                backgroundColor: "var(--accent-2)",
-                color: "white",
-                border: "none",
-                borderRadius: "4px",
-                fontSize: "0.85rem",
-                cursor: "pointer",
-              }}
-            >
-              ✓ Mark Done
-            </button>
-          )}
-          {onMoveToInbox && (
-            <button
-              onClick={onMoveToInbox}
-              style={{
-                padding: "0.5rem 1rem",
-                backgroundColor: "var(--panel-2)",
-                color: "var(--text)",
-                border: "1px solid var(--border)",
-                borderRadius: "4px",
-                fontSize: "0.85rem",
-                cursor: "pointer",
-              }}
-            >
-              ← Move to Inbox
-            </button>
-          )}
         </div>
       </div>
     </div>

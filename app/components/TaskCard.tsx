@@ -13,12 +13,11 @@ import { DateText } from "@/src/ui/DateText";
 interface TaskCardProps {
   id?: string; // InboxItem ID for persistence
   result: CleanTaskResponse;
-  showActions?: boolean;
   status?: "inbox" | "active" | "done" | "snoozed"; // Task status for done toggle
   onToggleDone?: () => void; // Toggle done/active
   onMove?: () => void; // Move to different status
-  onMoveToActive?: () => void; // Legacy: Move to active
-  onDelete?: () => void;
+  onEdit?: () => void; // Open edit mode
+  onDelete?: () => void; // Delete task
   onChange?: (patch: Partial<CleanTaskResponse>) => void; // Optional callback for parent updates
   selectable?: boolean; // Show checkbox for bulk selection
   isSelected?: boolean; // Whether this card is selected
@@ -28,11 +27,10 @@ interface TaskCardProps {
 export default function TaskCard({
   id,
   result,
-  showActions = false,
   status,
   onToggleDone,
   onMove,
-  onMoveToActive,
+  onEdit,
   onDelete,
   onChange,
   selectable = false,
@@ -725,10 +723,10 @@ export default function TaskCard({
           </div>
         )}
 
-        {/* Actions row */}
+        {/* Actions row - always rendered */}
         <div
           style={{
-            marginTop: "1rem",
+            marginTop: "0.75rem",
             borderTop: "1px solid var(--border)",
             paddingTop: "0.5rem",
             display: "flex",
@@ -740,100 +738,104 @@ export default function TaskCard({
           }}
         >
           {/* Mark done / Mark as active */}
-          {onToggleDone && (
-            <button
-              type="button"
-              onClick={onToggleDone}
-              style={{
-                borderRadius: "4px",
-                border: "1px solid var(--border)",
-                backgroundColor: "var(--panel)",
-                padding: "0.25rem 0.75rem",
-                color: "var(--text)",
-                cursor: "pointer",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = "var(--panel-2)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = "var(--panel)";
-              }}
-            >
-              {status === "done" ? "Mark as active" : "Mark done"}
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={onToggleDone || (() => {})}
+            disabled={!onToggleDone}
+            style={{
+              borderRadius: "6px",
+              border: "1px solid var(--border)",
+              backgroundColor: "var(--background)",
+              padding: "0.25rem 0.75rem",
+              color: "var(--text)",
+              cursor: onToggleDone ? "pointer" : "not-allowed",
+              opacity: onToggleDone ? 1 : 0.5,
+            }}
+            onMouseEnter={(e) => {
+              if (onToggleDone) {
+                e.currentTarget.style.backgroundColor = "var(--muted)";
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "var(--background)";
+            }}
+          >
+            {status === "done" ? "Mark as active" : "Mark done"}
+          </button>
 
           {/* Move */}
-          {onMove && (
-            <button
-              type="button"
-              onClick={onMove}
-              style={{
-                borderRadius: "4px",
-                border: "1px solid var(--border)",
-                backgroundColor: "var(--panel)",
-                padding: "0.25rem 0.75rem",
-                color: "var(--text)",
-                cursor: "pointer",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = "var(--panel-2)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = "var(--panel)";
-              }}
-            >
-              Move
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={onMove || (() => {})}
+            disabled={!onMove}
+            style={{
+              borderRadius: "6px",
+              border: "1px solid var(--border)",
+              backgroundColor: "var(--background)",
+              padding: "0.25rem 0.75rem",
+              color: "var(--text)",
+              cursor: onMove ? "pointer" : "not-allowed",
+              opacity: onMove ? 1 : 0.5,
+            }}
+            onMouseEnter={(e) => {
+              if (onMove) {
+                e.currentTarget.style.backgroundColor = "var(--muted)";
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "var(--background)";
+            }}
+          >
+            Move
+          </button>
 
           {/* Edit */}
-          {(id || onChange) && (
-            <button
-              type="button"
-              onClick={handleEdit}
-              style={{
-                borderRadius: "4px",
-                border: "1px solid var(--border)",
-                backgroundColor: "var(--panel)",
-                padding: "0.25rem 0.75rem",
-                color: "var(--text)",
-                cursor: "pointer",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = "var(--panel-2)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = "var(--panel)";
-              }}
-            >
-              Edit
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={onEdit || handleEdit}
+            style={{
+              borderRadius: "6px",
+              border: "1px solid var(--border)",
+              backgroundColor: "var(--background)",
+              padding: "0.25rem 0.75rem",
+              color: "var(--text)",
+              cursor: "pointer",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "var(--muted)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "var(--background)";
+            }}
+          >
+            Edit
+          </button>
 
           {/* Delete */}
-          {onDelete && (
-            <button
-              type="button"
-              onClick={onDelete}
-              style={{
-                borderRadius: "4px",
-                border: "1px solid color-mix(in srgb, var(--danger) 50%, transparent)",
-                backgroundColor: "var(--panel)",
-                padding: "0.25rem 0.75rem",
-                color: "var(--danger)",
-                cursor: "pointer",
-              }}
-              onMouseEnter={(e) => {
+          <button
+            type="button"
+            onClick={onDelete || (() => {})}
+            disabled={!onDelete}
+            style={{
+              borderRadius: "6px",
+              border: "1px solid color-mix(in srgb, var(--danger) 50%, transparent)",
+              backgroundColor: "var(--background)",
+              padding: "0.25rem 0.75rem",
+              color: "var(--danger)",
+              cursor: onDelete ? "pointer" : "not-allowed",
+              opacity: onDelete ? 1 : 0.5,
+            }}
+            onMouseEnter={(e) => {
+              if (onDelete) {
                 e.currentTarget.style.backgroundColor = "color-mix(in srgb, var(--danger) 10%, transparent)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = "var(--panel)";
-              }}
-            >
-              Delete
-            </button>
-          )}
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "var(--background)";
+            }}
+          >
+            Delete
+          </button>
         </div>
 
         {/* Collapsible JSON */}

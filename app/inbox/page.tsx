@@ -88,7 +88,23 @@ export default function InboxPage() {
     setItems(getInboxItems());
   };
 
-  // Handle move to active
+  // Handle toggle done
+  const handleToggleDone = (id: string) => {
+    const item = items.find((i) => i.id === id);
+    if (!item) return;
+    const newStatus = item.status === "done" ? "active" : "done";
+    updateInboxItemStatus(id, newStatus);
+    setItems(getInboxItems());
+  };
+
+  // Handle move (opens move dialog or moves to default location)
+  const handleMove = (id: string) => {
+    // For now, just move to active as default behavior
+    updateInboxItemStatus(id, "active");
+    setItems(getInboxItems());
+  };
+
+  // Handle move to active (legacy)
   const handleMoveToActive = (id: string) => {
     updateInboxItemStatus(id, "active");
     setItems(getInboxItems());
@@ -257,8 +273,9 @@ export default function InboxPage() {
                   <TaskCard
                     id={item.id}
                     result={item.result}
-                    showActions={true}
-                    onMoveToActive={() => handleMoveToActive(item.id)}
+                    status={item.status}
+                    onToggleDone={() => handleToggleDone(item.id)}
+                    onMove={() => handleMove(item.id)}
                     onDelete={() => handleDelete(item.id)}
                     onChange={() => setItems(getInboxItems())}
                     selectable={true}

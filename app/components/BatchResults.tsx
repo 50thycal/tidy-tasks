@@ -313,7 +313,6 @@ export default function BatchResults({
                   <TaskCard
                     id={result.id}
                     result={result.result}
-                    showActions={false}
                     selectable={true}
                     isSelected={selectedIds.has(result.id)}
                     onToggleSelect={() => toggleSelect(result.id)}
