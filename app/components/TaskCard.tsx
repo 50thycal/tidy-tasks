@@ -37,7 +37,6 @@ export default function TaskCard({
   isSelected = false,
   onToggleSelect,
 }: TaskCardProps) {
-  const [showJson, setShowJson] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -823,7 +822,8 @@ export default function TaskCard({
           </div>
 
           {/* Energy - clickable for inline editing */}
-          <div data-energy-edit>
+          <div data-energy-edit style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.25rem" }}>
+            <span style={{ fontSize: "0.7rem", color: "var(--muted)", fontWeight: "500" }}>Difficulty</span>
             {!isEditingEnergy && (id || onChange) ? (
               <span
                 onClick={() => setIsEditingEnergy(true)}
@@ -849,9 +849,9 @@ export default function TaskCard({
                   textTransform: "uppercase",
                   cursor: "pointer",
                 }}
-                title="Click to edit energy level"
+                title="Click to edit difficulty level"
               >
-                {result.energy}
+                {result.energy === "med" ? "Medium" : result.energy}
               </span>
             ) : (id || onChange) ? (
               <div style={{ display: "flex", gap: "0.25rem" }}>
@@ -912,7 +912,7 @@ export default function TaskCard({
                   textTransform: "uppercase",
                 }}
               >
-                {result.energy}
+                {result.energy === "med" ? "Medium" : result.energy}
               </span>
             )}
           </div>
@@ -1172,39 +1172,6 @@ export default function TaskCard({
           >
             Delete
           </button>
-        </div>
-
-        {/* Collapsible JSON */}
-        <div style={{ marginTop: "1rem", borderTop: "1px solid var(--border)", paddingTop: "1rem" }}>
-          <button
-            onClick={() => setShowJson(!showJson)}
-            style={{
-              background: "none",
-              border: "none",
-              color: "var(--accent)",
-              cursor: "pointer",
-              fontSize: "0.85rem",
-              padding: 0,
-            }}
-          >
-            {showJson ? "▼ Hide JSON" : "▶ Show JSON"}
-          </button>
-          {showJson && (
-            <pre
-              style={{
-                marginTop: "0.5rem",
-                padding: "0.75rem",
-                backgroundColor: "var(--panel)",
-                borderRadius: "4px",
-                fontSize: "0.75rem",
-                overflow: "auto",
-                maxHeight: "300px",
-                border: "1px solid var(--border)",
-              }}
-            >
-              {JSON.stringify(result, null, 2)}
-            </pre>
-          )}
         </div>
         </div>
       </div>
