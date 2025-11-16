@@ -39,11 +39,15 @@ export default function TaskCard({
 }: TaskCardProps) {
   const [showJson, setShowJson] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
-  const [quickEditMode, setQuickEditMode] = useState<"importance" | "effort" | "due">("importance");
   const [isEditMode, setIsEditMode] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showMoveMenu, setShowMoveMenu] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
+
+  // Inline editing states
+  const [isEditingImportance, setIsEditingImportance] = useState(false);
+  const [isEditingDuration, setIsEditingDuration] = useState(false);
+  const [showDueQuickEdit, setShowDueQuickEdit] = useState(false);
 
   // Edit form state
   const [title, setTitle] = useState(result.title);
@@ -451,17 +455,66 @@ export default function TaskCard({
             opacity: 0.85,
           }}
         >
+          {/* Due date - clickable to expand quick edit */}
           <div>
             <strong>Due:</strong>{" "}
-            <DateText value={result.due_at} tz={settings.timezone} variant="short" />
+            {(id || onChange) ? (
+              <span
+                onClick={() => setShowDueQuickEdit(!showDueQuickEdit)}
+                style={{ cursor: "pointer", textDecoration: "underline", textDecorationStyle: "dotted" }}
+                title="Click to edit due date"
+              >
+                <DateText value={result.due_at} tz={settings.timezone} variant="short" />
+              </span>
+            ) : (
+              <DateText value={result.due_at} tz={settings.timezone} variant="short" />
+            )}
           </div>
+
+          {/* Duration - clickable for inline editing */}
           <div>
-            <strong>Duration:</strong> {result.effort_min} min
+            <strong>Duration:</strong>{" "}
+            {!isEditingDuration && (id || onChange) ? (
+              <span
+                onClick={() => setIsEditingDuration(true)}
+                style={{ cursor: "pointer", textDecoration: "underline", textDecorationStyle: "dotted" }}
+                title="Click to edit duration"
+              >
+                {result.effort_min} min
+              </span>
+            ) : (id || onChange) ? (
+              <select
+                value={result.effort_min}
+                onChange={(e) => {
+                  handleQuickEffort(Number(e.target.value));
+                  setIsEditingDuration(false);
+                }}
+                onBlur={() => setIsEditingDuration(false)}
+                autoFocus
+                style={{
+                  padding: "0.25rem 0.5rem",
+                  backgroundColor: "var(--panel-2)",
+                  color: "var(--text)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "4px",
+                  fontSize: "0.9rem",
+                  cursor: "pointer",
+                }}
+              >
+                <option value={5}>5 min</option>
+                <option value={15}>15 min</option>
+                <option value={30}>30 min</option>
+                <option value={60}>1 hr</option>
+                <option value={120}>2 hr</option>
+              </select>
+            ) : (
+              <span>{result.effort_min} min</span>
+            )}
           </div>
         </div>
 
-        {/* Quick Edit section */}
-        {(id || onChange) && (
+        {/* Quick date edit - expands when due date clicked */}
+        {showDueQuickEdit && (id || onChange) && (
           <div
             style={{
               marginBottom: "0.75rem",
@@ -471,236 +524,146 @@ export default function TaskCard({
               border: "1px solid var(--border)",
             }}
           >
-            {/* Mode selector */}
-            <div style={{ marginBottom: "0.75rem" }}>
-              <select
-                value={quickEditMode}
-                onChange={(e) => setQuickEditMode(e.target.value as "importance" | "effort" | "due")}
-                style={{
-                  width: "100%",
-                  padding: "0.5rem",
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: "0.5rem",
+              }}
+            >
+              {(() => {
+                const actions = getQuickDateActions(settings, result.due_at);
+                const chipStyle = {
+                  padding: "0.4rem 0.75rem",
                   backgroundColor: "var(--panel-2)",
                   color: "var(--text)",
                   border: "1px solid var(--border)",
                   borderRadius: "4px",
-                  fontSize: "0.9rem",
+                  fontSize: "0.8rem",
                   cursor: "pointer",
-                }}
-              >
-                <option value="importance">Quick Edit: Importance</option>
-                <option value="effort">Quick Edit: Effort</option>
-                <option value="due">Quick Edit: Due Date</option>
-              </select>
+                  transition: "all 0.2s",
+                  fontWeight: "500" as const,
+                };
+
+                return (
+                  <>
+                    {/* Today */}
+                    <button
+                      onClick={() => {
+                        handleQuickDate(actions.today);
+                        setShowDueQuickEdit(false);
+                      }}
+                      style={chipStyle}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = "var(--accent)";
+                        e.currentTarget.style.color = "white";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = "var(--panel-2)";
+                        e.currentTarget.style.color = "var(--text)";
+                      }}
+                    >
+                      Today
+                    </button>
+
+                    {/* +1 BD */}
+                    <button
+                      onClick={() => {
+                        handleQuickDateBD(1);
+                        setShowDueQuickEdit(false);
+                      }}
+                      style={chipStyle}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = "var(--accent)";
+                        e.currentTarget.style.color = "white";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = "var(--panel-2)";
+                        e.currentTarget.style.color = "var(--text)";
+                      }}
+                    >
+                      +1 BD
+                    </button>
+
+                    {/* +2 BD */}
+                    <button
+                      onClick={() => {
+                        handleQuickDateBD(2);
+                        setShowDueQuickEdit(false);
+                      }}
+                      style={chipStyle}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = "var(--accent)";
+                        e.currentTarget.style.color = "white";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = "var(--panel-2)";
+                        e.currentTarget.style.color = "var(--text)";
+                      }}
+                    >
+                      +2 BD
+                    </button>
+
+                    {/* Fri (end of week anchor) */}
+                    <button
+                      onClick={() => {
+                        handleQuickDate(actions.nextFriday);
+                        setShowDueQuickEdit(false);
+                      }}
+                      style={chipStyle}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = "var(--accent)";
+                        e.currentTarget.style.color = "white";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = "var(--panel-2)";
+                        e.currentTarget.style.color = "var(--text)";
+                      }}
+                    >
+                      {settings.eowAnchor}
+                    </button>
+
+                    {/* Calendar icon */}
+                    <button
+                      onClick={() => setShowDatePicker(!showDatePicker)}
+                      style={chipStyle}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = "var(--accent)";
+                        e.currentTarget.style.color = "white";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = "var(--panel-2)";
+                        e.currentTarget.style.color = "var(--text)";
+                      }}
+                    >
+                      📅
+                    </button>
+                  </>
+                );
+              })()}
             </div>
 
-            {/* Importance mode - slider 0-100 */}
-            {quickEditMode === "importance" && (
-              <div>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginBottom: "0.5rem",
-                  }}
-                >
-                  <span style={{ fontSize: "0.85rem", color: "var(--muted)" }}>Importance</span>
-                  <span style={{ fontSize: "0.85rem", fontWeight: "600" }}>{result.importance}/100</span>
-                </div>
+            {/* Inline date picker */}
+            {showDatePicker && (
+              <div style={{ marginTop: "0.75rem" }}>
                 <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  step="1"
-                  value={result.importance}
-                  onChange={(e) => handleQuickImportance(Number(e.target.value))}
-                  style={{
-                    width: "100%",
-                    cursor: "pointer",
-                    accentColor: "var(--accent)",
-                  }}
-                />
-              </div>
-            )}
-
-            {/* Effort mode - slider with stops */}
-            {quickEditMode === "effort" && (
-              <div>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginBottom: "0.5rem",
-                  }}
-                >
-                  <span style={{ fontSize: "0.85rem", color: "var(--muted)" }}>Effort</span>
-                  <span style={{ fontSize: "0.85rem", fontWeight: "600" }}>{result.effort_min} min</span>
-                </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="4"
-                  step="1"
-                  value={[5, 15, 30, 60, 120].indexOf(result.effort_min)}
+                  type="date"
                   onChange={(e) => {
-                    const efforts = [5, 15, 30, 60, 120];
-                    handleQuickEffort(efforts[Number(e.target.value)]);
+                    handleDatePickerChange(e);
+                    setShowDueQuickEdit(false);
                   }}
+                  defaultValue={result.due_at ? result.due_at.split('T')[0] : ''}
                   style={{
                     width: "100%",
+                    padding: "0.5rem",
+                    backgroundColor: "var(--panel-2)",
+                    color: "var(--text)",
+                    border: "1px solid var(--border)",
+                    borderRadius: "4px",
+                    fontSize: "0.9rem",
                     cursor: "pointer",
-                    accentColor: "var(--accent)",
                   }}
                 />
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    fontSize: "0.7rem",
-                    color: "var(--muted)",
-                    marginTop: "0.25rem",
-                  }}
-                >
-                  <span>5m</span>
-                  <span>15m</span>
-                  <span>30m</span>
-                  <span>1h</span>
-                  <span>2h</span>
-                </div>
-              </div>
-            )}
-
-            {/* Due date mode - business day buttons + calendar */}
-            {quickEditMode === "due" && id && (
-              <div>
-                <div
-                  style={{
-                    display: "flex",
-                    flexWrap: "wrap",
-                    gap: "0.5rem",
-                  }}
-                >
-                  {(() => {
-                    const actions = getQuickDateActions(settings, result.due_at);
-                    const chipStyle = {
-                      padding: "0.4rem 0.75rem",
-                      backgroundColor: "var(--panel-2)",
-                      color: "var(--text)",
-                      border: "1px solid var(--border)",
-                      borderRadius: "4px",
-                      fontSize: "0.8rem",
-                      cursor: "pointer",
-                      transition: "all 0.2s",
-                      fontWeight: "500" as const,
-                    };
-
-                    return (
-                      <>
-                        {/* Today */}
-                        <button
-                          onClick={() => handleQuickDate(actions.today)}
-                          style={chipStyle}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = "var(--accent)";
-                            e.currentTarget.style.color = "white";
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = "var(--panel-2)";
-                            e.currentTarget.style.color = "var(--text)";
-                          }}
-                        >
-                          Today
-                        </button>
-
-                        {/* +1 BD */}
-                        <button
-                          onClick={() => handleQuickDateBD(1)}
-                          style={chipStyle}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = "var(--accent)";
-                            e.currentTarget.style.color = "white";
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = "var(--panel-2)";
-                            e.currentTarget.style.color = "var(--text)";
-                          }}
-                        >
-                          +1 BD
-                        </button>
-
-                        {/* +2 BD */}
-                        <button
-                          onClick={() => handleQuickDateBD(2)}
-                          style={chipStyle}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = "var(--accent)";
-                            e.currentTarget.style.color = "white";
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = "var(--panel-2)";
-                            e.currentTarget.style.color = "var(--text)";
-                          }}
-                        >
-                          +2 BD
-                        </button>
-
-                        {/* Fri (end of week anchor) */}
-                        <button
-                          onClick={() => handleQuickDate(actions.nextFriday)}
-                          style={chipStyle}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = "var(--accent)";
-                            e.currentTarget.style.color = "white";
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = "var(--panel-2)";
-                            e.currentTarget.style.color = "var(--text)";
-                          }}
-                        >
-                          {settings.eowAnchor}
-                        </button>
-
-                        {/* Calendar icon */}
-                        <button
-                          onClick={() => setShowDatePicker(!showDatePicker)}
-                          style={chipStyle}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = "var(--accent)";
-                            e.currentTarget.style.color = "white";
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = "var(--panel-2)";
-                            e.currentTarget.style.color = "var(--text)";
-                          }}
-                        >
-                          📅
-                        </button>
-                      </>
-                    );
-                  })()}
-                </div>
-
-                {/* Inline date picker */}
-                {showDatePicker && (
-                  <div style={{ marginTop: "0.75rem" }}>
-                    <input
-                      type="date"
-                      onChange={handleDatePickerChange}
-                      defaultValue={result.due_at ? result.due_at.split('T')[0] : ''}
-                      style={{
-                        width: "100%",
-                        padding: "0.5rem",
-                        backgroundColor: "var(--panel-2)",
-                        color: "var(--text)",
-                        border: "1px solid var(--border)",
-                        borderRadius: "4px",
-                        fontSize: "0.9rem",
-                        cursor: "pointer",
-                      }}
-                    />
-                  </div>
-                )}
               </div>
             )}
           </div>
@@ -715,33 +678,77 @@ export default function TaskCard({
             marginBottom: "0.75rem",
           }}
         >
-          {/* Importance bar */}
+          {/* Importance bar - clickable for inline editing */}
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: "0.85rem", marginBottom: "0.25rem", color: "var(--muted)" }}>
               <strong>Importance:</strong> {result.importance}/100
             </div>
-            <div
-              style={{
-                height: "6px",
-                backgroundColor: "var(--panel)",
-                borderRadius: "3px",
-                overflow: "hidden",
-                border: "1px solid var(--border)",
-              }}
-            >
+            {!isEditingImportance && (id || onChange) ? (
               <div
+                onClick={() => setIsEditingImportance(true)}
                 style={{
-                  height: "100%",
-                  width: `${result.importance}%`,
-                  backgroundColor:
-                    result.importance > 75
-                      ? "var(--danger)"
-                      : result.importance > 50
-                      ? "var(--warn)"
-                      : "var(--accent-2)",
+                  height: "6px",
+                  backgroundColor: "var(--panel)",
+                  borderRadius: "3px",
+                  overflow: "hidden",
+                  border: "1px solid var(--border)",
+                  cursor: "pointer",
+                }}
+                title="Click to edit importance"
+              >
+                <div
+                  style={{
+                    height: "100%",
+                    width: `${result.importance}%`,
+                    backgroundColor:
+                      result.importance > 75
+                        ? "var(--danger)"
+                        : result.importance > 50
+                        ? "var(--warn)"
+                        : "var(--accent-2)",
+                  }}
+                />
+              </div>
+            ) : (id || onChange) ? (
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="5"
+                value={result.importance}
+                onChange={(e) => handleQuickImportance(Number(e.target.value))}
+                onBlur={() => setIsEditingImportance(false)}
+                autoFocus
+                style={{
+                  width: "100%",
+                  cursor: "pointer",
+                  accentColor: "var(--accent)",
                 }}
               />
-            </div>
+            ) : (
+              <div
+                style={{
+                  height: "6px",
+                  backgroundColor: "var(--panel)",
+                  borderRadius: "3px",
+                  overflow: "hidden",
+                  border: "1px solid var(--border)",
+                }}
+              >
+                <div
+                  style={{
+                    height: "100%",
+                    width: `${result.importance}%`,
+                    backgroundColor:
+                      result.importance > 75
+                        ? "var(--danger)"
+                        : result.importance > 50
+                        ? "var(--warn)"
+                        : "var(--accent-2)",
+                  }}
+                />
+              </div>
+            )}
           </div>
 
           {/* Energy pill */}
