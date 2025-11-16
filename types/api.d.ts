@@ -16,7 +16,7 @@ export interface Task {
   bucket?: PriorityBucket;
 
   importance?: number;       // 0–100
-  effort_min?: 5 | 15 | 30 | 60 | 120;
+  effort_min?: 5 | 15 | 30 | 60 | 90 | 120;
   energy?: EnergyLevel;
 
   due_at?: string | null;          // ISO 8601
@@ -47,7 +47,7 @@ export interface CleanTaskResponse {
   title: string;
   due_at: string | null;        // ISO 8601 or null
   scheduled_for?: string | null;
-  effort_min: 5 | 15 | 30 | 60 | 120;
+  effort_min: 5 | 15 | 30 | 60 | 90 | 120;
   energy: EnergyLevel;
   tags: string[];
   project: string | null;
@@ -68,7 +68,7 @@ export interface PrioritizeTaskInput {
   title: string;
   status: TaskStatus;
   importance?: number;
-  effort_min?: 5 | 15 | 30 | 60 | 120;
+  effort_min?: 5 | 15 | 30 | 60 | 90 | 120;
   energy?: EnergyLevel;
   due_at?: string | null;
   scheduled_for?: string | null;

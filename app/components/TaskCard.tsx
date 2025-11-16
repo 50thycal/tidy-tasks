@@ -47,6 +47,7 @@ export default function TaskCard({
   // Inline editing states
   const [isEditingImportance, setIsEditingImportance] = useState(false);
   const [isEditingDuration, setIsEditingDuration] = useState(false);
+  const [isEditingEnergy, setIsEditingEnergy] = useState(false);
   const [showDueQuickEdit, setShowDueQuickEdit] = useState(false);
 
   // Edit form state
@@ -66,6 +67,33 @@ export default function TaskCard({
   // Get settings for timezone
   const settings = getWorkSettings();
 
+  // Duration options and formatting
+  const EFFORT_OPTIONS = [5, 15, 30, 60, 90, 120];
+
+  const formatDuration = (minutes: number): string => {
+    if (minutes <= 30) {
+      return `${minutes} min`;
+    } else if (minutes < 90) {
+      return "1 hr";
+    } else if (minutes < 120) {
+      return "1.5 hr";
+    } else {
+      return "2 hr +";
+    }
+  };
+
+  const getDurationLabel = (minutes: number): string => {
+    switch (minutes) {
+      case 5: return "5 min";
+      case 15: return "15 min";
+      case 30: return "30 min";
+      case 60: return "1 hr";
+      case 90: return "1.5 hr";
+      case 120: return "2 hr +";
+      default: return formatDuration(minutes);
+    }
+  };
+
   // Close move menu on click outside
   useEffect(() => {
     if (!showMoveMenu) return;
@@ -80,6 +108,26 @@ export default function TaskCard({
     document.addEventListener('click', handleClickOutside);
     return () => document.removeEventListener('click', handleClickOutside);
   }, [showMoveMenu]);
+
+  // Close energy picker on click outside
+  useEffect(() => {
+    if (!isEditingEnergy) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const energySection = target.closest('[data-energy-edit]');
+      if (!energySection) {
+        setIsEditingEnergy(false);
+      }
+    };
+
+    // Small delay to prevent immediate closing when opening
+    setTimeout(() => {
+      document.addEventListener('click', handleClickOutside);
+    }, 0);
+
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [isEditingEnergy]);
 
   // Initialize date/time from due_at
   useEffect(() => {
@@ -125,7 +173,7 @@ export default function TaskCard({
         tags: coerceTags(tagsText),
         subtasks: coerceSubtasks(subtasksText),
         notes_append: notes.trim() || undefined,
-        effort_min: clampEnum(effortMin, [5, 15, 30, 60, 120], 15) as 5 | 15 | 30 | 60 | 120,
+        effort_min: clampEnum(effortMin, [5, 15, 30, 60, 90, 120], 15) as 5 | 15 | 30 | 60 | 90 | 120,
         energy: energy as "low" | "med" | "high",
         due_at: toIsoFromDateTime(dueDate, dueTime, settings.timezone),
       };
@@ -237,7 +285,7 @@ export default function TaskCard({
     if (!id && !onChange) return;
 
     try {
-      const patch = { effort_min: value as 5 | 15 | 30 | 60 | 120 };
+      const patch = { effort_min: value as 5 | 15 | 30 | 60 | 90 | 120 };
 
       // Update the task if we have an ID
       if (id) {
@@ -252,6 +300,29 @@ export default function TaskCard({
       console.log("Updated effort:", value);
     } catch (error) {
       console.error("Error updating effort:", error);
+    }
+  };
+
+  // Handle quick energy update
+  const handleQuickEnergy = (value: "low" | "med" | "high") => {
+    if (!id && !onChange) return;
+
+    try {
+      const patch = { energy: value };
+
+      // Update the task if we have an ID
+      if (id) {
+        updateInboxItemResult(id, patch);
+      }
+
+      // Notify parent to refresh
+      if (onChange) {
+        onChange(patch);
+      }
+
+      console.log("Updated energy:", value);
+    } catch (error) {
+      console.error("Error updating energy:", error);
     }
   };
 
@@ -480,7 +551,7 @@ export default function TaskCard({
                 style={{ cursor: "pointer", textDecoration: "underline", textDecorationStyle: "dotted" }}
                 title="Click to edit duration"
               >
-                {result.effort_min} min
+                {formatDuration(result.effort_min)}
               </span>
             ) : (id || onChange) ? (
               <select
@@ -501,14 +572,14 @@ export default function TaskCard({
                   cursor: "pointer",
                 }}
               >
-                <option value={5}>5 min</option>
-                <option value={15}>15 min</option>
-                <option value={30}>30 min</option>
-                <option value={60}>1 hr</option>
-                <option value={120}>2 hr</option>
+                {EFFORT_OPTIONS.map(minutes => (
+                  <option key={minutes} value={minutes}>
+                    {getDurationLabel(minutes)}
+                  </option>
+                ))}
               </select>
             ) : (
-              <span>{result.effort_min} min</span>
+              <span>{formatDuration(result.effort_min)}</span>
             )}
           </div>
         </div>
@@ -751,33 +822,99 @@ export default function TaskCard({
             )}
           </div>
 
-          {/* Energy pill */}
-          <div>
-            <span
-              style={{
-                display: "inline-block",
-                padding: "0.35rem 0.75rem",
-                backgroundColor:
-                  result.energy === "high"
-                    ? "color-mix(in srgb, var(--danger) 20%, transparent)"
-                    : result.energy === "med"
-                    ? "color-mix(in srgb, var(--warn) 20%, transparent)"
-                    : "color-mix(in srgb, var(--accent) 20%, transparent)",
-                color:
-                  result.energy === "high"
-                    ? "var(--danger)"
-                    : result.energy === "med"
-                    ? "var(--warn)"
-                    : "var(--accent)",
-                borderRadius: "12px",
-                fontSize: "0.75rem",
-                border: "1px solid var(--border)",
-                fontWeight: "600",
-                textTransform: "uppercase",
-              }}
-            >
-              {result.energy}
-            </span>
+          {/* Energy - clickable for inline editing */}
+          <div data-energy-edit>
+            {!isEditingEnergy && (id || onChange) ? (
+              <span
+                onClick={() => setIsEditingEnergy(true)}
+                style={{
+                  display: "inline-block",
+                  padding: "0.35rem 0.75rem",
+                  backgroundColor:
+                    result.energy === "high"
+                      ? "color-mix(in srgb, var(--danger) 20%, transparent)"
+                      : result.energy === "med"
+                      ? "color-mix(in srgb, var(--warn) 20%, transparent)"
+                      : "color-mix(in srgb, var(--accent) 20%, transparent)",
+                  color:
+                    result.energy === "high"
+                      ? "var(--danger)"
+                      : result.energy === "med"
+                      ? "var(--warn)"
+                      : "var(--accent)",
+                  borderRadius: "12px",
+                  fontSize: "0.75rem",
+                  border: "1px solid var(--border)",
+                  fontWeight: "600",
+                  textTransform: "uppercase",
+                  cursor: "pointer",
+                }}
+                title="Click to edit energy level"
+              >
+                {result.energy}
+              </span>
+            ) : (id || onChange) ? (
+              <div style={{ display: "flex", gap: "0.25rem" }}>
+                {(["low", "med", "high"] as const).map((level) => (
+                  <button
+                    key={level}
+                    onClick={() => {
+                      handleQuickEnergy(level);
+                      setIsEditingEnergy(false);
+                    }}
+                    style={{
+                      padding: "0.35rem 0.5rem",
+                      backgroundColor:
+                        result.energy === level
+                          ? level === "high"
+                            ? "var(--danger)"
+                            : level === "med"
+                            ? "var(--warn)"
+                            : "var(--accent)"
+                          : "var(--panel-2)",
+                      color:
+                        result.energy === level
+                          ? "white"
+                          : "var(--text)",
+                      border: "1px solid var(--border)",
+                      borderRadius: "4px",
+                      fontSize: "0.7rem",
+                      fontWeight: "600",
+                      textTransform: "uppercase",
+                      cursor: "pointer",
+                    }}
+                  >
+                    {level === "med" ? "Medium" : level}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <span
+                style={{
+                  display: "inline-block",
+                  padding: "0.35rem 0.75rem",
+                  backgroundColor:
+                    result.energy === "high"
+                      ? "color-mix(in srgb, var(--danger) 20%, transparent)"
+                      : result.energy === "med"
+                      ? "color-mix(in srgb, var(--warn) 20%, transparent)"
+                      : "color-mix(in srgb, var(--accent) 20%, transparent)",
+                  color:
+                    result.energy === "high"
+                      ? "var(--danger)"
+                      : result.energy === "med"
+                      ? "var(--warn)"
+                      : "var(--accent)",
+                  borderRadius: "12px",
+                  fontSize: "0.75rem",
+                  border: "1px solid var(--border)",
+                  fontWeight: "600",
+                  textTransform: "uppercase",
+                }}
+              >
+                {result.energy}
+              </span>
+            )}
           </div>
         </div>
 
