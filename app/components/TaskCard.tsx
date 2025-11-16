@@ -50,6 +50,7 @@ export default function TaskCard({
   const [project, setProject] = useState(result.project || "");
   const [tagsText, setTagsText] = useState((result.tags || []).join(", "));
   const [subtasksText, setSubtasksText] = useState((result.subtasks || []).join("\n"));
+  const [notes, setNotes] = useState(result.notes_append || "");
   const [effortMin, setEffortMin] = useState<number>(result.effort_min || 15);
   const [energy, setEnergy] = useState(result.energy || "med");
   const [dueDate, setDueDate] = useState("");
@@ -89,6 +90,7 @@ export default function TaskCard({
     setProject(result.project || "");
     setTagsText((result.tags || []).join(", "));
     setSubtasksText((result.subtasks || []).join("\n"));
+    setNotes(result.notes_append || "");
     setEffortMin(result.effort_min || 15);
     setEnergy(result.energy || "med");
     const { date, time } = splitIso(result.due_at);
@@ -118,6 +120,7 @@ export default function TaskCard({
         project: nullIfEmpty(project),
         tags: coerceTags(tagsText),
         subtasks: coerceSubtasks(subtasksText),
+        notes_append: notes.trim() || undefined,
         effort_min: clampEnum(effortMin, [5, 15, 30, 60, 120], 15) as 5 | 15 | 30 | 60 | 120,
         energy: energy as "low" | "med" | "high",
         due_at: toIsoFromDateTime(dueDate, dueTime, settings.timezone),
@@ -450,7 +453,7 @@ export default function TaskCard({
         >
           <div>
             <strong>Due:</strong>{" "}
-            <DateText value={result.due_at} tz={settings.timezone} variant="long" />
+            <DateText value={result.due_at} tz={settings.timezone} variant="short" />
           </div>
           <div>
             <strong>Duration:</strong> {result.effort_min} min
@@ -1262,6 +1265,27 @@ export default function TaskCard({
         {fieldErrors.subtasks && (
           <div style={errorStyle}>
             {fieldErrors.subtasks.map((err, idx) => (
+              <div key={idx}>{err}</div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Notes */}
+      <div style={{ marginBottom: "1rem" }}>
+        <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600" }}>
+          Notes (optional)
+        </label>
+        <textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          onKeyDown={(e) => handleKeyDown(e, false)} // Don't submit on Enter in textarea
+          style={{ ...inputStyle, minHeight: "80px", resize: "vertical" }}
+          placeholder="Additional notes or context for this task..."
+        />
+        {fieldErrors.notes_append && (
+          <div style={errorStyle}>
+            {fieldErrors.notes_append.map((err, idx) => (
               <div key={idx}>{err}</div>
             ))}
           </div>
