@@ -49,7 +49,13 @@ export default function TaskCard({
   const [isEditingImportance, setIsEditingImportance] = useState(false);
   const [isEditingDuration, setIsEditingDuration] = useState(false);
   const [isEditingEnergy, setIsEditingEnergy] = useState(false);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [isEditingProject, setIsEditingProject] = useState(false);
   const [showDueQuickEdit, setShowDueQuickEdit] = useState(false);
+
+  // Draft values for inline editing
+  const [draftTitle, setDraftTitle] = useState(result.title);
+  const [draftProject, setDraftProject] = useState(result.project || "");
 
   // Edit form state
   const [title, setTitle] = useState(result.title);
@@ -136,6 +142,20 @@ export default function TaskCard({
     setDueDate(date);
     setDueTime(time);
   }, [result.due_at]);
+
+  // Sync draft title when result changes
+  useEffect(() => {
+    if (!isEditingTitle) {
+      setDraftTitle(result.title);
+    }
+  }, [result.title, isEditingTitle]);
+
+  // Sync draft project when result changes
+  useEffect(() => {
+    if (!isEditingProject) {
+      setDraftProject(result.project || "");
+    }
+  }, [result.project, isEditingProject]);
 
   // Reset form when entering edit mode
   const handleEdit = () => {
@@ -327,6 +347,67 @@ export default function TaskCard({
     }
   };
 
+  // Handle inline title save
+  const handleTitleSave = () => {
+    if (!id && !onChange) return;
+
+    const trimmedTitle = draftTitle.trim();
+    if (!trimmedTitle) {
+      // Revert to original if empty
+      setDraftTitle(result.title);
+      setIsEditingTitle(false);
+      return;
+    }
+
+    try {
+      const patch = { title: trimmedTitle };
+
+      // Update the task if we have an ID
+      if (id) {
+        updateInboxItemResult(id, patch);
+      }
+
+      // Notify parent to refresh
+      if (onChange) {
+        onChange(patch);
+      }
+
+      setIsEditingTitle(false);
+      console.log("Updated title:", trimmedTitle);
+    } catch (error) {
+      console.error("Error updating title:", error);
+      setDraftTitle(result.title);
+      setIsEditingTitle(false);
+    }
+  };
+
+  // Handle inline project save
+  const handleProjectSave = () => {
+    if (!id && !onChange) return;
+
+    try {
+      const trimmedProject = draftProject.trim();
+      const patch = { project: trimmedProject || null };
+
+      // Update the task if we have an ID
+      if (id) {
+        updateInboxItemResult(id, patch);
+      }
+
+      // Notify parent to refresh
+      if (onChange) {
+        onChange(patch);
+      }
+
+      setIsEditingProject(false);
+      console.log("Updated project:", trimmedProject || null);
+    } catch (error) {
+      console.error("Error updating project:", error);
+      setDraftProject(result.project || "");
+      setIsEditingProject(false);
+    }
+  };
+
   // Helper: Add business days to a date
   const addBusinessDays = (startDate: Date, daysToAdd: number): string => {
     // Handle both V1 (workDays) and V2 (work_days) settings
@@ -491,13 +572,146 @@ export default function TaskCard({
         )}
 
         <div style={{ flex: 1, minWidth: 0 }}>
-        {/* Title */}
-        <h3 style={{ margin: "0 0 0.75rem 0", fontSize: "1.1rem", fontWeight: "600", color: "var(--text)" }}>
-          {result.title}
-        </h3>
+        {/* Title - inline editable */}
+        {!isEditingTitle && (id || onChange) ? (
+          <h3
+            onClick={() => {
+              setDraftTitle(result.title);
+              setIsEditingTitle(true);
+            }}
+            style={{
+              margin: "0 0 0.75rem 0",
+              fontSize: "1.1rem",
+              fontWeight: "600",
+              color: "var(--text)",
+              cursor: "pointer",
+              borderBottom: "2px dashed transparent",
+              transition: "border-bottom-color 0.2s",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderBottomColor = "var(--border)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderBottomColor = "transparent";
+            }}
+            title="Click to edit title"
+          >
+            {result.title}
+          </h3>
+        ) : isEditingTitle && (id || onChange) ? (
+          <input
+            type="text"
+            value={draftTitle}
+            onChange={(e) => setDraftTitle(e.target.value)}
+            onBlur={handleTitleSave}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                handleTitleSave();
+              } else if (e.key === "Escape") {
+                setDraftTitle(result.title);
+                setIsEditingTitle(false);
+              }
+            }}
+            autoFocus
+            style={{
+              margin: "0 0 0.75rem 0",
+              fontSize: "1.1rem",
+              fontWeight: "600",
+              color: "var(--text)",
+              backgroundColor: "var(--panel)",
+              border: "2px solid var(--accent)",
+              borderRadius: "4px",
+              padding: "0.25rem 0.5rem",
+              width: "100%",
+              fontFamily: "inherit",
+            }}
+          />
+        ) : (
+          <h3 style={{ margin: "0 0 0.75rem 0", fontSize: "1.1rem", fontWeight: "600", color: "var(--text)" }}>
+            {result.title}
+          </h3>
+        )}
 
-        {/* Project pill (no label) */}
-        {result.project && (
+        {/* Project - inline editable */}
+        {!isEditingProject && (id || onChange) ? (
+          <div style={{ marginBottom: "0.75rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            {result.project ? (
+              <span
+                onClick={() => {
+                  setDraftProject(result.project || "");
+                  setIsEditingProject(true);
+                }}
+                style={{
+                  display: "inline-block",
+                  padding: "0.25rem 0.75rem",
+                  backgroundColor: "color-mix(in srgb, var(--accent-2) 20%, transparent)",
+                  color: "var(--accent-2)",
+                  borderRadius: "12px",
+                  fontSize: "0.85rem",
+                  border: "1px solid var(--border)",
+                  fontWeight: "500",
+                  cursor: "pointer",
+                }}
+                title="Click to edit project"
+              >
+                {result.project}
+              </span>
+            ) : (
+              <button
+                onClick={() => {
+                  setDraftProject("");
+                  setIsEditingProject(true);
+                }}
+                style={{
+                  padding: "0.25rem 0.75rem",
+                  backgroundColor: "var(--panel)",
+                  color: "var(--muted)",
+                  border: "1px dashed var(--border)",
+                  borderRadius: "12px",
+                  fontSize: "0.85rem",
+                  cursor: "pointer",
+                  fontWeight: "500",
+                }}
+                title="Click to add project"
+              >
+                + Add project
+              </button>
+            )}
+          </div>
+        ) : isEditingProject && (id || onChange) ? (
+          <div style={{ marginBottom: "0.75rem" }}>
+            <input
+              type="text"
+              value={draftProject}
+              onChange={(e) => setDraftProject(e.target.value)}
+              onBlur={handleProjectSave}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleProjectSave();
+                } else if (e.key === "Escape") {
+                  setDraftProject(result.project || "");
+                  setIsEditingProject(false);
+                }
+              }}
+              autoFocus
+              placeholder="Enter project name"
+              style={{
+                fontSize: "0.85rem",
+                fontWeight: "500",
+                color: "var(--text)",
+                backgroundColor: "var(--panel)",
+                border: "2px solid var(--accent)",
+                borderRadius: "12px",
+                padding: "0.25rem 0.75rem",
+                width: "auto",
+                minWidth: "200px",
+                fontFamily: "inherit",
+              }}
+            />
+          </div>
+        ) : result.project ? (
           <div style={{ marginBottom: "0.75rem" }}>
             <span
               style={{
@@ -514,7 +728,7 @@ export default function TaskCard({
               {result.project}
             </span>
           </div>
-        )}
+        ) : null}
 
         {/* Due + Duration row */}
         <div
