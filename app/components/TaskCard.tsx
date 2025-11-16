@@ -2,7 +2,7 @@
 
 import { useState, useEffect, KeyboardEvent } from "react";
 import type { CleanTaskResponse } from "@/src/types";
-import { updateInboxItemResult } from "@/src/lib/clientStore";
+import { updateInboxItemResult, updateInboxItemStatus } from "@/src/lib/clientStore";
 import { getWorkSettings } from "@/src/lib/settings";
 import { validateTask } from "@/src/lib/validate";
 import { coerceTags, coerceSubtasks, nullIfEmpty, clampEnum } from "@/src/lib/uiCoerce";
@@ -42,6 +42,8 @@ export default function TaskCard({
   const [quickEditMode, setQuickEditMode] = useState<"importance" | "effort" | "due">("importance");
   const [isEditMode, setIsEditMode] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [showMoveMenu, setShowMoveMenu] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   // Edit form state
   const [title, setTitle] = useState(result.title);
@@ -58,6 +60,21 @@ export default function TaskCard({
 
   // Get settings for timezone
   const settings = getWorkSettings();
+
+  // Close move menu on click outside
+  useEffect(() => {
+    if (!showMoveMenu) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('[data-move-menu]')) {
+        setShowMoveMenu(false);
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [showMoveMenu]);
 
   // Initialize date/time from due_at
   useEffect(() => {
@@ -228,6 +245,131 @@ export default function TaskCard({
       console.log("Updated effort:", value);
     } catch (error) {
       console.error("Error updating effort:", error);
+    }
+  };
+
+  // Helper: Add business days to a date
+  const addBusinessDays = (startDate: Date, daysToAdd: number): string => {
+    // Handle both V1 (workDays) and V2 (work_days) settings
+    const workDaysArray: string[] = ('work_days' in settings
+      ? settings.work_days
+      : (settings.workDays || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'])) as string[];
+
+    const workDayNumbers = workDaysArray.map(day => {
+      const map: Record<string, number> = { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6 };
+      return map[day.toLowerCase()];
+    });
+
+    let currentDate = new Date(startDate);
+    let addedDays = 0;
+
+    while (addedDays < daysToAdd) {
+      currentDate.setDate(currentDate.getDate() + 1);
+      if (workDayNumbers.includes(currentDate.getDay())) {
+        addedDays++;
+      }
+    }
+
+    const year = currentDate.getFullYear();
+    const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+    const day = String(currentDate.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
+
+    // Use end of day time
+    const [hours, minutes] = settings.endOfDay.split(':');
+    return `${dateStr}T${hours}:${minutes}:00${getTimezoneOffset(currentDate)}`;
+  };
+
+  // Helper: Get timezone offset string
+  const getTimezoneOffset = (date: Date): string => {
+    const offset = date.getTimezoneOffset();
+    const offsetHours = Math.floor(Math.abs(offset) / 60);
+    const offsetMinutes = Math.abs(offset) % 60;
+    const offsetSign = offset <= 0 ? '+' : '-';
+    return `${offsetSign}${String(offsetHours).padStart(2, '0')}:${String(offsetMinutes).padStart(2, '0')}`;
+  };
+
+  // Handle quick date updates with business days
+  const handleQuickDateBD = (businessDays: number) => {
+    if (!id && !onChange) return;
+
+    try {
+      const now = new Date();
+      const newDueAt = addBusinessDays(now, businessDays);
+
+      // Update the task
+      if (id) {
+        updateInboxItemResult(id, { due_at: newDueAt });
+      }
+
+      // Notify parent
+      if (onChange) {
+        onChange({ due_at: newDueAt });
+      }
+
+      console.log("Updated due date:", newDueAt);
+    } catch (error) {
+      console.error("Error updating due date:", error);
+    }
+  };
+
+  // Handle date picker change
+  const handleDatePickerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!id && !onChange) return;
+
+    try {
+      const selectedDate = e.target.value; // YYYY-MM-DD
+      if (!selectedDate) return;
+
+      const [hours, minutes] = settings.endOfDay.split(':');
+      const newDueAt = `${selectedDate}T${hours}:${minutes}:00${getTimezoneOffset(new Date(selectedDate))}`;
+
+      // Update the task
+      if (id) {
+        updateInboxItemResult(id, { due_at: newDueAt });
+      }
+
+      // Notify parent
+      if (onChange) {
+        onChange({ due_at: newDueAt });
+      }
+
+      setShowDatePicker(false);
+      console.log("Updated due date:", newDueAt);
+    } catch (error) {
+      console.error("Error updating due date:", error);
+    }
+  };
+
+  // Handle move to specific bucket/status
+  const handleMoveTo = (destination: "inbox" | "now" | "next" | "later" | "backlog") => {
+    if (!id) return;
+
+    try {
+      // Update status based on destination
+      if (destination === "inbox") {
+        updateInboxItemStatus(id, "inbox");
+      } else {
+        // For now/next/later/backlog, set status to active
+        updateInboxItemStatus(id, "active");
+      }
+
+      // Store bucket in a custom property (not part of CleanTaskResponse schema)
+      // This is handled separately by the Focus page logic
+      const customUpdate = { ...result };
+      (customUpdate as any).bucket = destination;
+
+      // Notify parent if onChange provided
+      if (onChange) {
+        onChange(customUpdate);
+      }
+
+      // Close the menu
+      setShowMoveMenu(false);
+
+      console.log(`Moved task to ${destination}`);
+    } catch (error) {
+      console.error("Error moving task:", error);
     }
   };
 
@@ -426,136 +568,136 @@ export default function TaskCard({
               </div>
             )}
 
-            {/* Due date mode - business day buttons */}
+            {/* Due date mode - business day buttons + calendar */}
             {quickEditMode === "due" && id && (
-              <div
-                style={{
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: "0.5rem",
-                }}
-              >
-                {(() => {
-                  const actions = getQuickDateActions(settings, result.due_at);
-                  const chipStyle = {
-                    padding: "0.4rem 0.75rem",
-                    backgroundColor: "var(--panel-2)",
-                    color: "var(--text)",
-                    border: "1px solid var(--border)",
-                    borderRadius: "4px",
-                    fontSize: "0.8rem",
-                    cursor: "pointer",
-                    transition: "all 0.2s",
-                    fontWeight: "500" as const,
-                  };
+              <div>
+                <div
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: "0.5rem",
+                  }}
+                >
+                  {(() => {
+                    const actions = getQuickDateActions(settings, result.due_at);
+                    const chipStyle = {
+                      padding: "0.4rem 0.75rem",
+                      backgroundColor: "var(--panel-2)",
+                      color: "var(--text)",
+                      border: "1px solid var(--border)",
+                      borderRadius: "4px",
+                      fontSize: "0.8rem",
+                      cursor: "pointer",
+                      transition: "all 0.2s",
+                      fontWeight: "500" as const,
+                    };
 
-                  return (
-                    <>
-                      <button
-                        onClick={() => handleQuickDate(actions.today)}
-                        style={chipStyle}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = "var(--accent)";
-                          e.currentTarget.style.color = "white";
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = "var(--panel-2)";
-                          e.currentTarget.style.color = "var(--text)";
-                        }}
-                      >
-                        Today
-                      </button>
-                      <button
-                        onClick={() => handleQuickDate(actions.tomorrow)}
-                        style={chipStyle}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = "var(--accent)";
-                          e.currentTarget.style.color = "white";
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = "var(--panel-2)";
-                          e.currentTarget.style.color = "var(--text)";
-                        }}
-                      >
-                        Tomorrow
-                      </button>
-                      <button
-                        onClick={() => handleQuickDate(actions.nextFriday)}
-                        style={chipStyle}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = "var(--accent)";
-                          e.currentTarget.style.color = "white";
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = "var(--panel-2)";
-                          e.currentTarget.style.color = "var(--text)";
-                        }}
-                      >
-                        Next {settings.eowAnchor}
-                      </button>
-                      <button
-                        onClick={() => handleQuickDate(actions.nextWeek)}
-                        style={chipStyle}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = "var(--accent)";
-                          e.currentTarget.style.color = "white";
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = "var(--panel-2)";
-                          e.currentTarget.style.color = "var(--text)";
-                        }}
-                      >
-                        Next Week
-                      </button>
-                      <button
-                        onClick={() => handleQuickDate(actions.plusOneWeek)}
-                        style={chipStyle}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = "var(--accent)";
-                          e.currentTarget.style.color = "white";
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = "var(--panel-2)";
-                          e.currentTarget.style.color = "var(--text)";
-                        }}
-                      >
-                        +1w
-                      </button>
-                      <button
-                        onClick={() => handleQuickDate(actions.plusTwoWeeks)}
-                        style={chipStyle}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = "var(--accent)";
-                          e.currentTarget.style.color = "white";
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = "var(--panel-2)";
-                          e.currentTarget.style.color = "var(--text)";
-                        }}
-                      >
-                        +2w
-                      </button>
-                      <button
-                        onClick={() => handleQuickDate(actions.clear)}
-                        style={{
-                          ...chipStyle,
-                          color: "var(--danger)",
-                          borderColor: "var(--danger)",
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = "var(--danger)";
-                          e.currentTarget.style.color = "white";
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = "var(--panel-2)";
-                          e.currentTarget.style.color = "var(--danger)";
-                        }}
-                      >
-                        Clear
-                      </button>
-                    </>
-                  );
-                })()}
+                    return (
+                      <>
+                        {/* Today */}
+                        <button
+                          onClick={() => handleQuickDate(actions.today)}
+                          style={chipStyle}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = "var(--accent)";
+                            e.currentTarget.style.color = "white";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = "var(--panel-2)";
+                            e.currentTarget.style.color = "var(--text)";
+                          }}
+                        >
+                          Today
+                        </button>
+
+                        {/* +1 BD */}
+                        <button
+                          onClick={() => handleQuickDateBD(1)}
+                          style={chipStyle}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = "var(--accent)";
+                            e.currentTarget.style.color = "white";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = "var(--panel-2)";
+                            e.currentTarget.style.color = "var(--text)";
+                          }}
+                        >
+                          +1 BD
+                        </button>
+
+                        {/* +2 BD */}
+                        <button
+                          onClick={() => handleQuickDateBD(2)}
+                          style={chipStyle}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = "var(--accent)";
+                            e.currentTarget.style.color = "white";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = "var(--panel-2)";
+                            e.currentTarget.style.color = "var(--text)";
+                          }}
+                        >
+                          +2 BD
+                        </button>
+
+                        {/* Fri (end of week anchor) */}
+                        <button
+                          onClick={() => handleQuickDate(actions.nextFriday)}
+                          style={chipStyle}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = "var(--accent)";
+                            e.currentTarget.style.color = "white";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = "var(--panel-2)";
+                            e.currentTarget.style.color = "var(--text)";
+                          }}
+                        >
+                          {settings.eowAnchor}
+                        </button>
+
+                        {/* Calendar icon */}
+                        <button
+                          onClick={() => setShowDatePicker(!showDatePicker)}
+                          style={chipStyle}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = "var(--accent)";
+                            e.currentTarget.style.color = "white";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = "var(--panel-2)";
+                            e.currentTarget.style.color = "var(--text)";
+                          }}
+                        >
+                          📅
+                        </button>
+                      </>
+                    );
+                  })()}
+                </div>
+
+                {/* Inline date picker */}
+                {showDatePicker && (
+                  <div style={{ marginTop: "0.75rem" }}>
+                    <input
+                      type="date"
+                      onChange={handleDatePickerChange}
+                      defaultValue={result.due_at ? result.due_at.split('T')[0] : ''}
+                      style={{
+                        width: "100%",
+                        padding: "0.5rem",
+                        backgroundColor: "var(--panel-2)",
+                        color: "var(--text)",
+                        border: "1px solid var(--border)",
+                        borderRadius: "4px",
+                        fontSize: "0.9rem",
+                        cursor: "pointer",
+                      }}
+                    />
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -763,31 +905,78 @@ export default function TaskCard({
             {status === "done" ? "Mark as active" : "Mark done"}
           </button>
 
-          {/* Move */}
-          <button
-            type="button"
-            onClick={onMove || (() => {})}
-            disabled={!onMove}
-            style={{
-              borderRadius: "6px",
-              border: "1px solid var(--border)",
-              backgroundColor: "var(--background)",
-              padding: "0.25rem 0.75rem",
-              color: "var(--text)",
-              cursor: onMove ? "pointer" : "not-allowed",
-              opacity: onMove ? 1 : 0.5,
-            }}
-            onMouseEnter={(e) => {
-              if (onMove) {
-                e.currentTarget.style.backgroundColor = "var(--muted)";
-              }
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = "var(--background)";
-            }}
-          >
-            Move
-          </button>
+          {/* Move with dropdown menu */}
+          <div style={{ position: "relative" }} data-move-menu>
+            <button
+              type="button"
+              onClick={() => id ? setShowMoveMenu(!showMoveMenu) : (onMove ? onMove() : {})}
+              disabled={!id && !onMove}
+              style={{
+                borderRadius: "6px",
+                border: "1px solid var(--border)",
+                backgroundColor: "var(--background)",
+                padding: "0.25rem 0.75rem",
+                color: "var(--text)",
+                cursor: (id || onMove) ? "pointer" : "not-allowed",
+                opacity: (id || onMove) ? 1 : 0.5,
+              }}
+              onMouseEnter={(e) => {
+                if (id || onMove) {
+                  e.currentTarget.style.backgroundColor = "var(--muted)";
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "var(--background)";
+              }}
+            >
+              Move ▾
+            </button>
+
+            {/* Move menu dropdown */}
+            {showMoveMenu && id && (
+              <div
+                style={{
+                  position: "absolute",
+                  bottom: "100%",
+                  left: 0,
+                  marginBottom: "0.25rem",
+                  backgroundColor: "var(--panel)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "6px",
+                  boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+                  zIndex: 10,
+                  minWidth: "150px",
+                }}
+              >
+                {["inbox", "now", "next", "later", "backlog"].map((dest) => (
+                  <button
+                    key={dest}
+                    type="button"
+                    onClick={() => handleMoveTo(dest as "inbox" | "now" | "next" | "later" | "backlog")}
+                    style={{
+                      display: "block",
+                      width: "100%",
+                      textAlign: "left",
+                      padding: "0.5rem 0.75rem",
+                      backgroundColor: "transparent",
+                      border: "none",
+                      color: "var(--text)",
+                      cursor: "pointer",
+                      fontSize: "0.875rem",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = "var(--muted)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = "transparent";
+                    }}
+                  >
+                    {dest.charAt(0).toUpperCase() + dest.slice(1)}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* Edit */}
           <button
