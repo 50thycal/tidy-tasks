@@ -14,7 +14,10 @@ interface TaskCardProps {
   id?: string; // InboxItem ID for persistence
   result: CleanTaskResponse;
   showActions?: boolean;
-  onMoveToActive?: () => void;
+  status?: "inbox" | "active" | "done" | "snoozed"; // Task status for done toggle
+  onToggleDone?: () => void; // Toggle done/active
+  onMove?: () => void; // Move to different status
+  onMoveToActive?: () => void; // Legacy: Move to active
   onDelete?: () => void;
   onChange?: (patch: Partial<CleanTaskResponse>) => void; // Optional callback for parent updates
   selectable?: boolean; // Show checkbox for bulk selection
@@ -26,6 +29,9 @@ export default function TaskCard({
   id,
   result,
   showActions = false,
+  status,
+  onToggleDone,
+  onMove,
   onMoveToActive,
   onDelete,
   onChange,
@@ -719,53 +725,110 @@ export default function TaskCard({
           </div>
         )}
 
-        {/* Actions row (Edit + Actions) */}
-        <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem", paddingTop: "0.75rem", borderTop: "1px solid var(--border)" }}>
+        {/* Actions row */}
+        <div
+          style={{
+            marginTop: "1rem",
+            borderTop: "1px solid var(--border)",
+            paddingTop: "0.5rem",
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            justifyContent: "flex-end",
+            gap: "0.5rem",
+            fontSize: "0.875rem",
+          }}
+        >
+          {/* Mark done / Mark as active */}
+          {onToggleDone && (
+            <button
+              type="button"
+              onClick={onToggleDone}
+              style={{
+                borderRadius: "4px",
+                border: "1px solid var(--border)",
+                backgroundColor: "var(--panel)",
+                padding: "0.25rem 0.75rem",
+                color: "var(--text)",
+                cursor: "pointer",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "var(--panel-2)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "var(--panel)";
+              }}
+            >
+              {status === "done" ? "Mark as active" : "Mark done"}
+            </button>
+          )}
+
+          {/* Move */}
+          {onMove && (
+            <button
+              type="button"
+              onClick={onMove}
+              style={{
+                borderRadius: "4px",
+                border: "1px solid var(--border)",
+                backgroundColor: "var(--panel)",
+                padding: "0.25rem 0.75rem",
+                color: "var(--text)",
+                cursor: "pointer",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "var(--panel-2)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "var(--panel)";
+              }}
+            >
+              Move
+            </button>
+          )}
+
+          {/* Edit */}
           {(id || onChange) && (
             <button
+              type="button"
               onClick={handleEdit}
               style={{
-                padding: "0.5rem 1rem",
-                backgroundColor: "var(--panel)",
-                color: "var(--text)",
-                border: "1px solid var(--border)",
                 borderRadius: "4px",
+                border: "1px solid var(--border)",
+                backgroundColor: "var(--panel)",
+                padding: "0.25rem 0.75rem",
+                color: "var(--text)",
                 cursor: "pointer",
-                fontSize: "0.9rem",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "var(--panel-2)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "var(--panel)";
               }}
             >
               Edit
             </button>
           )}
 
-          {showActions && onMoveToActive && (
+          {/* Delete */}
+          {onDelete && (
             <button
-              onClick={onMoveToActive}
-              style={{
-                padding: "0.5rem 1rem",
-                backgroundColor: "var(--accent-2)",
-                color: "white",
-                border: "none",
-                borderRadius: "4px",
-                cursor: "pointer",
-                fontSize: "0.9rem",
-              }}
-            >
-              Move to Active
-            </button>
-          )}
-
-          {showActions && onDelete && (
-            <button
+              type="button"
               onClick={onDelete}
               style={{
-                padding: "0.5rem 1rem",
-                backgroundColor: "var(--danger)",
-                color: "white",
-                border: "none",
                 borderRadius: "4px",
+                border: "1px solid color-mix(in srgb, var(--danger) 50%, transparent)",
+                backgroundColor: "var(--panel)",
+                padding: "0.25rem 0.75rem",
+                color: "var(--danger)",
                 cursor: "pointer",
-                fontSize: "0.9rem",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "color-mix(in srgb, var(--danger) 10%, transparent)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "var(--panel)";
               }}
             >
               Delete
