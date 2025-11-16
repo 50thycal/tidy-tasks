@@ -14,6 +14,7 @@ interface TaskCardProps {
   id?: string; // InboxItem ID for persistence
   result: CleanTaskResponse;
   status?: "inbox" | "active" | "done" | "snoozed"; // Task status for done toggle
+  originalPrompt?: string; // Raw input before AI cleanup
   onToggleDone?: () => void; // Toggle done/active
   onMove?: () => void; // Move to different status
   onEdit?: () => void; // Open edit mode
@@ -28,6 +29,7 @@ export default function TaskCard({
   id,
   result,
   status,
+  originalPrompt,
   onToggleDone,
   onMove,
   onEdit,
@@ -1236,6 +1238,32 @@ export default function TaskCard({
           </div>
         )}
       </div>
+
+      {/* Original prompt - read-only */}
+      {originalPrompt && (
+        <div style={{ marginBottom: "1rem" }}>
+          <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600", fontSize: "0.85rem", color: "var(--muted)" }}>
+            Original prompt
+          </label>
+          <div
+            style={{
+              width: "100%",
+              backgroundColor: "var(--panel)",
+              color: "var(--text)",
+              border: "1px solid var(--border)",
+              borderRadius: "8px",
+              padding: "0.75rem",
+              fontSize: "0.85rem",
+              fontFamily: "inherit",
+              whiteSpace: "pre-wrap",
+              wordBreak: "break-word",
+              opacity: 0.85,
+            }}
+          >
+            {originalPrompt}
+          </div>
+        </div>
+      )}
 
       {/* Project */}
       <div style={{ marginBottom: "1rem" }}>

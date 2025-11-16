@@ -10,6 +10,7 @@ export interface Task {
   id: string;                // UUID
   title: string;             // verb-first
   notes?: string;
+  original_prompt?: string;  // Raw input before AI cleanup
   status: TaskStatus;
 
   priority_score?: number;   // 0–100

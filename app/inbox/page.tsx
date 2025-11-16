@@ -274,6 +274,7 @@ export default function InboxPage() {
                     id={item.id}
                     result={item.result}
                     status={item.status}
+                    originalPrompt={item.request?.raw_text}
                     onToggleDone={() => handleToggleDone(item.id)}
                     onMove={() => handleMove(item.id)}
                     onDelete={() => handleDelete(item.id)}
