@@ -9,6 +9,7 @@ export interface Metrics {
   tasksCompleted: number;
   aiCleans: number;
   aiPrioritizations: number;
+  aiAddNotes: number;
   updatedAt: string; // ISO
 }
 
@@ -20,6 +21,7 @@ const DEFAULT_METRICS: Metrics = {
   tasksCompleted: 0,
   aiCleans: 0,
   aiPrioritizations: 0,
+  aiAddNotes: 0,
   updatedAt: new Date().toISOString(),
 };
 
@@ -48,7 +50,7 @@ export async function getMetrics(): Promise<Metrics> {
 /**
  * Increment a specific metric counter
  */
-export async function inc(key: keyof Pick<Metrics, 'tasksCreated' | 'tasksCompleted' | 'aiCleans' | 'aiPrioritizations'>): Promise<void> {
+export async function inc(key: keyof Pick<Metrics, 'tasksCreated' | 'tasksCompleted' | 'aiCleans' | 'aiPrioritizations' | 'aiAddNotes'>): Promise<void> {
   if (typeof window === "undefined") return;
 
   try {

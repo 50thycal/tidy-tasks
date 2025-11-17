@@ -9,6 +9,7 @@ const DEFAULT_METRICS: Metrics = {
   tasksCompleted: 0,
   aiCleans: 0,
   aiPrioritizations: 0,
+  aiAddNotes: 0,
   updatedAt: new Date().toISOString(),
 };
 

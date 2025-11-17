@@ -54,8 +54,9 @@
           "title": { "type": "string", "minLength": 1 },
           "status": { "type": "string", "enum": ["inbox", "active", "done", "snoozed"] },
           "importance": { "type": "integer", "minimum": 0, "maximum": 100 },
-          "effort_min": { "type": "integer", "enum": [5, 15, 30, 60, 120] },
+          "effort_min": { "type": "integer", "enum": [5, 15, 30, 60, 90, 120] },
           "energy": { "type": "string", "enum": ["low", "med", "high"] },
+          "planned_day": { "type": ["string", "null"], "enum": ["mon", "tue", "wed", "thu", "fri", "weekend", null] },
           "due_at": { "type": ["string", "null"], "format": "date-time" },
           "scheduled_for": { "type": ["string", "null"], "format": "date-time" },
           "project": { "type": ["string", "null"] },
@@ -86,6 +87,7 @@
           "importance": 60,
           "effort_min": 30,
           "energy": "low",
+          "planned_day": "wed",
           "due_at": "2025-11-03T16:00:00-07:00",
           "project": "Account Ops",
           "tags": ["email", "report"]
@@ -97,6 +99,7 @@
           "importance": 78,
           "effort_min": 30,
           "energy": "low",
+          "planned_day": "thu",
           "due_at": "2025-11-04T17:00:00-07:00",
           "project": "Shawnee-Walker Segment 1",
           "tags": ["email", "client", "easement"]

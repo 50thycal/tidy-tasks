@@ -4,20 +4,23 @@
 export type TaskStatus = "inbox" | "active" | "done" | "snoozed";
 export type PriorityBucket = "now" | "next" | "later" | "backlog";
 export type EnergyLevel = "low" | "med" | "high";
+export type PlannedDay = "mon" | "tue" | "wed" | "thu" | "fri" | "weekend";
 
 // Matches schema/task.json (storage form)
 export interface Task {
   id: string;                // UUID
   title: string;             // verb-first
   notes?: string;
+  original_prompt?: string;  // Raw input before AI cleanup
   status: TaskStatus;
 
   priority_score?: number;   // 0–100
   bucket?: PriorityBucket;
 
   importance?: number;       // 0–100
-  effort_min?: 5 | 15 | 30 | 60 | 120;
+  effort_min?: 5 | 15 | 30 | 60 | 90 | 120;
   energy?: EnergyLevel;
+  planned_day?: PlannedDay | null;  // Planned work day
 
   due_at?: string | null;          // ISO 8601
   scheduled_for?: string | null;   // ISO 8601
@@ -47,8 +50,9 @@ export interface CleanTaskResponse {
   title: string;
   due_at: string | null;        // ISO 8601 or null
   scheduled_for?: string | null;
-  effort_min: 5 | 15 | 30 | 60 | 120;
+  effort_min: 5 | 15 | 30 | 60 | 90 | 120;
   energy: EnergyLevel;
+  planned_day?: PlannedDay | null;  // Planned work day
   tags: string[];
   project: string | null;
   subtasks: string[];
@@ -68,8 +72,9 @@ export interface PrioritizeTaskInput {
   title: string;
   status: TaskStatus;
   importance?: number;
-  effort_min?: 5 | 15 | 30 | 60 | 120;
+  effort_min?: 5 | 15 | 30 | 60 | 90 | 120;
   energy?: EnergyLevel;
+  planned_day?: PlannedDay | null;
   due_at?: string | null;
   scheduled_for?: string | null;
   project?: string | null;
@@ -98,6 +103,30 @@ export interface FocusQueueSummary {
   planned_minutes_now: number;
   remaining_capacity_minutes: number;
   alternates?: string[]; // task ids
+}
+
+// ---------- Add Notes ----------
+export interface TaskSummaryForNotes {
+  id: string;
+  title: string;
+  project?: string | null;
+  tags?: string[];
+  notes?: string;
+  importance?: number;
+  effort_min?: 5 | 15 | 30 | 60 | 90 | 120;
+  energy?: EnergyLevel;
+  planned_day?: PlannedDay | null;
+  due_at?: string | null;
+}
+
+export interface AddNotesRequest {
+  task: TaskSummaryForNotes;
+  new_note_raw: string;
+}
+
+export interface AddNotesResponse {
+  notes_append: string;
+  tags_to_add: string[];
 }
 
 // ---------- Weekly Summary ----------

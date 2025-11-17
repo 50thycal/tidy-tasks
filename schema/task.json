@@ -37,7 +37,7 @@
     },
     "effort_min": {
       "type": "integer",
-      "enum": [5, 15, 30, 60, 120],
+      "enum": [5, 15, 30, 60, 90, 120],
       "default": 15,
       "description": "Estimated focused effort in minutes"
     },
@@ -46,6 +46,11 @@
       "enum": ["low", "med", "high"],
       "default": "med",
       "description": "Likely energy requirement"
+    },
+    "planned_day": {
+      "type": ["string", "null"],
+      "enum": ["mon", "tue", "wed", "thu", "fri", "weekend", null],
+      "description": "Planned work day for this task"
     },
     "due_at": {
       "type": ["string", "null"],
@@ -92,6 +97,7 @@
       "importance": 78,
       "effort_min": 30,
       "energy": "low",
+      "planned_day": "wed",
       "due_at": "2025-11-03T17:00:00-07:00",
       "scheduled_for": null,
       "project": "Shawnee-Walker Segment 1",
