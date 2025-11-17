@@ -4,6 +4,7 @@
 export type TaskStatus = "inbox" | "active" | "done" | "snoozed";
 export type PriorityBucket = "now" | "next" | "later" | "backlog";
 export type EnergyLevel = "low" | "med" | "high";
+export type PlannedDay = "mon" | "tue" | "wed" | "thu" | "fri" | "weekend";
 
 // Matches schema/task.json (storage form)
 export interface Task {
@@ -19,6 +20,7 @@ export interface Task {
   importance?: number;       // 0–100
   effort_min?: 5 | 15 | 30 | 60 | 90 | 120;
   energy?: EnergyLevel;
+  planned_day?: PlannedDay | null;  // Planned work day
 
   due_at?: string | null;          // ISO 8601
   scheduled_for?: string | null;   // ISO 8601
@@ -50,6 +52,7 @@ export interface CleanTaskResponse {
   scheduled_for?: string | null;
   effort_min: 5 | 15 | 30 | 60 | 90 | 120;
   energy: EnergyLevel;
+  planned_day?: PlannedDay | null;  // Planned work day
   tags: string[];
   project: string | null;
   subtasks: string[];

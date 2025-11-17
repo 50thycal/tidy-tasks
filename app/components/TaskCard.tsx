@@ -51,6 +51,7 @@ export default function TaskCard({
   const [isEditingEnergy, setIsEditingEnergy] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isEditingProject, setIsEditingProject] = useState(false);
+  const [isEditingPlannedDay, setIsEditingPlannedDay] = useState(false);
   const [showDueQuickEdit, setShowDueQuickEdit] = useState(false);
 
   // Draft values for inline editing
@@ -408,6 +409,31 @@ export default function TaskCard({
     }
   };
 
+  // Handle planned day update
+  const handlePlannedDayUpdate = (value: "mon" | "tue" | "wed" | "thu" | "fri" | "weekend" | null) => {
+    if (!id && !onChange) return;
+
+    try {
+      const patch = { planned_day: value };
+
+      // Update the task if we have an ID
+      if (id) {
+        updateInboxItemResult(id, patch);
+      }
+
+      // Notify parent to refresh
+      if (onChange) {
+        onChange(patch);
+      }
+
+      setIsEditingPlannedDay(false);
+      console.log("Updated planned_day:", value);
+    } catch (error) {
+      console.error("Error updating planned_day:", error);
+      setIsEditingPlannedDay(false);
+    }
+  };
+
   // Helper: Add business days to a date
   const addBusinessDays = (startDate: Date, daysToAdd: number): string => {
     // Handle both V1 (workDays) and V2 (work_days) settings
@@ -633,51 +659,84 @@ export default function TaskCard({
           </h3>
         )}
 
-        {/* Project - inline editable */}
-        {!isEditingProject && (id || onChange) ? (
-          <div style={{ marginBottom: "0.75rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-            {result.project ? (
+        {/* Project + Planned Day row */}
+        {!isEditingProject && !isEditingPlannedDay && (id || onChange) ? (
+          <div style={{ marginBottom: "0.75rem", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.5rem" }}>
+            {/* Project on the left */}
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              {result.project ? (
+                <span
+                  onClick={() => {
+                    setDraftProject(result.project || "");
+                    setIsEditingProject(true);
+                  }}
+                  style={{
+                    display: "inline-block",
+                    padding: "0.25rem 0.75rem",
+                    backgroundColor: "color-mix(in srgb, var(--accent-2) 20%, transparent)",
+                    color: "var(--accent-2)",
+                    borderRadius: "12px",
+                    fontSize: "0.85rem",
+                    border: "1px solid var(--border)",
+                    fontWeight: "500",
+                    cursor: "pointer",
+                  }}
+                  title="Click to edit project"
+                >
+                  {result.project}
+                </span>
+              ) : (
+                <button
+                  onClick={() => {
+                    setDraftProject("");
+                    setIsEditingProject(true);
+                  }}
+                  style={{
+                    padding: "0.25rem 0.75rem",
+                    backgroundColor: "var(--panel)",
+                    color: "var(--muted)",
+                    border: "1px dashed var(--border)",
+                    borderRadius: "12px",
+                    fontSize: "0.85rem",
+                    cursor: "pointer",
+                    fontWeight: "500",
+                  }}
+                  title="Click to add project"
+                >
+                  + Add project
+                </button>
+              )}
+            </div>
+
+            {/* Planned Day on the right */}
+            <div>
               <span
-                onClick={() => {
-                  setDraftProject(result.project || "");
-                  setIsEditingProject(true);
-                }}
+                onClick={() => setIsEditingPlannedDay(true)}
                 style={{
                   display: "inline-block",
-                  padding: "0.25rem 0.75rem",
-                  backgroundColor: "color-mix(in srgb, var(--accent-2) 20%, transparent)",
-                  color: "var(--accent-2)",
-                  borderRadius: "12px",
-                  fontSize: "0.85rem",
-                  border: "1px solid var(--border)",
-                  fontWeight: "500",
+                  padding: "0.25rem 0.5rem",
+                  backgroundColor: result.planned_day
+                    ? "color-mix(in srgb, var(--accent) 20%, transparent)"
+                    : "var(--panel)",
+                  color: result.planned_day ? "var(--accent)" : "var(--muted)",
+                  borderRadius: "8px",
+                  fontSize: "0.75rem",
+                  border: result.planned_day ? "1px solid var(--border)" : "1px dashed var(--border)",
+                  fontWeight: "600",
                   cursor: "pointer",
+                  textTransform: "capitalize",
                 }}
-                title="Click to edit project"
+                title="Click to edit planned day"
               >
-                {result.project}
+                {result.planned_day === "mon" ? "Mon"
+                  : result.planned_day === "tue" ? "Tue"
+                  : result.planned_day === "wed" ? "Wed"
+                  : result.planned_day === "thu" ? "Thu"
+                  : result.planned_day === "fri" ? "Fri"
+                  : result.planned_day === "weekend" ? "Weekend"
+                  : "None"}
               </span>
-            ) : (
-              <button
-                onClick={() => {
-                  setDraftProject("");
-                  setIsEditingProject(true);
-                }}
-                style={{
-                  padding: "0.25rem 0.75rem",
-                  backgroundColor: "var(--panel)",
-                  color: "var(--muted)",
-                  border: "1px dashed var(--border)",
-                  borderRadius: "12px",
-                  fontSize: "0.85rem",
-                  cursor: "pointer",
-                  fontWeight: "500",
-                }}
-                title="Click to add project"
-              >
-                + Add project
-              </button>
-            )}
+            </div>
           </div>
         ) : isEditingProject && (id || onChange) ? (
           <div style={{ marginBottom: "0.75rem" }}>
@@ -710,6 +769,40 @@ export default function TaskCard({
                 fontFamily: "inherit",
               }}
             />
+          </div>
+        ) : isEditingPlannedDay && (id || onChange) ? (
+          <div style={{ marginBottom: "0.75rem" }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.25rem" }}>
+              {[null, "mon", "tue", "wed", "thu", "fri", "weekend"].map((day) => (
+                <button
+                  key={day || "none"}
+                  onClick={() => handlePlannedDayUpdate(day as "mon" | "tue" | "wed" | "thu" | "fri" | "weekend" | null)}
+                  style={{
+                    padding: "0.25rem 0.5rem",
+                    backgroundColor: result.planned_day === day
+                      ? "var(--accent)"
+                      : "var(--panel-2)",
+                    color: result.planned_day === day
+                      ? "white"
+                      : "var(--text)",
+                    border: "1px solid var(--border)",
+                    borderRadius: "8px",
+                    fontSize: "0.75rem",
+                    fontWeight: "600",
+                    cursor: "pointer",
+                    textTransform: "capitalize",
+                  }}
+                >
+                  {day === null ? "None"
+                    : day === "mon" ? "Mon"
+                    : day === "tue" ? "Tue"
+                    : day === "wed" ? "Wed"
+                    : day === "thu" ? "Thu"
+                    : day === "fri" ? "Fri"
+                    : "Weekend"}
+                </button>
+              ))}
+            </div>
           </div>
         ) : result.project ? (
           <div style={{ marginBottom: "0.75rem" }}>
