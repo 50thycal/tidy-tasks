@@ -481,7 +481,10 @@ export default function TaskCard({
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to add note");
+        console.error("Add notes API error:", errorData);
+        const errorMsg = errorData.error || "Failed to add note";
+        const details = errorData.details ? `\n\nDetails: ${JSON.stringify(errorData.details, null, 2)}` : "";
+        throw new Error(errorMsg + details);
       }
 
       const data = await response.json();

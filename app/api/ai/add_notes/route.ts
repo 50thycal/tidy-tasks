@@ -44,6 +44,8 @@ export async function POST(request: NextRequest) {
 
     // Validate request against schema
     if (!validateRequest(body)) {
+      console.error("Add notes validation failed:", JSON.stringify(validateRequest.errors, null, 2));
+      console.error("Request body:", JSON.stringify(body, null, 2));
       return NextResponse.json(
         { error: "Invalid request", details: validateRequest.errors },
         { status: 422 }
