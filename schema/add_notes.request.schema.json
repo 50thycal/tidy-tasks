@@ -1,0 +1,54 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://tidy.app/schema/add_notes.request.schema.json",
+  "title": "AddNotesRequest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["task", "new_note_raw"],
+  "properties": {
+    "task": {
+      "type": "object",
+      "required": ["id", "title"],
+      "additionalProperties": true,
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string", "minLength": 1 },
+        "project": { "type": ["string", "null"] },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "notes": { "type": "string" },
+        "importance": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "effort_min": { "type": "integer", "enum": [5, 15, 30, 60, 90, 120] },
+        "energy": { "type": "string", "enum": ["low", "med", "high"] },
+        "planned_day": { "type": ["string", "null"], "enum": ["mon", "tue", "wed", "thu", "fri", "weekend", null] },
+        "due_at": { "type": ["string", "null"], "format": "date-time" }
+      },
+      "description": "Current task context for AI to understand what the note is about"
+    },
+    "new_note_raw": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Raw messy note from the user to be cleaned by AI"
+    }
+  },
+  "examples": [
+    {
+      "task": {
+        "id": "t_change_order",
+        "title": "Send change order to John for Hines",
+        "project": "Hines – LLMR",
+        "tags": ["change-order", "hines"],
+        "notes": "Already discussed the grading issue last week.",
+        "importance": 80,
+        "effort_min": 60,
+        "energy": "med",
+        "planned_day": "wed",
+        "due_at": "2025-11-07T23:59:59Z"
+      },
+      "new_note_raw": "mention that grading issue was due to utility conflict on north access road, remind Brian to update schedule, cc John if needed"
+    }
+  ]
+}

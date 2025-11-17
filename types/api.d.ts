@@ -105,6 +105,30 @@ export interface FocusQueueSummary {
   alternates?: string[]; // task ids
 }
 
+// ---------- Add Notes ----------
+export interface TaskSummaryForNotes {
+  id: string;
+  title: string;
+  project?: string | null;
+  tags?: string[];
+  notes?: string;
+  importance?: number;
+  effort_min?: 5 | 15 | 30 | 60 | 90 | 120;
+  energy?: EnergyLevel;
+  planned_day?: PlannedDay | null;
+  due_at?: string | null;
+}
+
+export interface AddNotesRequest {
+  task: TaskSummaryForNotes;
+  new_note_raw: string;
+}
+
+export interface AddNotesResponse {
+  notes_append: string;
+  tags_to_add: string[];
+}
+
 // ---------- Weekly Summary ----------
 export interface WeeklySummaryTask {
   id: string;

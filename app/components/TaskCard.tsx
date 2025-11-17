@@ -44,6 +44,9 @@ export default function TaskCard({
   const [isSaving, setIsSaving] = useState(false);
   const [showMoveMenu, setShowMoveMenu] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showAddNotesModal, setShowAddNotesModal] = useState(false);
+  const [newNoteText, setNewNoteText] = useState("");
+  const [isSavingNote, setIsSavingNote] = useState(false);
 
   // Inline editing states
   const [isEditingImportance, setIsEditingImportance] = useState(false);
@@ -434,6 +437,87 @@ export default function TaskCard({
     } catch (error) {
       console.error("Error updating planned_day:", error);
       setIsEditingPlannedDay(false);
+    }
+  };
+
+  // Handle Add Notes
+  const handleAddNotes = async () => {
+    if (!newNoteText.trim()) {
+      alert("Please enter a note");
+      return;
+    }
+
+    if (isSavingNote) return;
+
+    setIsSavingNote(true);
+
+    try {
+      // Build task summary for AI
+      const taskSummary = {
+        id: id || "temp",
+        title: result.title,
+        project: result.project,
+        tags: result.tags,
+        notes: result.notes_append,
+        importance: result.importance,
+        effort_min: result.effort_min,
+        energy: result.energy,
+        planned_day: result.planned_day,
+        due_at: result.due_at,
+      };
+
+      // Call AI endpoint
+      const response = await fetch("/api/ai/add_notes", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-No-Train": "true",
+        },
+        body: JSON.stringify({
+          task: taskSummary,
+          new_note_raw: newNoteText,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to add note");
+      }
+
+      const data = await response.json();
+      const { notes_append, tags_to_add } = data;
+
+      // Update task with new notes and tags
+      const currentNotes = result.notes_append || "";
+      const updatedNotes = currentNotes ? `${currentNotes}\n\n${notes_append}` : notes_append;
+
+      const currentTags = result.tags || [];
+      const updatedTags = Array.from(new Set([...currentTags, ...tags_to_add]));
+
+      const patch = {
+        notes_append: updatedNotes,
+        tags: updatedTags,
+      };
+
+      // Update the task if we have an ID
+      if (id) {
+        updateInboxItemResult(id, patch);
+      }
+
+      // Notify parent to refresh
+      if (onChange) {
+        onChange(patch);
+      }
+
+      // Close modal and reset
+      setShowAddNotesModal(false);
+      setNewNoteText("");
+      console.log("Added note:", notes_append, "Added tags:", tags_to_add);
+    } catch (error) {
+      console.error("Error adding note:", error);
+      alert(`Failed to add note: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setIsSavingNote(false);
     }
   };
 
@@ -1459,6 +1543,28 @@ export default function TaskCard({
             Edit
           </button>
 
+          {/* Add notes */}
+          <button
+            type="button"
+            onClick={() => setShowAddNotesModal(true)}
+            style={{
+              borderRadius: "6px",
+              border: "1px solid var(--border)",
+              backgroundColor: "var(--background)",
+              padding: "0.25rem 0.75rem",
+              color: "var(--text)",
+              cursor: "pointer",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "var(--muted)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "var(--background)";
+            }}
+          >
+            Add notes
+          </button>
+
           {/* Delete */}
           <button
             type="button"
@@ -1810,6 +1916,155 @@ export default function TaskCard({
       <div style={{ fontSize: "0.85rem", color: "var(--muted)", marginTop: "0.75rem" }}>
         Press Enter to save, Esc to cancel
       </div>
+
+      {/* Add Notes Modal */}
+      {showAddNotesModal && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
+          onClick={() => {
+            if (!isSavingNote) {
+              setShowAddNotesModal(false);
+              setNewNoteText("");
+            }
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: "var(--panel-2)",
+              borderRadius: "8px",
+              padding: "1.5rem",
+              maxWidth: "600px",
+              width: "90%",
+              maxHeight: "80vh",
+              overflow: "auto",
+              border: "1px solid var(--border)",
+            }}
+          >
+            {/* Task title for context */}
+            <h3 style={{ margin: "0 0 1rem 0", fontSize: "1.2rem", fontWeight: "600", color: "var(--text)" }}>
+              {result.title}
+            </h3>
+
+            {/* Existing notes (read-only) */}
+            <div style={{ marginBottom: "1rem" }}>
+              <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600", fontSize: "0.9rem" }}>
+                Existing notes
+              </label>
+              {result.notes_append ? (
+                <div
+                  style={{
+                    backgroundColor: "var(--panel)",
+                    padding: "0.75rem",
+                    borderRadius: "6px",
+                    border: "1px solid var(--border)",
+                    maxHeight: "8rem",
+                    overflowY: "auto",
+                    fontSize: "0.85rem",
+                    color: "var(--text)",
+                    whiteSpace: "pre-wrap",
+                    wordBreak: "break-word",
+                  }}
+                >
+                  {result.notes_append}
+                </div>
+              ) : (
+                <div
+                  style={{
+                    backgroundColor: "var(--panel)",
+                    padding: "0.75rem",
+                    borderRadius: "6px",
+                    border: "1px dashed var(--border)",
+                    fontSize: "0.85rem",
+                    color: "var(--muted)",
+                    fontStyle: "italic",
+                  }}
+                >
+                  No notes yet for this task.
+                </div>
+              )}
+            </div>
+
+            {/* New note input */}
+            <div style={{ marginBottom: "1rem" }}>
+              <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600", fontSize: "0.9rem" }}>
+                New note
+              </label>
+              <textarea
+                value={newNoteText}
+                onChange={(e) => setNewNoteText(e.target.value)}
+                placeholder="Type your note about this task…"
+                autoFocus
+                style={{
+                  width: "100%",
+                  minHeight: "100px",
+                  backgroundColor: "var(--background)",
+                  color: "var(--text)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "6px",
+                  padding: "0.75rem",
+                  fontSize: "0.9rem",
+                  fontFamily: "inherit",
+                  resize: "vertical",
+                }}
+              />
+            </div>
+
+            {/* Actions */}
+            <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
+              <button
+                onClick={() => {
+                  setShowAddNotesModal(false);
+                  setNewNoteText("");
+                }}
+                disabled={isSavingNote}
+                style={{
+                  padding: "0.5rem 1rem",
+                  backgroundColor: "var(--panel)",
+                  color: "var(--text)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "6px",
+                  cursor: isSavingNote ? "not-allowed" : "pointer",
+                  fontSize: "0.9rem",
+                  opacity: isSavingNote ? 0.5 : 1,
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddNotes}
+                disabled={isSavingNote || !newNoteText.trim()}
+                style={{
+                  padding: "0.5rem 1rem",
+                  backgroundColor: isSavingNote || !newNoteText.trim() ? "var(--muted)" : "var(--accent)",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "6px",
+                  cursor: isSavingNote || !newNoteText.trim() ? "not-allowed" : "pointer",
+                  fontSize: "0.9rem",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                }}
+              >
+                {isSavingNote && <span>⏳</span>}
+                {isSavingNote ? "Cleaning…" : "Save with AI"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

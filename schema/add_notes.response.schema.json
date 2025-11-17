@@ -1,0 +1,27 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://tidy.app/schema/add_notes.response.schema.json",
+  "title": "AddNotesResponse",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["notes_append", "tags_to_add"],
+  "properties": {
+    "notes_append": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Cleaned-up note to append to the task's existing notes"
+    },
+    "tags_to_add": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true,
+      "description": "New tags to add to the task based on the note content"
+    }
+  },
+  "examples": [
+    {
+      "notes_append": "Grading issue was caused by utility conflict on north access road. Remind Brian to update schedule. CC John if needed.",
+      "tags_to_add": ["utility-conflict", "schedule-update"]
+    }
+  ]
+}
