@@ -39,6 +39,30 @@ export default function TaskCard({
   isSelected = false,
   onToggleSelect,
 }: TaskCardProps) {
+  // Local task state - this is what the UI renders from
+  const [localTask, setLocalTask] = useState(result);
+
+  // Sync local state when result prop changes
+  useEffect(() => {
+    setLocalTask(result);
+  }, [result]);
+
+  // Helper to apply patches to both local state and persistence
+  const applyPatch = (patch: Partial<CleanTaskResponse>) => {
+    // Update local state immediately for instant UI feedback
+    setLocalTask(prev => ({ ...prev, ...patch }));
+
+    // Persist to localStorage if we have an ID
+    if (id) {
+      updateInboxItemResult(id, patch);
+    }
+
+    // Notify parent component
+    if (onChange) {
+      onChange(patch);
+    }
+  };
+
   const [showDetails, setShowDetails] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -58,18 +82,18 @@ export default function TaskCard({
   const [showDueQuickEdit, setShowDueQuickEdit] = useState(false);
 
   // Draft values for inline editing
-  const [draftTitle, setDraftTitle] = useState(result.title);
-  const [draftProject, setDraftProject] = useState(result.project || "");
+  const [draftTitle, setDraftTitle] = useState(localTask.title);
+  const [draftProject, setDraftProject] = useState(localTask.project || "");
 
   // Edit form state
-  const [title, setTitle] = useState(result.title);
-  const [project, setProject] = useState(result.project || "");
-  const [tagsText, setTagsText] = useState((result.tags || []).join(", "));
-  const [subtasksText, setSubtasksText] = useState((result.subtasks || []).join("\n"));
-  const [notes, setNotes] = useState(result.notes_append || "");
-  const [effortMin, setEffortMin] = useState<number>(result.effort_min || 15);
-  const [energy, setEnergy] = useState(result.energy || "med");
-  const [plannedDay, setPlannedDay] = useState<"mon" | "tue" | "wed" | "thu" | "fri" | "weekend" | null>(result.planned_day || null);
+  const [title, setTitle] = useState(localTask.title);
+  const [project, setProject] = useState(localTask.project || "");
+  const [tagsText, setTagsText] = useState((localTask.tags || []).join(", "));
+  const [subtasksText, setSubtasksText] = useState((localTask.subtasks || []).join("\n"));
+  const [notes, setNotes] = useState(localTask.notes_append || "");
+  const [effortMin, setEffortMin] = useState<number>(localTask.effort_min || 15);
+  const [energy, setEnergy] = useState(localTask.energy || "med");
+  const [plannedDay, setPlannedDay] = useState<"mon" | "tue" | "wed" | "thu" | "fri" | "weekend" | null>(localTask.planned_day || null);
   const [dueDate, setDueDate] = useState("");
   const [dueTime, setDueTime] = useState("");
 
@@ -143,36 +167,36 @@ export default function TaskCard({
 
   // Initialize date/time from due_at
   useEffect(() => {
-    const { date, time } = splitIso(result.due_at);
+    const { date, time } = splitIso(localTask.due_at);
     setDueDate(date);
     setDueTime(time);
-  }, [result.due_at]);
+  }, [localTask.due_at]);
 
-  // Sync draft title when result changes
+  // Sync draft title when localTask changes
   useEffect(() => {
     if (!isEditingTitle) {
-      setDraftTitle(result.title);
+      setDraftTitle(localTask.title);
     }
-  }, [result.title, isEditingTitle]);
+  }, [localTask.title, isEditingTitle]);
 
-  // Sync draft project when result changes
+  // Sync draft project when localTask changes
   useEffect(() => {
     if (!isEditingProject) {
-      setDraftProject(result.project || "");
+      setDraftProject(localTask.project || "");
     }
-  }, [result.project, isEditingProject]);
+  }, [localTask.project, isEditingProject]);
 
   // Reset form when entering edit mode
   const handleEdit = () => {
-    setTitle(result.title);
-    setProject(result.project || "");
-    setTagsText((result.tags || []).join(", "));
-    setSubtasksText((result.subtasks || []).join("\n"));
-    setNotes(result.notes_append || "");
-    setEffortMin(result.effort_min || 15);
-    setEnergy(result.energy || "med");
-    setPlannedDay(result.planned_day || null);
-    const { date, time } = splitIso(result.due_at);
+    setTitle(localTask.title);
+    setProject(localTask.project || "");
+    setTagsText((localTask.tags || []).join(", "));
+    setSubtasksText((localTask.subtasks || []).join("\n"));
+    setNotes(localTask.notes_append || "");
+    setEffortMin(localTask.effort_min || 15);
+    setEnergy(localTask.energy || "med");
+    setPlannedDay(localTask.planned_day || null);
+    const { date, time } = splitIso(localTask.due_at);
     setDueDate(date);
     setDueTime(time);
     setFieldErrors({});
@@ -266,19 +290,11 @@ export default function TaskCard({
 
   // Handle quick date actions
   const handleQuickDate = (action: () => string | null) => {
-    if (!id) return; // Only works if we have an ID
+    if (!id && !onChange) return;
 
     try {
       const newDueAt = action();
-
-      // Update the task
-      updateInboxItemResult(id, { due_at: newDueAt });
-
-      // Notify parent to refresh
-      if (onChange) {
-        onChange({ due_at: newDueAt });
-      }
-
+      applyPatch({ due_at: newDueAt });
       console.log("Updated due date:", newDueAt);
     } catch (error) {
       console.error("Error updating due date:", error);
@@ -290,18 +306,7 @@ export default function TaskCard({
     if (!id && !onChange) return;
 
     try {
-      const patch = { importance: value };
-
-      // Update the task if we have an ID
-      if (id) {
-        updateInboxItemResult(id, patch);
-      }
-
-      // Notify parent to refresh
-      if (onChange) {
-        onChange(patch);
-      }
-
+      applyPatch({ importance: value });
       console.log("Updated importance:", value);
     } catch (error) {
       console.error("Error updating importance:", error);
@@ -313,18 +318,7 @@ export default function TaskCard({
     if (!id && !onChange) return;
 
     try {
-      const patch = { effort_min: value as 5 | 15 | 30 | 60 | 90 | 120 };
-
-      // Update the task if we have an ID
-      if (id) {
-        updateInboxItemResult(id, patch);
-      }
-
-      // Notify parent to refresh
-      if (onChange) {
-        onChange(patch);
-      }
-
+      applyPatch({ effort_min: value as 5 | 15 | 30 | 60 | 90 | 120 });
       console.log("Updated effort:", value);
     } catch (error) {
       console.error("Error updating effort:", error);
@@ -336,18 +330,7 @@ export default function TaskCard({
     if (!id && !onChange) return;
 
     try {
-      const patch = { energy: value };
-
-      // Update the task if we have an ID
-      if (id) {
-        updateInboxItemResult(id, patch);
-      }
-
-      // Notify parent to refresh
-      if (onChange) {
-        onChange(patch);
-      }
-
+      applyPatch({ energy: value });
       console.log("Updated energy:", value);
     } catch (error) {
       console.error("Error updating energy:", error);
@@ -361,29 +344,18 @@ export default function TaskCard({
     const trimmedTitle = draftTitle.trim();
     if (!trimmedTitle) {
       // Revert to original if empty
-      setDraftTitle(result.title);
+      setDraftTitle(localTask.title);
       setIsEditingTitle(false);
       return;
     }
 
     try {
-      const patch = { title: trimmedTitle };
-
-      // Update the task if we have an ID
-      if (id) {
-        updateInboxItemResult(id, patch);
-      }
-
-      // Notify parent to refresh
-      if (onChange) {
-        onChange(patch);
-      }
-
+      applyPatch({ title: trimmedTitle });
       setIsEditingTitle(false);
       console.log("Updated title:", trimmedTitle);
     } catch (error) {
       console.error("Error updating title:", error);
-      setDraftTitle(result.title);
+      setDraftTitle(localTask.title);
       setIsEditingTitle(false);
     }
   };
@@ -394,23 +366,12 @@ export default function TaskCard({
 
     try {
       const trimmedProject = draftProject.trim();
-      const patch = { project: trimmedProject || null };
-
-      // Update the task if we have an ID
-      if (id) {
-        updateInboxItemResult(id, patch);
-      }
-
-      // Notify parent to refresh
-      if (onChange) {
-        onChange(patch);
-      }
-
+      applyPatch({ project: trimmedProject || null });
       setIsEditingProject(false);
       console.log("Updated project:", trimmedProject || null);
     } catch (error) {
       console.error("Error updating project:", error);
-      setDraftProject(result.project || "");
+      setDraftProject(localTask.project || "");
       setIsEditingProject(false);
     }
   };
@@ -420,18 +381,7 @@ export default function TaskCard({
     if (!id && !onChange) return;
 
     try {
-      const patch = { planned_day: value };
-
-      // Update the task if we have an ID
-      if (id) {
-        updateInboxItemResult(id, patch);
-      }
-
-      // Notify parent to refresh
-      if (onChange) {
-        onChange(patch);
-      }
-
+      applyPatch({ planned_day: value });
       setIsEditingPlannedDay(false);
       console.log("Updated planned_day:", value);
     } catch (error) {
@@ -452,18 +402,18 @@ export default function TaskCard({
     setIsSavingNote(true);
 
     try {
-      // Build task summary for AI
+      // Build task summary for AI using current localTask state
       const taskSummary = {
         id: id || "temp",
-        title: result.title,
-        project: result.project,
-        tags: result.tags,
-        notes: result.notes_append,
-        importance: result.importance,
-        effort_min: result.effort_min,
-        energy: result.energy,
-        planned_day: result.planned_day,
-        due_at: result.due_at,
+        title: localTask.title,
+        project: localTask.project,
+        tags: localTask.tags,
+        notes: localTask.notes_append,
+        importance: localTask.importance,
+        effort_min: localTask.effort_min,
+        energy: localTask.energy,
+        planned_day: localTask.planned_day,
+        due_at: localTask.due_at,
       };
 
       // Call AI endpoint
@@ -492,45 +442,30 @@ export default function TaskCard({
 
       console.log("✅ AI response received:", { notes_append, tags_to_add });
 
-      // Update task with new notes and tags
-      const currentNotes = result.notes_append || "";
+      // Update task with new notes and tags using localTask
+      const currentNotes = localTask.notes_append || "";
       const updatedNotes = currentNotes ? `${currentNotes}\n\n${notes_append}` : notes_append;
 
-      const currentTags = result.tags || [];
+      const currentTags = localTask.tags || [];
       const updatedTags = Array.from(new Set([...currentTags, ...tags_to_add]));
 
-      const patch = {
-        notes_append: updatedNotes,
-        tags: updatedTags,
-      };
-
-      console.log("📝 Applying patch:", {
-        patch,
+      console.log("📝 Applying patch via applyPatch helper:", {
         taskId: id,
         currentNotes: currentNotes.substring(0, 50) + (currentNotes.length > 50 ? "..." : ""),
         updatedNotes: updatedNotes.substring(0, 50) + (updatedNotes.length > 50 ? "..." : ""),
+        newTags: tags_to_add,
       });
 
-      // Update the task if we have an ID
-      if (id) {
-        updateInboxItemResult(id, patch);
-        console.log("💾 Updated localStorage for task:", id);
-      } else {
-        console.warn("⚠️ No task ID - localStorage not updated");
-      }
-
-      // Notify parent to refresh
-      if (onChange) {
-        onChange(patch);
-        console.log("🔄 Called onChange callback");
-      } else {
-        console.warn("⚠️ No onChange callback provided");
-      }
+      // Use applyPatch to update local state and persistence atomically
+      applyPatch({
+        notes_append: updatedNotes,
+        tags: updatedTags,
+      });
 
       // Close modal and reset
       setShowAddNotesModal(false);
       setNewNoteText("");
-      console.log("✨ Successfully added note and tags");
+      console.log("✨ Successfully added note and tags via applyPatch");
     } catch (error) {
       console.error("Error adding note:", error);
       alert(`Failed to add note: ${error instanceof Error ? error.message : String(error)}`);
@@ -587,17 +522,7 @@ export default function TaskCard({
     try {
       const now = new Date();
       const newDueAt = addBusinessDays(now, businessDays);
-
-      // Update the task
-      if (id) {
-        updateInboxItemResult(id, { due_at: newDueAt });
-      }
-
-      // Notify parent
-      if (onChange) {
-        onChange({ due_at: newDueAt });
-      }
-
+      applyPatch({ due_at: newDueAt });
       console.log("Updated due date:", newDueAt);
     } catch (error) {
       console.error("Error updating due date:", error);
@@ -615,16 +540,7 @@ export default function TaskCard({
       const [hours, minutes] = settings.endOfDay.split(':');
       const newDueAt = `${selectedDate}T${hours}:${minutes}:00${getTimezoneOffset(new Date(selectedDate))}`;
 
-      // Update the task
-      if (id) {
-        updateInboxItemResult(id, { due_at: newDueAt });
-      }
-
-      // Notify parent
-      if (onChange) {
-        onChange({ due_at: newDueAt });
-      }
-
+      applyPatch({ due_at: newDueAt });
       setShowDatePicker(false);
       console.log("Updated due date:", newDueAt);
     } catch (error) {
@@ -697,7 +613,7 @@ export default function TaskCard({
                 cursor: "pointer",
                 accentColor: "var(--accent)",
               }}
-              aria-label={`Select ${result.title}`}
+              aria-label={`Select ${localTask.title}`}
             />
           </div>
         )}
@@ -707,7 +623,7 @@ export default function TaskCard({
         {!isEditingTitle && (id || onChange) ? (
           <h3
             onClick={() => {
-              setDraftTitle(result.title);
+              setDraftTitle(localTask.title);
               setIsEditingTitle(true);
             }}
             style={{
@@ -727,7 +643,7 @@ export default function TaskCard({
             }}
             title="Click to edit title"
           >
-            {result.title}
+            {localTask.title}
           </h3>
         ) : isEditingTitle && (id || onChange) ? (
           <input
@@ -740,7 +656,7 @@ export default function TaskCard({
                 e.preventDefault();
                 handleTitleSave();
               } else if (e.key === "Escape") {
-                setDraftTitle(result.title);
+                setDraftTitle(localTask.title);
                 setIsEditingTitle(false);
               }
             }}
@@ -760,7 +676,7 @@ export default function TaskCard({
           />
         ) : (
           <h3 style={{ margin: "0 0 0.75rem 0", fontSize: "1.1rem", fontWeight: "600", color: "var(--text)" }}>
-            {result.title}
+            {localTask.title}
           </h3>
         )}
 
@@ -769,10 +685,10 @@ export default function TaskCard({
           <div style={{ marginBottom: "0.75rem", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.5rem" }}>
             {/* Project on the left */}
             <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              {result.project ? (
+              {localTask.project ? (
                 <span
                   onClick={() => {
-                    setDraftProject(result.project || "");
+                    setDraftProject(localTask.project || "");
                     setIsEditingProject(true);
                   }}
                   style={{
@@ -788,7 +704,7 @@ export default function TaskCard({
                   }}
                   title="Click to edit project"
                 >
-                  {result.project}
+                  {localTask.project}
                 </span>
               ) : (
                 <button
@@ -820,25 +736,25 @@ export default function TaskCard({
                 style={{
                   display: "inline-block",
                   padding: "0.25rem 0.5rem",
-                  backgroundColor: result.planned_day
+                  backgroundColor: localTask.planned_day
                     ? "color-mix(in srgb, var(--accent) 20%, transparent)"
                     : "var(--panel)",
-                  color: result.planned_day ? "var(--accent)" : "var(--muted)",
+                  color: localTask.planned_day ? "var(--accent)" : "var(--muted)",
                   borderRadius: "8px",
                   fontSize: "0.75rem",
-                  border: result.planned_day ? "1px solid var(--border)" : "1px dashed var(--border)",
+                  border: localTask.planned_day ? "1px solid var(--border)" : "1px dashed var(--border)",
                   fontWeight: "600",
                   cursor: "pointer",
                   textTransform: "capitalize",
                 }}
                 title="Click to edit planned day"
               >
-                {result.planned_day === "mon" ? "Mon"
-                  : result.planned_day === "tue" ? "Tue"
-                  : result.planned_day === "wed" ? "Wed"
-                  : result.planned_day === "thu" ? "Thu"
-                  : result.planned_day === "fri" ? "Fri"
-                  : result.planned_day === "weekend" ? "Weekend"
+                {localTask.planned_day === "mon" ? "Mon"
+                  : localTask.planned_day === "tue" ? "Tue"
+                  : localTask.planned_day === "wed" ? "Wed"
+                  : localTask.planned_day === "thu" ? "Thu"
+                  : localTask.planned_day === "fri" ? "Fri"
+                  : localTask.planned_day === "weekend" ? "Weekend"
                   : "None"}
               </span>
             </div>
@@ -855,7 +771,7 @@ export default function TaskCard({
                   e.preventDefault();
                   handleProjectSave();
                 } else if (e.key === "Escape") {
-                  setDraftProject(result.project || "");
+                  setDraftProject(localTask.project || "");
                   setIsEditingProject(false);
                 }
               }}
@@ -884,10 +800,10 @@ export default function TaskCard({
                   onClick={() => handlePlannedDayUpdate(day as "mon" | "tue" | "wed" | "thu" | "fri" | "weekend" | null)}
                   style={{
                     padding: "0.25rem 0.5rem",
-                    backgroundColor: result.planned_day === day
+                    backgroundColor: localTask.planned_day === day
                       ? "var(--accent)"
                       : "var(--panel-2)",
-                    color: result.planned_day === day
+                    color: localTask.planned_day === day
                       ? "white"
                       : "var(--text)",
                     border: "1px solid var(--border)",
@@ -909,7 +825,7 @@ export default function TaskCard({
               ))}
             </div>
           </div>
-        ) : result.project ? (
+        ) : localTask.project ? (
           <div style={{ marginBottom: "0.75rem" }}>
             <span
               style={{
@@ -923,7 +839,7 @@ export default function TaskCard({
                 fontWeight: "500",
               }}
             >
-              {result.project}
+              {localTask.project}
             </span>
           </div>
         ) : null}
@@ -948,10 +864,10 @@ export default function TaskCard({
                 style={{ cursor: "pointer", textDecoration: "underline", textDecorationStyle: "dotted" }}
                 title="Click to edit due date"
               >
-                <DateText value={result.due_at} tz={settings.timezone} variant="short" />
+                <DateText value={localTask.due_at} tz={settings.timezone} variant="short" />
               </span>
             ) : (
-              <DateText value={result.due_at} tz={settings.timezone} variant="short" />
+              <DateText value={localTask.due_at} tz={settings.timezone} variant="short" />
             )}
           </div>
 
@@ -964,11 +880,11 @@ export default function TaskCard({
                 style={{ cursor: "pointer", textDecoration: "underline", textDecorationStyle: "dotted" }}
                 title="Click to edit duration"
               >
-                {formatDuration(result.effort_min)}
+                {formatDuration(localTask.effort_min)}
               </span>
             ) : (id || onChange) ? (
               <select
-                value={result.effort_min}
+                value={localTask.effort_min}
                 onChange={(e) => {
                   handleQuickEffort(Number(e.target.value));
                   setIsEditingDuration(false);
@@ -992,7 +908,7 @@ export default function TaskCard({
                 ))}
               </select>
             ) : (
-              <span>{formatDuration(result.effort_min)}</span>
+              <span>{formatDuration(localTask.effort_min)}</span>
             )}
           </div>
         </div>
@@ -1016,7 +932,7 @@ export default function TaskCard({
               }}
             >
               {(() => {
-                const actions = getQuickDateActions(settings, result.due_at);
+                const actions = getQuickDateActions(settings, localTask.due_at);
                 const chipStyle = {
                   padding: "0.4rem 0.75rem",
                   backgroundColor: "var(--panel-2)",
@@ -1136,7 +1052,7 @@ export default function TaskCard({
                     handleDatePickerChange(e);
                     setShowDueQuickEdit(false);
                   }}
-                  defaultValue={result.due_at ? result.due_at.split('T')[0] : ''}
+                  defaultValue={localTask.due_at ? localTask.due_at.split('T')[0] : ''}
                   style={{
                     width: "100%",
                     padding: "0.5rem",
@@ -1165,7 +1081,7 @@ export default function TaskCard({
           {/* Importance bar - clickable for inline editing */}
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: "0.85rem", marginBottom: "0.25rem", color: "var(--muted)" }}>
-              <strong>Importance:</strong> {result.importance}/100
+              <strong>Importance:</strong> {localTask.importance}/100
             </div>
             {!isEditingImportance && (id || onChange) ? (
               <div
@@ -1183,11 +1099,11 @@ export default function TaskCard({
                 <div
                   style={{
                     height: "100%",
-                    width: `${result.importance}%`,
+                    width: `${localTask.importance}%`,
                     backgroundColor:
-                      result.importance > 75
+                      localTask.importance > 75
                         ? "var(--danger)"
-                        : result.importance > 50
+                        : localTask.importance > 50
                         ? "var(--warn)"
                         : "var(--accent-2)",
                   }}
@@ -1199,7 +1115,7 @@ export default function TaskCard({
                 min="0"
                 max="100"
                 step="5"
-                value={result.importance}
+                value={localTask.importance}
                 onChange={(e) => handleQuickImportance(Number(e.target.value))}
                 onBlur={() => setIsEditingImportance(false)}
                 autoFocus
@@ -1222,11 +1138,11 @@ export default function TaskCard({
                 <div
                   style={{
                     height: "100%",
-                    width: `${result.importance}%`,
+                    width: `${localTask.importance}%`,
                     backgroundColor:
-                      result.importance > 75
+                      localTask.importance > 75
                         ? "var(--danger)"
-                        : result.importance > 50
+                        : localTask.importance > 50
                         ? "var(--warn)"
                         : "var(--accent-2)",
                   }}
@@ -1245,15 +1161,15 @@ export default function TaskCard({
                   display: "inline-block",
                   padding: "0.35rem 0.75rem",
                   backgroundColor:
-                    result.energy === "high"
+                    localTask.energy === "high"
                       ? "color-mix(in srgb, var(--danger) 20%, transparent)"
-                      : result.energy === "med"
+                      : localTask.energy === "med"
                       ? "color-mix(in srgb, var(--warn) 20%, transparent)"
                       : "color-mix(in srgb, var(--accent) 20%, transparent)",
                   color:
-                    result.energy === "high"
+                    localTask.energy === "high"
                       ? "var(--danger)"
-                      : result.energy === "med"
+                      : localTask.energy === "med"
                       ? "var(--warn)"
                       : "var(--accent)",
                   borderRadius: "12px",
@@ -1265,7 +1181,7 @@ export default function TaskCard({
                 }}
                 title="Click to edit difficulty level"
               >
-                {result.energy === "med" ? "Medium" : result.energy}
+                {localTask.energy === "med" ? "Medium" : localTask.energy}
               </span>
             ) : (id || onChange) ? (
               <div style={{ display: "flex", gap: "0.25rem" }}>
@@ -1279,7 +1195,7 @@ export default function TaskCard({
                     style={{
                       padding: "0.35rem 0.5rem",
                       backgroundColor:
-                        result.energy === level
+                        localTask.energy === level
                           ? level === "high"
                             ? "var(--danger)"
                             : level === "med"
@@ -1287,7 +1203,7 @@ export default function TaskCard({
                             : "var(--accent)"
                           : "var(--panel-2)",
                       color:
-                        result.energy === level
+                        localTask.energy === level
                           ? "white"
                           : "var(--text)",
                       border: "1px solid var(--border)",
@@ -1308,15 +1224,15 @@ export default function TaskCard({
                   display: "inline-block",
                   padding: "0.35rem 0.75rem",
                   backgroundColor:
-                    result.energy === "high"
+                    localTask.energy === "high"
                       ? "color-mix(in srgb, var(--danger) 20%, transparent)"
-                      : result.energy === "med"
+                      : localTask.energy === "med"
                       ? "color-mix(in srgb, var(--warn) 20%, transparent)"
                       : "color-mix(in srgb, var(--accent) 20%, transparent)",
                   color:
-                    result.energy === "high"
+                    localTask.energy === "high"
                       ? "var(--danger)"
-                      : result.energy === "med"
+                      : localTask.energy === "med"
                       ? "var(--warn)"
                       : "var(--accent)",
                   borderRadius: "12px",
@@ -1326,16 +1242,16 @@ export default function TaskCard({
                   textTransform: "uppercase",
                 }}
               >
-                {result.energy === "med" ? "Medium" : result.energy}
+                {localTask.energy === "med" ? "Medium" : localTask.energy}
               </span>
             )}
           </div>
         </div>
 
         {/* Collapsible More info section */}
-        {((result.tags && result.tags.length > 0) ||
-          (result.subtasks && result.subtasks.length > 0) ||
-          result.notes_append) && (
+        {((localTask.tags && localTask.tags.length > 0) ||
+          (localTask.subtasks && localTask.subtasks.length > 0) ||
+          localTask.notes_append) && (
           <div style={{ marginBottom: "0.75rem" }}>
             <button
               onClick={() => setShowDetails(!showDetails)}
@@ -1363,13 +1279,13 @@ export default function TaskCard({
                 }}
               >
                 {/* Tags */}
-                {result.tags && result.tags.length > 0 && (
-                  <div style={{ marginBottom: result.subtasks || result.notes_append ? "0.75rem" : "0" }}>
+                {localTask.tags && localTask.tags.length > 0 && (
+                  <div style={{ marginBottom: localTask.subtasks || localTask.notes_append ? "0.75rem" : "0" }}>
                     <strong style={{ fontSize: "0.85rem", color: "var(--muted)", display: "block", marginBottom: "0.5rem" }}>
                       Tags
                     </strong>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
-                      {result.tags.map((tag, idx) => (
+                      {localTask.tags.map((tag, idx) => (
                         <span
                           key={idx}
                           style={{
@@ -1389,13 +1305,13 @@ export default function TaskCard({
                 )}
 
                 {/* Subtasks */}
-                {result.subtasks && result.subtasks.length > 0 && (
-                  <div style={{ marginBottom: result.notes_append ? "0.75rem" : "0" }}>
+                {localTask.subtasks && localTask.subtasks.length > 0 && (
+                  <div style={{ marginBottom: localTask.notes_append ? "0.75rem" : "0" }}>
                     <strong style={{ fontSize: "0.85rem", color: "var(--muted)", display: "block", marginBottom: "0.5rem" }}>
                       Subtasks
                     </strong>
                     <ul style={{ margin: 0, padding: "0 0 0 1.25rem", fontSize: "0.85rem" }}>
-                      {result.subtasks.map((subtask, idx) => (
+                      {localTask.subtasks.map((subtask, idx) => (
                         <li key={idx} style={{ marginBottom: "0.25rem" }}>{subtask}</li>
                       ))}
                     </ul>
@@ -1403,7 +1319,7 @@ export default function TaskCard({
                 )}
 
                 {/* Notes */}
-                {result.notes_append && (
+                {localTask.notes_append && (
                   <div>
                     <strong style={{ fontSize: "0.85rem", color: "var(--muted)", display: "block", marginBottom: "0.5rem" }}>
                       Note
@@ -1417,7 +1333,7 @@ export default function TaskCard({
                         border: "1px solid var(--border)",
                       }}
                     >
-                      {result.notes_append}
+                      {localTask.notes_append}
                     </div>
                   </div>
                 )}
@@ -1972,7 +1888,7 @@ export default function TaskCard({
           >
             {/* Task title for context */}
             <h3 style={{ margin: "0 0 1rem 0", fontSize: "1.2rem", fontWeight: "600", color: "var(--text)" }}>
-              {result.title}
+              {localTask.title}
             </h3>
 
             {/* Existing notes (read-only) */}
@@ -1980,7 +1896,7 @@ export default function TaskCard({
               <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600", fontSize: "0.9rem" }}>
                 Existing notes
               </label>
-              {result.notes_append ? (
+              {localTask.notes_append ? (
                 <div
                   style={{
                     backgroundColor: "var(--panel)",
@@ -1995,7 +1911,7 @@ export default function TaskCard({
                     wordBreak: "break-word",
                   }}
                 >
-                  {result.notes_append}
+                  {localTask.notes_append}
                 </div>
               ) : (
                 <div
