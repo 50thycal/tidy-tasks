@@ -490,6 +490,8 @@ export default function TaskCard({
       const data = await response.json();
       const { notes_append, tags_to_add } = data;
 
+      console.log("✅ AI response received:", { notes_append, tags_to_add });
+
       // Update task with new notes and tags
       const currentNotes = result.notes_append || "";
       const updatedNotes = currentNotes ? `${currentNotes}\n\n${notes_append}` : notes_append;
@@ -502,20 +504,33 @@ export default function TaskCard({
         tags: updatedTags,
       };
 
+      console.log("📝 Applying patch:", {
+        patch,
+        taskId: id,
+        currentNotes: currentNotes.substring(0, 50) + (currentNotes.length > 50 ? "..." : ""),
+        updatedNotes: updatedNotes.substring(0, 50) + (updatedNotes.length > 50 ? "..." : ""),
+      });
+
       // Update the task if we have an ID
       if (id) {
         updateInboxItemResult(id, patch);
+        console.log("💾 Updated localStorage for task:", id);
+      } else {
+        console.warn("⚠️ No task ID - localStorage not updated");
       }
 
       // Notify parent to refresh
       if (onChange) {
         onChange(patch);
+        console.log("🔄 Called onChange callback");
+      } else {
+        console.warn("⚠️ No onChange callback provided");
       }
 
       // Close modal and reset
       setShowAddNotesModal(false);
       setNewNoteText("");
-      console.log("Added note:", notes_append, "Added tags:", tags_to_add);
+      console.log("✨ Successfully added note and tags");
     } catch (error) {
       console.error("Error adding note:", error);
       alert(`Failed to add note: ${error instanceof Error ? error.message : String(error)}`);
