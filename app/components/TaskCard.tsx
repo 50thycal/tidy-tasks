@@ -580,20 +580,22 @@ export default function TaskCard({
     }
   };
 
-  // View mode
-  if (!isEditMode) {
-    return (
-      <div
-        style={{
-          border: "1px solid var(--border)",
-          borderRadius: "8px",
-          padding: "1rem",
-          backgroundColor: "var(--panel-2)",
-          color: "var(--text)",
-          display: "flex",
-          gap: "0.75rem",
-        }}
-      >
+  // Render view mode or edit mode
+  return (
+    <>
+      {!isEditMode ? (
+        // View mode
+        <div
+          style={{
+            border: "1px solid var(--border)",
+            borderRadius: "8px",
+            padding: "1rem",
+            backgroundColor: "var(--panel-2)",
+            color: "var(--text)",
+            display: "flex",
+            gap: "0.75rem",
+          }}
+        >
         {/* Selection checkbox */}
         {selectable && (
           <div style={{ display: "flex", alignItems: "flex-start", paddingTop: "0.125rem" }}>
@@ -1527,29 +1529,29 @@ export default function TaskCard({
         </div>
         </div>
       </div>
-    );
-  }
+      ) : (
+        // Edit mode
+        <>
+        {(() => {
+          const inputStyle = {
+            width: "100%",
+            backgroundColor: "var(--panel-2)",
+            color: "var(--text)",
+            border: "1px solid var(--border)",
+            borderRadius: "8px",
+            padding: "0.75rem",
+            fontSize: "1rem",
+            fontFamily: "inherit",
+          };
 
-  // Edit mode
-  const inputStyle = {
-    width: "100%",
-    backgroundColor: "var(--panel-2)",
-    color: "var(--text)",
-    border: "1px solid var(--border)",
-    borderRadius: "8px",
-    padding: "0.75rem",
-    fontSize: "1rem",
-    fontFamily: "inherit",
-  };
+          const errorStyle = {
+            color: "var(--danger)",
+            fontSize: "0.85rem",
+            marginTop: "0.25rem",
+          };
 
-  const errorStyle = {
-    color: "var(--danger)",
-    fontSize: "0.85rem",
-    marginTop: "0.25rem",
-  };
-
-  return (
-    <div
+          return (
+            <div
       style={{
         border: "1px solid var(--border)",
         borderRadius: "8px",
@@ -1847,11 +1849,16 @@ export default function TaskCard({
         </button>
       </div>
 
-      <div style={{ fontSize: "0.85rem", color: "var(--muted)", marginTop: "0.75rem" }}>
-        Press Enter to save, Esc to cancel
-      </div>
+            <div style={{ fontSize: "0.85rem", color: "var(--muted)", marginTop: "0.75rem" }}>
+              Press Enter to save, Esc to cancel
+            </div>
+          </div>
+          );
+        })()}
+        </>
+      )}
 
-      {/* Add Notes Modal */}
+      {/* Add Notes Modal - always rendered regardless of edit mode */}
       {showAddNotesModal && (
         <div
           style={{
@@ -1999,6 +2006,6 @@ export default function TaskCard({
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
