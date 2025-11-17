@@ -74,6 +74,7 @@ export interface PrioritizeTaskInput {
   importance?: number;
   effort_min?: 5 | 15 | 30 | 60 | 90 | 120;
   energy?: EnergyLevel;
+  planned_day?: PlannedDay | null;
   due_at?: string | null;
   scheduled_for?: string | null;
   project?: string | null;

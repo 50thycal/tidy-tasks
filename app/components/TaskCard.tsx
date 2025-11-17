@@ -66,6 +66,7 @@ export default function TaskCard({
   const [notes, setNotes] = useState(result.notes_append || "");
   const [effortMin, setEffortMin] = useState<number>(result.effort_min || 15);
   const [energy, setEnergy] = useState(result.energy || "med");
+  const [plannedDay, setPlannedDay] = useState<"mon" | "tue" | "wed" | "thu" | "fri" | "weekend" | null>(result.planned_day || null);
   const [dueDate, setDueDate] = useState("");
   const [dueTime, setDueTime] = useState("");
 
@@ -167,6 +168,7 @@ export default function TaskCard({
     setNotes(result.notes_append || "");
     setEffortMin(result.effort_min || 15);
     setEnergy(result.energy || "med");
+    setPlannedDay(result.planned_day || null);
     const { date, time } = splitIso(result.due_at);
     setDueDate(date);
     setDueTime(time);
@@ -197,6 +199,7 @@ export default function TaskCard({
         notes_append: notes.trim() || undefined,
         effort_min: clampEnum(effortMin, [5, 15, 30, 60, 90, 120], 15) as 5 | 15 | 30 | 60 | 90 | 120,
         energy: energy as "low" | "med" | "high",
+        planned_day: plannedDay,
         due_at: toIsoFromDateTime(dueDate, dueTime, settings.timezone),
       };
 
@@ -1668,6 +1671,34 @@ export default function TaskCard({
         {fieldErrors.energy && (
           <div style={errorStyle}>
             {fieldErrors.energy.map((err, idx) => (
+              <div key={idx}>{err}</div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Planned work day */}
+      <div style={{ marginBottom: "1rem" }}>
+        <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600" }}>
+          Planned work day
+        </label>
+        <select
+          value={plannedDay || ""}
+          onChange={(e) => setPlannedDay(e.target.value === "" ? null : e.target.value as "mon" | "tue" | "wed" | "thu" | "fri" | "weekend")}
+          onKeyDown={(e) => handleKeyDown(e)}
+          style={inputStyle}
+        >
+          <option value="">None</option>
+          <option value="mon">Mon</option>
+          <option value="tue">Tue</option>
+          <option value="wed">Wed</option>
+          <option value="thu">Thu</option>
+          <option value="fri">Fri</option>
+          <option value="weekend">Weekend</option>
+        </select>
+        {fieldErrors.planned_day && (
+          <div style={errorStyle}>
+            {fieldErrors.planned_day.map((err, idx) => (
               <div key={idx}>{err}</div>
             ))}
           </div>

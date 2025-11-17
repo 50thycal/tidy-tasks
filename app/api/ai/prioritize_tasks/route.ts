@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
             t.importance ?? "unspecified"
           }\n  Effort: ${t.effort_min ?? "unspecified"} min\n  Energy: ${
             t.energy ?? "unspecified"
-          }\n  Due: ${t.due_at ?? "no deadline"}\n  Project: ${t.project ?? "none"}\n  Tags: ${
+          }\n  Planned day: ${t.planned_day ?? "not set"}\n  Due: ${t.due_at ?? "no deadline"}\n  Project: ${t.project ?? "none"}\n  Tags: ${
             t.tags?.join(", ") ?? "none"
           }`
       )

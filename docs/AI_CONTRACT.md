@@ -31,6 +31,11 @@ Implement two endpoints that transform messy tasks into structured objects and g
      1. call LLM with "Prioritize — system prompt" from SPEC.md
      2. validate against `prioritize.response.schema.json`
      3. return JSON or 422
+   - Task fields available to AI:
+     - **planned_day** (optional): one of "mon", "tue", "wed", "thu", "fri", "weekend", or null.
+       Represents when the user intends to work on the task. This is a soft signal — when possible,
+       align "Now"/"Next" suggestions with tasks whose planned_day matches the current day and whose
+       due dates/importance justify focus. The AI should use this as a hint but not as a hard constraint.
 
 ## Model Prompts (from SPEC.md)
 - "Clean Task — system" and "Prioritize — system" exactly as in SPEC.md.
