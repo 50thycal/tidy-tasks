@@ -67,6 +67,12 @@ export interface TidySettingsDocV1 {
   work: WorkSettingsV1;
 }
 
+// Privacy Settings for AI redaction
+export interface PrivacySettings {
+  enabled: boolean; // default: false
+  redactionMode: "none" | "emails_phones" | "emails_phones_names";
+}
+
 // V2 Settings (current)
 export interface WorkSettingsV2 {
   version: 2;
@@ -86,6 +92,7 @@ export interface WorkSettingsV2 {
     digestTime: string;
     lastDigestDate?: string;
   };
+  privacy?: PrivacySettings;
 }
 
 export interface TidySettingsDocV2 {

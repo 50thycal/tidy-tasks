@@ -64,6 +64,7 @@ export default function TaskCard({
   };
 
   const [showDetails, setShowDetails] = useState(false);
+  const [showJson, setShowJson] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showMoveMenu, setShowMoveMenu] = useState(false);
@@ -1322,7 +1323,7 @@ export default function TaskCard({
 
                 {/* Notes */}
                 {localTask.notes_append && (
-                  <div>
+                  <div style={{ marginBottom: "0.75rem" }}>
                     <strong style={{ fontSize: "0.85rem", color: "var(--muted)", display: "block", marginBottom: "0.5rem" }}>
                       Note
                     </strong>
@@ -1338,6 +1339,46 @@ export default function TaskCard({
                       {localTask.notes_append}
                     </div>
                   </div>
+                )}
+
+                {/* JSON Debug Toggle */}
+                <div style={{ marginTop: "0.5rem", display: "flex", justifyContent: "flex-end" }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowJson(!showJson)}
+                    style={{
+                      fontSize: "0.7rem",
+                      color: "var(--muted)",
+                      textDecoration: "underline",
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      padding: "0.25rem",
+                    }}
+                  >
+                    {showJson ? "Hide JSON" : "Show JSON"}
+                  </button>
+                </div>
+
+                {/* JSON Debug View */}
+                {showJson && (
+                  <pre
+                    style={{
+                      marginTop: "0.5rem",
+                      borderRadius: "4px",
+                      backgroundColor: "var(--panel-2)",
+                      padding: "0.5rem",
+                      fontSize: "10px",
+                      lineHeight: "1.3",
+                      overflowX: "auto",
+                      whiteSpace: "pre",
+                      border: "1px solid var(--border)",
+                      maxHeight: "300px",
+                      overflowY: "auto",
+                    }}
+                  >
+                    {JSON.stringify(localTask, null, 2)}
+                  </pre>
                 )}
               </div>
             )}

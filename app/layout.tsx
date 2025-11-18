@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import TopNav from "./components/TopNav";
+import { AppShell } from "./components/AppShell";
 import DigestScheduler from "./components/DigestScheduler";
 import RegisterSW from "./register-sw";
 import SwListener from "./sw-listener";
@@ -36,8 +36,7 @@ export default function RootLayout({
         <SwListener />
         <DigestScheduler />
         <EnvBanner />
-        <TopNav />
-        <div className="min-h-screen">{children}</div>
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );
