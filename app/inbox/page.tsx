@@ -1,15 +1,14 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import TaskForm from "@/app/components/TaskForm";
 import TaskCard from "@/app/components/TaskCard";
 import SearchBar from "@/app/components/SearchBar";
 import NotifyBanner from "@/app/components/NotifyBanner";
 import InstallCTA from "@/app/components/InstallCTA";
 import BulkBar from "@/app/components/BulkBar";
+import { FloatingAddTaskButton } from "@/app/components/FloatingAddTaskButton";
 import {
   getInboxItems,
-  saveInboxItem,
   updateInboxItemStatus,
   deleteInboxItem,
   bulkMarkDone,
@@ -18,8 +17,6 @@ import {
   type InboxItem,
 } from "@/src/lib/clientStore";
 import { getWorkSettings } from "@/src/lib/settings";
-import { inc } from "@/src/db/metrics";
-import type { CleanTaskRequest, CleanTaskResponse } from "@/src/types";
 import { applyFilters, DEFAULT_FILTERS, type Filters } from "@/src/lib/filter";
 import { getDistinctProjects, getDistinctTags } from "@/src/db/queries";
 import { getQuickDateActions } from "@/src/lib/quickdates";
@@ -47,46 +44,6 @@ export default function InboxPage() {
   const filteredItems = useMemo(() => {
     return applyFilters(items, filters, settings);
   }, [items, filters, settings]);
-
-  // Handle form submission
-  const handleSubmit = async (request: CleanTaskRequest): Promise<CleanTaskResponse> => {
-    const response = await fetch("/api/ai/clean_task", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ ...request, settings }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-
-      if (response.status === 422) {
-        // Validation error
-        const details = errorData.details || errorData.error;
-        throw new Error(`Validation failed: ${JSON.stringify(details)}`);
-      }
-
-      throw new Error(errorData.error || `HTTP ${response.status}`);
-    }
-
-    return await response.json();
-  };
-
-  // Handle successful cleaning
-  const handleSuccess = async (result: CleanTaskResponse, request: CleanTaskRequest) => {
-    const newItem: InboxItem = {
-      id: crypto.randomUUID(),
-      created_at: new Date().toISOString(),
-      request,
-      result,
-      status: "inbox",
-    };
-
-    saveInboxItem(newItem);
-    await inc('tasksCreated');
-    setItems(getInboxItems());
-  };
 
   // Handle toggle done
   const handleToggleDone = (id: string) => {
@@ -182,21 +139,8 @@ export default function InboxPage() {
 
         <h1 style={{ marginBottom: "1rem" }}>Inbox</h1>
         <p style={{ color: "var(--muted)", marginBottom: "2rem" }}>
-          Paste a messy task description below and let AI clean it up.
+          Your task inbox. Use the + button to quickly add tasks, or go to Capture for bulk AI cleanup.
         </p>
-
-        {/* Task Form */}
-        <div
-          style={{
-            marginBottom: "3rem",
-            padding: "1rem",
-            backgroundColor: "var(--panel)",
-            border: "1px solid var(--border)",
-            borderRadius: "12px",
-          }}
-        >
-          <TaskForm onSubmit={handleSubmit} onSuccess={handleSuccess} />
-        </div>
 
         {/* Saved Items List */}
         <div>
@@ -226,7 +170,7 @@ export default function InboxPage() {
                 color: "var(--muted)",
               }}
             >
-              No tasks yet. Use the form above to clean your first task.
+              No tasks yet. Use the + button to add your first task, or visit Capture to import multiple tasks.
             </div>
           ) : filteredItems.length === 0 ? (
             <div
@@ -298,6 +242,9 @@ export default function InboxPage() {
         onDue={handleBulkDue}
         onCancel={handleBulkCancel}
       />
+
+      {/* Floating Add Task Button */}
+      <FloatingAddTaskButton defaultBucket="inbox" onTaskAdded={() => setItems(getInboxItems())} />
     </div>
   );
 }

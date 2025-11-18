@@ -11,6 +11,7 @@ import CapacityBar from "@/app/components/CapacityBar";
 import FocusBucket from "@/app/components/FocusBucket";
 import FocusControls from "@/app/components/FocusControls";
 import SearchBar from "@/app/components/SearchBar";
+import { FloatingAddTaskButton } from "@/app/components/FloatingAddTaskButton";
 import { applyFilters, DEFAULT_FILTERS_FOCUS, type Filters } from "@/src/lib/filter";
 import { getDistinctProjects, getDistinctTags } from "@/src/db/queries";
 import { Skeleton } from "@/src/ui/Skeleton";
@@ -583,6 +584,9 @@ export default function FocusPage() {
           )}
         </div>
       </div>
+
+      {/* Floating Add Task Button */}
+      <FloatingAddTaskButton defaultBucket="now" onTaskAdded={() => setRefreshKey((prev) => prev + 1)} />
     </DndContext>
   );
 }
