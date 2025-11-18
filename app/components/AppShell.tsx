@@ -11,9 +11,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         minHeight: "100vh",
         backgroundColor: "var(--background)",
         color: "var(--text)",
+        flexDirection: "column",
       }}
+      className="md:flex-row"
     >
+      {/* Sidebar renders both mobile top nav (sticky at top) and desktop sidebar (sticky, side by side) */}
       <Sidebar />
+
+      {/* Main content */}
       <main
         style={{
           flex: 1,

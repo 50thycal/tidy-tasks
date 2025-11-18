@@ -4,7 +4,7 @@ import { useState } from "react";
 import { saveInboxItem, type InboxItem } from "@/src/lib/clientStore";
 import { getWorkSettings } from "@/src/lib/settings";
 import { inc } from "@/src/db/metrics";
-import type { CleanTaskResponse } from "@/src/types";
+import type { CleanTaskResponse, CleanTaskRequest } from "@/src/types";
 
 interface FloatingAddTaskButtonProps {
   defaultBucket?: "inbox" | "now";
@@ -13,61 +13,72 @@ interface FloatingAddTaskButtonProps {
 
 export function FloatingAddTaskButton({ defaultBucket = "inbox", onTaskAdded }: FloatingAddTaskButtonProps) {
   const [open, setOpen] = useState(false);
-  const [title, setTitle] = useState("");
-  const [project, setProject] = useState("");
+  const [messyText, setMessyText] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!title.trim() || loading) return;
+    if (!messyText.trim() || loading) return;
 
     setLoading(true);
+    setError(null);
 
     try {
       const settings = getWorkSettings();
+      const today = new Date().toISOString().split("T")[0];
 
-      // Create a simple task without AI cleanup
-      const taskResult: CleanTaskResponse = {
-        title: title.trim(),
-        project: project.trim() || null,
-        tags: [],
-        subtasks: [],
-        due_at: null,
-        effort_min: 30,
-        energy: "med",
-        importance: 50,
+      // Build request for AI cleanup
+      const request: CleanTaskRequest = {
+        raw_text: messyText.trim(),
+        today,
+        timezone: settings.timezone,
       };
 
+      // Call AI cleanup endpoint
+      const response = await fetch("/api/ai/clean_task", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ ...request, settings }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP ${response.status}`);
+      }
+
+      const taskResult: CleanTaskResponse = await response.json();
+
+      // Create inbox item with AI-cleaned task
       const newItem: InboxItem = {
         id: crypto.randomUUID(),
         created_at: new Date().toISOString(),
-        request: {
-          raw_text: title,
-          timezone: settings.timezone,
-          today: new Date().toISOString().split("T")[0],
-        },
+        request,
         result: taskResult,
         status: defaultBucket === "inbox" ? "inbox" : "active",
       };
 
-      // If it's going to "now" bucket, we need to set it as active with a custom property
+      // If it's going to "now" bucket, set the bucket property
       if (defaultBucket === "now") {
         (newItem as any).bucket = "now";
       }
 
       saveInboxItem(newItem);
       await inc('tasksCreated');
+      await inc('aiCleans');
 
       // Close modal and reset
       setOpen(false);
-      setTitle("");
-      setProject("");
+      setMessyText("");
+      setError(null);
 
       // Notify parent to refresh
       onTaskAdded?.();
     } catch (error) {
       console.error("Error creating task:", error);
-      alert("Failed to create task");
+      setError(error instanceof Error ? error.message : "Failed to create task");
     } finally {
       setLoading(false);
     }
@@ -131,8 +142,8 @@ export function FloatingAddTaskButton({ defaultBucket = "inbox", onTaskAdded }: 
           onClick={() => {
             if (!loading) {
               setOpen(false);
-              setTitle("");
-              setProject("");
+              setMessyText("");
+              setError(null);
             }
           }}
         >
@@ -142,90 +153,63 @@ export function FloatingAddTaskButton({ defaultBucket = "inbox", onTaskAdded }: 
               backgroundColor: "var(--panel-2)",
               borderRadius: "8px",
               padding: "1.5rem",
-              maxWidth: "400px",
+              maxWidth: "500px",
               width: "100%",
               border: "1px solid var(--border)",
             }}
           >
-            <h3 style={{ margin: "0 0 1rem 0", fontSize: "1.125rem", fontWeight: "600" }}>
-              Add task
+            <h3 style={{ margin: "0 0 0.5rem 0", fontSize: "1.125rem", fontWeight: "600" }}>
+              Quick Add Task
             </h3>
+            <p style={{ margin: "0 0 1rem 0", fontSize: "0.8rem", color: "var(--muted)" }}>
+              Write your task in natural language. AI will clean it up and extract details.
+            </p>
 
             <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
               <div>
-                <label
-                  htmlFor="task-title"
-                  style={{
-                    display: "block",
-                    fontSize: "0.75rem",
-                    fontWeight: "500",
-                    color: "var(--muted)",
-                    marginBottom: "0.375rem",
-                  }}
-                >
-                  Title
-                </label>
-                <input
-                  id="task-title"
-                  type="text"
+                <textarea
                   autoFocus
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Write the task…"
+                  value={messyText}
+                  onChange={(e) => setMessyText(e.target.value)}
+                  placeholder="e.g., 'call john tomorrow about the api keys' or 'buy milk on friday'"
                   disabled={loading}
+                  rows={4}
                   style={{
                     width: "100%",
-                    padding: "0.625rem",
+                    padding: "0.75rem",
                     backgroundColor: "var(--panel)",
                     color: "var(--text)",
                     border: "1px solid var(--border)",
                     borderRadius: "6px",
                     fontSize: "0.875rem",
                     fontFamily: "inherit",
+                    resize: "vertical",
                   }}
                 />
               </div>
 
-              <div>
-                <label
-                  htmlFor="task-project"
+              {error && (
+                <div
                   style={{
-                    display: "block",
-                    fontSize: "0.75rem",
-                    fontWeight: "500",
-                    color: "var(--muted)",
-                    marginBottom: "0.375rem",
+                    padding: "0.75rem",
+                    backgroundColor: "color-mix(in srgb, var(--danger) 15%, transparent)",
+                    color: "var(--danger)",
+                    borderRadius: "6px",
+                    fontSize: "0.85rem",
+                    border: "1px solid var(--danger)",
                   }}
                 >
-                  Project (optional)
-                </label>
-                <input
-                  id="task-project"
-                  type="text"
-                  value={project}
-                  onChange={(e) => setProject(e.target.value)}
-                  placeholder="Project name"
-                  disabled={loading}
-                  style={{
-                    width: "100%",
-                    padding: "0.625rem",
-                    backgroundColor: "var(--panel)",
-                    color: "var(--text)",
-                    border: "1px solid var(--border)",
-                    borderRadius: "6px",
-                    fontSize: "0.875rem",
-                    fontFamily: "inherit",
-                  }}
-                />
-              </div>
+                  {error}
+                </div>
+              )}
 
               <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem", paddingTop: "0.25rem" }}>
                 <button
                   type="button"
                   onClick={() => {
                     setOpen(false);
-                    setTitle("");
-                    setProject("");
+                    setMessyText("");
+                    setError(null);
                   }}
                   disabled={loading}
                   style={{
@@ -243,19 +227,23 @@ export function FloatingAddTaskButton({ defaultBucket = "inbox", onTaskAdded }: 
                 </button>
                 <button
                   type="submit"
-                  disabled={!title.trim() || loading}
+                  disabled={!messyText.trim() || loading}
                   style={{
                     padding: "0.5rem 1rem",
-                    backgroundColor: !title.trim() || loading ? "var(--muted)" : "var(--accent)",
+                    backgroundColor: !messyText.trim() || loading ? "var(--muted)" : "var(--accent)",
                     color: "white",
                     border: "none",
                     borderRadius: "6px",
                     fontSize: "0.875rem",
-                    cursor: !title.trim() || loading ? "not-allowed" : "pointer",
+                    cursor: !messyText.trim() || loading ? "not-allowed" : "pointer",
                     fontWeight: "500",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
                   }}
                 >
-                  {loading ? "Adding..." : "Add"}
+                  {loading && <span style={{ fontSize: "1rem" }}>⏳</span>}
+                  {loading ? "Cleaning with AI..." : "Clean & Add Task"}
                 </button>
               </div>
             </form>
