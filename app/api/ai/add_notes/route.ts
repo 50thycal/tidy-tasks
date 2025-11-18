@@ -107,6 +107,33 @@ Return JSON with cleaned note and suggested tags.`;
       );
     }
 
+    // Build OpenAI payload
+    const openAiPayload = {
+      model: modelName,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      response_format: { type: "json_object" as const },
+      temperature: 0.7,
+    };
+
+    // 🔍 Debug mode - return payload instead of calling OpenAI
+    const url = new URL(request.url);
+    const debugParam = url.searchParams.get("debug");
+    const debugHeader = request.headers.get("x-debug-ai");
+
+    if (debugParam === "1" || debugHeader === "1") {
+      return NextResponse.json(
+        {
+          debug: true,
+          payload: openAiPayload,
+          note: "Debug mode: OpenAI was not called. This is the exact payload that would be sent."
+        },
+        { status: 200 }
+      );
+    }
+
     const openaiResponse = await fetch(
       "https://api.openai.com/v1/chat/completions",
       {
@@ -116,15 +143,7 @@ Return JSON with cleaned note and suggested tags.`;
           Authorization: `Bearer ${openaiApiKey}`,
           "X-No-Train": "true",
         },
-        body: JSON.stringify({
-          model: modelName,
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt },
-          ],
-          response_format: { type: "json_object" },
-          temperature: 0.7,
-        }),
+        body: JSON.stringify(openAiPayload),
       }
     );
 
