@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { getWorkSettingsV2 } from "@/src/lib/settings";
 
 interface BatchFormProps {
   onClean: (lines: string[], options: BatchCleanOptions) => void;
@@ -12,11 +13,6 @@ export interface BatchCleanOptions {
 
 export default function BatchForm({ onClean, isProcessing }: BatchFormProps) {
   const [rawText, setRawText] = useState("");
-  const [showOptions, setShowOptions] = useState(false);
-  const [redactionEnabled, setRedactionEnabled] = useState(false);
-  const [redactionEntities, setRedactionEntities] = useState<Array<"emails" | "phones" | "proper_names">>(
-    ["emails", "phones"]
-  );
 
   const handleClean = () => {
     const lines = rawText
@@ -28,22 +24,29 @@ export default function BatchForm({ onClean, isProcessing }: BatchFormProps) {
       return;
     }
 
+    // Get privacy settings from global settings
+    const settings = getWorkSettingsV2();
+    const privacyEnabled = settings.privacy?.enabled ?? false;
+    const redactionMode = settings.privacy?.redactionMode ?? "emails_phones";
+
+    // Map redaction mode to entities array
+    let redactionEntities: Array<"emails" | "phones" | "proper_names"> = [];
+    if (privacyEnabled) {
+      if (redactionMode === "emails_phones") {
+        redactionEntities = ["emails", "phones"];
+      } else if (redactionMode === "emails_phones_names") {
+        redactionEntities = ["emails", "phones", "proper_names"];
+      }
+    }
+
     onClean(lines, {
-      redactionEnabled,
+      redactionEnabled: privacyEnabled,
       redactionEntities,
     });
   };
 
   const handleClear = () => {
     setRawText("");
-  };
-
-  const toggleRedactionEntity = (entity: "emails" | "phones" | "proper_names") => {
-    if (redactionEntities.includes(entity)) {
-      setRedactionEntities(redactionEntities.filter((e) => e !== entity));
-    } else {
-      setRedactionEntities([...redactionEntities, entity]);
-    }
   };
 
   const lineCount = rawText.split("\n").filter((line) => line.trim().length > 0).length;
@@ -78,82 +81,6 @@ export default function BatchForm({ onClean, isProcessing }: BatchFormProps) {
         <div className="text-muted" style={{ fontSize: "0.85rem", marginTop: "0.25rem" }}>
           {lineCount} {lineCount === 1 ? "task" : "tasks"}
         </div>
-      </div>
-
-      {/* Options (collapsed) */}
-      <div style={{ marginBottom: "1rem" }}>
-        <button
-          type="button"
-          onClick={() => setShowOptions(!showOptions)}
-          style={{
-            background: "none",
-            border: "none",
-            padding: "0.5rem 0",
-            fontSize: "0.9rem",
-            color: "var(--accent)",
-            cursor: "pointer",
-            textDecoration: "underline",
-          }}
-        >
-          {showOptions ? "▼" : "▶"} Advanced Options
-        </button>
-
-        {showOptions && (
-          <div
-            style={{
-              marginTop: "0.75rem",
-              padding: "1rem",
-              backgroundColor: "var(--panel-2)",
-              borderRadius: "0.75rem",
-              border: "1px solid var(--border)",
-            }}
-          >
-            <div style={{ marginBottom: "1rem" }}>
-              <label style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                <input
-                  type="checkbox"
-                  checked={redactionEnabled}
-                  onChange={(e) => setRedactionEnabled(e.target.checked)}
-                />
-                <span style={{ fontSize: "0.9rem", color: "var(--text)" }}>
-                  Enable redaction (privacy mode)
-                </span>
-              </label>
-            </div>
-
-            {redactionEnabled && (
-              <div style={{ marginLeft: "1.5rem" }}>
-                <div className="text-muted" style={{ fontSize: "0.85rem", marginBottom: "0.5rem" }}>
-                  Redact:
-                </div>
-                <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
-                  <input
-                    type="checkbox"
-                    checked={redactionEntities.includes("emails")}
-                    onChange={() => toggleRedactionEntity("emails")}
-                  />
-                  <span style={{ fontSize: "0.85rem", color: "var(--text)" }}>Email addresses</span>
-                </label>
-                <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
-                  <input
-                    type="checkbox"
-                    checked={redactionEntities.includes("phones")}
-                    onChange={() => toggleRedactionEntity("phones")}
-                  />
-                  <span style={{ fontSize: "0.85rem", color: "var(--text)" }}>Phone numbers</span>
-                </label>
-                <label style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <input
-                    type="checkbox"
-                    checked={redactionEntities.includes("proper_names")}
-                    onChange={() => toggleRedactionEntity("proper_names")}
-                  />
-                  <span style={{ fontSize: "0.85rem", color: "var(--text)" }}>Proper names</span>
-                </label>
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
       {/* Action buttons */}

@@ -48,6 +48,10 @@ export default function SettingsPage() {
   const [digestTime, setDigestTime] = useState("09:00");
   const [permissionStatus, setPermissionStatus] = useState<"default" | "granted" | "denied">("default");
 
+  // Privacy state
+  const [privacyEnabled, setPrivacyEnabled] = useState(false);
+  const [redactionMode, setRedactionMode] = useState<"none" | "emails_phones" | "emails_phones_names">("emails_phones");
+
   // Load settings on mount
   useEffect(() => {
     setMounted(true);
@@ -58,6 +62,11 @@ export default function SettingsPage() {
       if (stored.work.notifications) {
         setNotificationsEnabled(stored.work.notifications.enabled);
         setDigestTime(stored.work.notifications.digestTime || "09:00");
+      }
+      // Load privacy settings
+      if (stored.work.privacy) {
+        setPrivacyEnabled(stored.work.privacy.enabled);
+        setRedactionMode(stored.work.privacy.redactionMode);
       }
     }
     // Check permission status
@@ -74,6 +83,10 @@ export default function SettingsPage() {
         notifications: {
           enabled: notificationsEnabled,
           digestTime,
+        },
+        privacy: {
+          enabled: privacyEnabled,
+          redactionMode,
         },
       },
     };
@@ -619,6 +632,136 @@ export default function SettingsPage() {
           >
             The digest shows: overdue tasks, due today, due next 7 days, and stale active tasks (no activity for 7+ days).
             All processing happens locally in your browser.
+          </div>
+        </div>
+
+        {/* AI & Privacy */}
+        <div
+          style={{
+            backgroundColor: "var(--panel)",
+            border: "1px solid var(--border)",
+            borderRadius: "8px",
+            padding: "2rem",
+            color: "var(--text)",
+            marginTop: "2rem",
+          }}
+        >
+          <h2 style={{ marginBottom: "1rem", fontSize: "1.25rem" }}>AI & Privacy</h2>
+          <p style={{ color: "var(--muted)", marginBottom: "1.5rem", fontSize: "0.9rem" }}>
+            Control what data is sent to AI for task processing. When privacy is OFF, your raw task text is sent as-is.
+          </p>
+
+          {/* Enable Privacy Toggle */}
+          <div style={{ marginBottom: "1.5rem" }}>
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.75rem",
+                cursor: "pointer",
+                padding: "0.75rem",
+                borderRadius: "4px",
+                backgroundColor: privacyEnabled ? "color-mix(in srgb, var(--accent) 15%, transparent)" : "transparent",
+                border: "1px solid var(--border)",
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={privacyEnabled}
+                onChange={(e) => setPrivacyEnabled(e.target.checked)}
+                style={{ cursor: "pointer" }}
+              />
+              <div>
+                <div style={{ fontWeight: "500", color: "var(--text)" }}>
+                  Redact sensitive info before sending to AI
+                </div>
+                <div style={{ fontSize: "0.85rem", color: "var(--muted)", marginTop: "0.25rem" }}>
+                  {privacyEnabled
+                    ? "Privacy mode ON - sensitive data will be redacted"
+                    : "Privacy mode OFF - raw task text sent to AI"}
+                </div>
+              </div>
+            </label>
+          </div>
+
+          {/* Redaction Mode */}
+          {privacyEnabled && (
+            <div style={{ marginBottom: "1.5rem" }}>
+              <label
+                style={{ display: "block", fontWeight: "500", marginBottom: "0.75rem", color: "var(--text)" }}
+              >
+                Redaction Level
+              </label>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                <label
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                    cursor: "pointer",
+                    padding: "0.75rem",
+                    borderRadius: "4px",
+                    backgroundColor: redactionMode === "emails_phones" ? "color-mix(in srgb, var(--accent) 15%, transparent)" : "var(--panel-2)",
+                    border: "1px solid var(--border)",
+                  }}
+                >
+                  <input
+                    type="radio"
+                    checked={redactionMode === "emails_phones"}
+                    onChange={() => setRedactionMode("emails_phones")}
+                    style={{ cursor: "pointer" }}
+                  />
+                  <div>
+                    <div style={{ fontWeight: "500" }}>Emails & Phone Numbers</div>
+                    <div style={{ fontSize: "0.85rem", color: "var(--muted)" }}>
+                      Redact email addresses and phone numbers only
+                    </div>
+                  </div>
+                </label>
+                <label
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                    cursor: "pointer",
+                    padding: "0.75rem",
+                    borderRadius: "4px",
+                    backgroundColor: redactionMode === "emails_phones_names" ? "color-mix(in srgb, var(--accent) 15%, transparent)" : "var(--panel-2)",
+                    border: "1px solid var(--border)",
+                  }}
+                >
+                  <input
+                    type="radio"
+                    checked={redactionMode === "emails_phones_names"}
+                    onChange={() => setRedactionMode("emails_phones_names")}
+                    style={{ cursor: "pointer" }}
+                  />
+                  <div>
+                    <div style={{ fontWeight: "500" }}>Emails, Phone Numbers & Names</div>
+                    <div style={{ fontSize: "0.85rem", color: "var(--muted)" }}>
+                      Also redact common person names (more aggressive)
+                    </div>
+                  </div>
+                </label>
+              </div>
+            </div>
+          )}
+
+          {/* Info Text */}
+          <div
+            style={{
+              padding: "1rem",
+              backgroundColor: "var(--panel-2)",
+              borderRadius: "4px",
+              fontSize: "0.85rem",
+              color: "var(--muted)",
+              marginTop: "1.5rem",
+            }}
+          >
+            <strong style={{ color: "var(--text)" }}>Default: Privacy OFF</strong>
+            <br />
+            When privacy is disabled, your task text is sent to OpenAI as-is for better AI understanding.
+            Enable privacy if your tasks contain sensitive information like emails, phone numbers, or names.
           </div>
         </div>
 

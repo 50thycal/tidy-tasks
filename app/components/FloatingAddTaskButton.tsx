@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { saveInboxItem, type InboxItem } from "@/src/lib/clientStore";
-import { getWorkSettings } from "@/src/lib/settings";
+import { getWorkSettings, getWorkSettingsV2 } from "@/src/lib/settings";
 import { inc } from "@/src/db/metrics";
 import type { CleanTaskResponse, CleanTaskRequest } from "@/src/types";
 
@@ -28,11 +28,30 @@ export function FloatingAddTaskButton({ defaultBucket = "inbox", onTaskAdded }: 
       const settings = getWorkSettings();
       const today = new Date().toISOString().split("T")[0];
 
+      // Get privacy settings from global settings (V2)
+      const settingsV2 = getWorkSettingsV2();
+      const privacyEnabled = settingsV2.privacy?.enabled ?? false;
+      const redactionMode = settingsV2.privacy?.redactionMode ?? "emails_phones";
+
+      // Map redaction mode to entities array
+      let redactionEntities: Array<"emails" | "phones" | "proper_names"> = [];
+      if (privacyEnabled) {
+        if (redactionMode === "emails_phones") {
+          redactionEntities = ["emails", "phones"];
+        } else if (redactionMode === "emails_phones_names") {
+          redactionEntities = ["emails", "phones", "proper_names"];
+        }
+      }
+
       // Build request for AI cleanup
       const request: CleanTaskRequest = {
         raw_text: messyText.trim(),
         today,
         timezone: settings.timezone,
+        redaction: {
+          enabled: privacyEnabled,
+          entities: redactionEntities,
+        },
       };
 
       // Call AI cleanup endpoint

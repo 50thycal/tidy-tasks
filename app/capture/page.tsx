@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import BatchForm, { type BatchCleanOptions } from "@/app/components/BatchForm";
 import BatchResults, { type BatchTaskResult } from "@/app/components/BatchResults";
 import { bulkAddInboxItems, type InboxItem } from "@/src/lib/clientStore";
-import { getWorkSettings } from "@/src/lib/settings";
+import { getWorkSettings, getWorkSettingsV2 } from "@/src/lib/settings";
 import { runWithPool, splitTasks } from "@/src/lib/batchRunner";
 import type { CleanTaskRequest, CleanTaskResponse } from "@/src/types";
 import { Skeleton } from "@/src/ui/Skeleton";
@@ -173,10 +173,24 @@ export default function CapturePage() {
 
     console.log(`[Capture] Retrying ${lines.length} failed tasks with strict mode`);
 
-    // Get options from first failed result (use defaults)
+    // Get privacy settings from global settings (V2)
+    const settingsV2 = getWorkSettingsV2();
+    const privacyEnabled = settingsV2.privacy?.enabled ?? false;
+    const redactionMode = settingsV2.privacy?.redactionMode ?? "emails_phones";
+
+    // Map redaction mode to entities array
+    let redactionEntities: Array<"emails" | "phones" | "proper_names"> = [];
+    if (privacyEnabled) {
+      if (redactionMode === "emails_phones") {
+        redactionEntities = ["emails", "phones"];
+      } else if (redactionMode === "emails_phones_names") {
+        redactionEntities = ["emails", "phones", "proper_names"];
+      }
+    }
+
     const options: BatchCleanOptions = {
-      redactionEnabled: true,
-      redactionEntities: ["emails", "phones"],
+      redactionEnabled: privacyEnabled,
+      redactionEntities,
     };
 
     // Remove failed tasks from results
@@ -192,10 +206,24 @@ export default function CapturePage() {
 
     console.log(`[Capture] Retrying one failed task with strict mode: ${failedResult.rawText.substring(0, 40)}`);
 
-    // Get options (use defaults)
+    // Get privacy settings from global settings (V2)
+    const settingsV2 = getWorkSettingsV2();
+    const privacyEnabled = settingsV2.privacy?.enabled ?? false;
+    const redactionMode = settingsV2.privacy?.redactionMode ?? "emails_phones";
+
+    // Map redaction mode to entities array
+    let redactionEntities: Array<"emails" | "phones" | "proper_names"> = [];
+    if (privacyEnabled) {
+      if (redactionMode === "emails_phones") {
+        redactionEntities = ["emails", "phones"];
+      } else if (redactionMode === "emails_phones_names") {
+        redactionEntities = ["emails", "phones", "proper_names"];
+      }
+    }
+
     const options: BatchCleanOptions = {
-      redactionEnabled: true,
-      redactionEntities: ["emails", "phones"],
+      redactionEnabled: privacyEnabled,
+      redactionEntities,
     };
 
     // Remove this failed task from results
