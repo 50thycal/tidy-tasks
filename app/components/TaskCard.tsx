@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, KeyboardEvent } from "react";
+import { useState, useEffect, useRef, KeyboardEvent } from "react";
 import type { CleanTaskResponse } from "@/src/types";
 import { updateInboxItemResult, updateInboxItemStatus } from "@/src/lib/clientStore";
 import { getWorkSettings } from "@/src/lib/settings";
@@ -1051,6 +1051,18 @@ export default function TaskCard({
               <div style={{ marginTop: "0.75rem" }}>
                 <input
                   type="date"
+                  ref={(el) => {
+                    // Auto-open the calendar picker when the input mounts
+                    if (el) {
+                      try {
+                        el.showPicker();
+                      } catch {
+                        // Fallback for browsers that don't support showPicker
+                        el.focus();
+                        el.click();
+                      }
+                    }
+                  }}
                   onChange={(e) => {
                     handleDatePickerChange(e);
                     setShowDueQuickEdit(false);
