@@ -1065,12 +1065,12 @@ export default function TaskCard({
                           defaultValue={localTask.due_at ? localTask.due_at.split('T')[0] : ''}
                           style={{
                             position: "absolute",
-                            top: "100%",
+                            top: 0,
                             left: 0,
+                            width: "100%",
+                            height: "100%",
                             opacity: 0,
-                            width: "1px",
-                            height: "1px",
-                            pointerEvents: "none",
+                            cursor: "pointer",
                           }}
                         />
                       )}
