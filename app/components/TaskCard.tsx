@@ -1026,61 +1026,60 @@ export default function TaskCard({
                       {settings.eowAnchor}
                     </button>
 
-                    {/* Calendar icon */}
-                    <button
-                      onClick={() => setShowDatePicker(!showDatePicker)}
-                      style={chipStyle}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = "var(--accent)";
-                        e.currentTarget.style.color = "white";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = "var(--panel-2)";
-                        e.currentTarget.style.color = "var(--text)";
-                      }}
-                    >
-                      📅
-                    </button>
+                    {/* Calendar icon with inline date picker */}
+                    <span style={{ position: "relative", display: "inline-block" }}>
+                      <button
+                        onClick={() => setShowDatePicker(!showDatePicker)}
+                        style={chipStyle}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = "var(--accent)";
+                          e.currentTarget.style.color = "white";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = "var(--panel-2)";
+                          e.currentTarget.style.color = "var(--text)";
+                        }}
+                      >
+                        📅
+                      </button>
+                      {showDatePicker && (
+                        <input
+                          type="date"
+                          ref={(el) => {
+                            // Auto-open the calendar picker when the input mounts
+                            if (el) {
+                              try {
+                                el.showPicker();
+                              } catch {
+                                // Fallback for browsers that don't support showPicker
+                                el.focus();
+                                el.click();
+                              }
+                            }
+                          }}
+                          onChange={(e) => {
+                            handleDatePickerChange(e);
+                            setShowDueQuickEdit(false);
+                          }}
+                          onBlur={() => setShowDatePicker(false)}
+                          defaultValue={localTask.due_at ? localTask.due_at.split('T')[0] : ''}
+                          style={{
+                            position: "absolute",
+                            top: "100%",
+                            left: 0,
+                            opacity: 0,
+                            width: "1px",
+                            height: "1px",
+                            pointerEvents: "none",
+                          }}
+                        />
+                      )}
+                    </span>
                   </>
                 );
               })()}
             </div>
 
-            {/* Inline date picker */}
-            {showDatePicker && (
-              <div style={{ marginTop: "0.75rem" }}>
-                <input
-                  type="date"
-                  ref={(el) => {
-                    // Auto-open the calendar picker when the input mounts
-                    if (el) {
-                      try {
-                        el.showPicker();
-                      } catch {
-                        // Fallback for browsers that don't support showPicker
-                        el.focus();
-                        el.click();
-                      }
-                    }
-                  }}
-                  onChange={(e) => {
-                    handleDatePickerChange(e);
-                    setShowDueQuickEdit(false);
-                  }}
-                  defaultValue={localTask.due_at ? localTask.due_at.split('T')[0] : ''}
-                  style={{
-                    width: "100%",
-                    padding: "0.5rem",
-                    backgroundColor: "var(--panel-2)",
-                    color: "var(--text)",
-                    border: "1px solid var(--border)",
-                    borderRadius: "4px",
-                    fontSize: "0.9rem",
-                    cursor: "pointer",
-                  }}
-                />
-              </div>
-            )}
           </div>
         )}
 
