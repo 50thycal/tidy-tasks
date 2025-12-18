@@ -1029,7 +1029,7 @@ export default function TaskCard({
                     {/* Calendar icon with inline date picker */}
                     <span style={{ position: "relative", display: "inline-block" }}>
                       <button
-                        onClick={() => setShowDatePicker(!showDatePicker)}
+                        onClick={() => setShowDatePicker(true)}
                         style={chipStyle}
                         onMouseEnter={(e) => {
                           e.currentTarget.style.backgroundColor = "var(--accent)";
@@ -1048,17 +1048,21 @@ export default function TaskCard({
                           ref={(el) => {
                             // Auto-open the calendar picker when the input mounts
                             if (el) {
-                              try {
-                                el.showPicker();
-                              } catch {
-                                // Fallback for browsers that don't support showPicker
-                                el.focus();
-                                el.click();
-                              }
+                              // Small delay to ensure the element is fully rendered
+                              setTimeout(() => {
+                                try {
+                                  el.showPicker();
+                                } catch {
+                                  // Fallback for browsers that don't support showPicker
+                                  el.focus();
+                                  el.click();
+                                }
+                              }, 0);
                             }
                           }}
                           onChange={(e) => {
                             handleDatePickerChange(e);
+                            setShowDatePicker(false);
                             setShowDueQuickEdit(false);
                           }}
                           onBlur={() => setShowDatePicker(false)}
@@ -1066,11 +1070,13 @@ export default function TaskCard({
                           style={{
                             position: "absolute",
                             top: 0,
-                            left: 0,
-                            width: "100%",
-                            height: "100%",
+                            left: "100%",
+                            marginLeft: "4px",
                             opacity: 0,
-                            cursor: "pointer",
+                            width: "1px",
+                            height: "100%",
+                            border: "none",
+                            padding: 0,
                           }}
                         />
                       )}
