@@ -69,6 +69,8 @@ export default function TaskCard({
   const [isSaving, setIsSaving] = useState(false);
   const [showMoveMenu, setShowMoveMenu] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [datePickerKey, setDatePickerKey] = useState(0);
+  const [isPendingDone, setIsPendingDone] = useState(false);
   const [showAddNotesModal, setShowAddNotesModal] = useState(false);
   const [newNoteText, setNewNoteText] = useState("");
   const [isSavingNote, setIsSavingNote] = useState(false);
@@ -165,6 +167,34 @@ export default function TaskCard({
 
     return () => document.removeEventListener('click', handleClickOutside);
   }, [isEditingEnergy]);
+
+  // Handle pending done - confirm on click outside, with animation delay
+  useEffect(() => {
+    if (!isPendingDone) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      // Check if click is on the undo button
+      if (target.closest('[data-undo-button]')) {
+        return;
+      }
+      // Click outside confirms the done action
+      setIsPendingDone(false);
+      if (onToggleDone) {
+        onToggleDone();
+      }
+    };
+
+    // Small delay to prevent immediate triggering
+    const timeoutId = setTimeout(() => {
+      document.addEventListener('click', handleClickOutside);
+    }, 50);
+
+    return () => {
+      clearTimeout(timeoutId);
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [isPendingDone, onToggleDone]);
 
   // Initialize date/time from due_at
   useEffect(() => {
@@ -591,12 +621,64 @@ export default function TaskCard({
             border: "1px solid var(--border)",
             borderRadius: "8px",
             padding: "1rem",
-            backgroundColor: "var(--panel-2)",
+            backgroundColor: isPendingDone ? "var(--panel)" : "var(--panel-2)",
             color: "var(--text)",
             display: "flex",
             gap: "0.75rem",
+            transition: "all 0.3s ease",
+            opacity: isPendingDone ? 0.7 : 1,
+            transform: isPendingDone ? "scale(0.98)" : "scale(1)",
           }}
         >
+        {/* Pending done overlay with undo button */}
+        {isPendingDone ? (
+          <div
+            style={{
+              width: "100%",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "2rem",
+              gap: "1rem",
+            }}
+          >
+            <div style={{ fontSize: "1.5rem" }}>✓</div>
+            <div style={{ color: "var(--muted)", fontSize: "0.9rem" }}>
+              Task marked as done
+            </div>
+            <button
+              data-undo-button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsPendingDone(false);
+              }}
+              style={{
+                padding: "0.5rem 1.5rem",
+                backgroundColor: "var(--accent)",
+                color: "white",
+                border: "none",
+                borderRadius: "6px",
+                cursor: "pointer",
+                fontSize: "0.9rem",
+                fontWeight: "500",
+                transition: "background-color 0.2s ease",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "var(--accent-2)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "var(--accent)";
+              }}
+            >
+              Undo
+            </button>
+            <div style={{ color: "var(--muted)", fontSize: "0.75rem" }}>
+              Click anywhere else to confirm
+            </div>
+          </div>
+        ) : (
+        <>
         {/* Selection checkbox */}
         {selectable && (
           <div style={{ display: "flex", alignItems: "flex-start", paddingTop: "0.125rem" }}>
@@ -1029,7 +1111,14 @@ export default function TaskCard({
                     {/* Calendar icon with inline date picker */}
                     <span style={{ position: "relative", display: "inline-block" }}>
                       <button
-                        onClick={() => setShowDatePicker(true)}
+                        onClick={() => {
+                          if (showDatePicker) {
+                            setShowDatePicker(false);
+                          } else {
+                            setDatePickerKey(k => k + 1);
+                            setShowDatePicker(true);
+                          }
+                        }}
                         style={chipStyle}
                         onMouseEnter={(e) => {
                           e.currentTarget.style.backgroundColor = "var(--accent)";
@@ -1044,6 +1133,7 @@ export default function TaskCard({
                       </button>
                       {showDatePicker && (
                         <input
+                          key={datePickerKey}
                           type="date"
                           ref={(el) => {
                             // Auto-open the calendar picker when the input mounts
@@ -1419,7 +1509,16 @@ export default function TaskCard({
           {/* Mark done / Mark as active */}
           <button
             type="button"
-            onClick={onToggleDone || (() => {})}
+            onClick={() => {
+              if (!onToggleDone) return;
+              // If marking as done (not already done), show undo option
+              if (status !== "done") {
+                setIsPendingDone(true);
+              } else {
+                // Marking as active - no undo needed
+                onToggleDone();
+              }
+            }}
             disabled={!onToggleDone}
             style={{
               borderRadius: "6px",
@@ -1586,6 +1685,7 @@ export default function TaskCard({
           </button>
         </div>
         </div>
+        </>)}
       </div>
       ) : (
         // Edit mode
