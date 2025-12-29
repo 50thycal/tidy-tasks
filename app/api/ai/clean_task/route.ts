@@ -291,8 +291,31 @@ ${systemPrompt}`;
     }
 
     // Extract suggested_project before validation (not in schema)
-    const suggestedProject = normalizedResponse.suggested_project || null;
+    let suggestedProject = normalizedResponse.suggested_project || null;
     delete normalizedResponse.suggested_project;
+
+    // Filter out suggested_project if it already matches a project in the list (case-insensitive)
+    // This handles cases where the AI suggests a project that's already available
+    if (suggestedProject && projectList.length > 0) {
+      const matchesExisting = projectList.some(
+        p => p.toLowerCase() === suggestedProject!.toLowerCase()
+      );
+      if (matchesExisting) {
+        // Find the correct case from the list and set it as the project
+        const correctName = projectList.find(
+          p => p.toLowerCase() === suggestedProject!.toLowerCase()
+        );
+        if (correctName && !normalizedResponse.project) {
+          normalizedResponse.project = correctName;
+        }
+        suggestedProject = null; // Don't suggest it since it already exists
+      }
+    }
+
+    // Also clear suggested_project if a project was already matched
+    if (normalizedResponse.project) {
+      suggestedProject = null;
+    }
 
     // Validate response against schema
     if (!validateResponse(normalizedResponse)) {

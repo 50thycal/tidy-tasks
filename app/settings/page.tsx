@@ -8,6 +8,7 @@ import {
   saveSettings,
   resetSettings,
 } from "@/src/lib/settings";
+import { getInboxItems, type InboxItem, type AIFirstPass } from "@/src/lib/clientStore";
 import ProjectsTable from "@/app/components/Settings/ProjectsTable";
 import { exportAndDownloadJson, exportAndDownloadCsv, type BackupDoc } from "@/src/lib/export";
 import { validateBackup, importBackup, getBackupPreview, type ImportResult } from "@/src/lib/import";
@@ -36,6 +37,15 @@ export default function SettingsPage() {
   const [importSuccess, setImportSuccess] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
   const [exporting, setExporting] = useState(false);
+
+  // AI Analysis Export state
+  const [analysisStartDate, setAnalysisStartDate] = useState<string>("");
+  const [analysisEndDate, setAnalysisEndDate] = useState<string>("");
+  const [analysisPreview, setAnalysisPreview] = useState<{
+    total: number;
+    withFirstPass: number;
+  } | null>(null);
+  const [exportingAnalysis, setExportingAnalysis] = useState(false);
 
   // Load settings on mount
   useEffect(() => {
@@ -186,6 +196,135 @@ export default function SettingsPage() {
   const handleInvalidateCache = async () => {
     if (confirm("Clear all cached app data and reload? This will get the newest version.")) {
       await invalidateAndReload();
+    }
+  };
+
+  // Update analysis preview when dates change
+  useEffect(() => {
+    if (!mounted) return;
+
+    const items = getInboxItems();
+    const startDate = analysisStartDate ? new Date(analysisStartDate + "T00:00:00") : null;
+    const endDate = analysisEndDate ? new Date(analysisEndDate + "T23:59:59") : null;
+
+    const filtered = items.filter(item => {
+      const createdAt = new Date(item.created_at);
+      if (startDate && createdAt < startDate) return false;
+      if (endDate && createdAt > endDate) return false;
+      return true;
+    });
+
+    setAnalysisPreview({
+      total: filtered.length,
+      withFirstPass: filtered.filter(item => item.ai_first_pass).length,
+    });
+  }, [analysisStartDate, analysisEndDate, mounted]);
+
+  // Export AI analysis data
+  const handleExportAnalysis = () => {
+    setExportingAnalysis(true);
+
+    try {
+      const items = getInboxItems();
+      const startDate = analysisStartDate ? new Date(analysisStartDate + "T00:00:00") : null;
+      const endDate = analysisEndDate ? new Date(analysisEndDate + "T23:59:59") : null;
+
+      const filtered = items.filter(item => {
+        const createdAt = new Date(item.created_at);
+        if (startDate && createdAt < startDate) return false;
+        if (endDate && createdAt > endDate) return false;
+        return true;
+      });
+
+      // Build analysis export with comparison data
+      const analysisData = filtered.map(item => {
+        const firstPass = item.ai_first_pass;
+        const current = item.result;
+
+        // Compute changes if we have first pass data
+        const changes: Record<string, { from: any; to: any }> = {};
+        if (firstPass) {
+          if (firstPass.title !== current.title) {
+            changes.title = { from: firstPass.title, to: current.title };
+          }
+          if (firstPass.due_at !== current.due_at) {
+            changes.due_at = { from: firstPass.due_at, to: current.due_at };
+          }
+          if (firstPass.effort_min !== current.effort_min) {
+            changes.effort_min = { from: firstPass.effort_min, to: current.effort_min };
+          }
+          if (firstPass.energy !== current.energy) {
+            changes.energy = { from: firstPass.energy, to: current.energy };
+          }
+          if (firstPass.importance !== current.importance) {
+            changes.importance = { from: firstPass.importance, to: current.importance };
+          }
+          if (firstPass.project !== current.project) {
+            changes.project = { from: firstPass.project, to: current.project };
+          }
+          if (JSON.stringify(firstPass.tags) !== JSON.stringify(current.tags)) {
+            changes.tags = { from: firstPass.tags, to: current.tags };
+          }
+          if (JSON.stringify(firstPass.subtasks) !== JSON.stringify(current.subtasks)) {
+            changes.subtasks = { from: firstPass.subtasks, to: current.subtasks };
+          }
+        }
+
+        return {
+          id: item.id,
+          created_at: item.created_at,
+          status: item.status,
+          raw_text: item.request.raw_text,
+          ai_first_pass: firstPass || null,
+          current_state: {
+            title: current.title,
+            due_at: current.due_at,
+            scheduled_for: current.scheduled_for,
+            effort_min: current.effort_min,
+            energy: current.energy,
+            tags: current.tags,
+            project: current.project,
+            subtasks: current.subtasks,
+            importance: current.importance,
+            notes_append: current.notes_append,
+          },
+          changes: Object.keys(changes).length > 0 ? changes : null,
+          has_changes: Object.keys(changes).length > 0,
+        };
+      });
+
+      // Create export document
+      const exportDoc = {
+        version: 1,
+        exported_at: new Date().toISOString(),
+        app: "tidy-tasks-analysis",
+        date_range: {
+          start: analysisStartDate || null,
+          end: analysisEndDate || null,
+        },
+        summary: {
+          total_tasks: analysisData.length,
+          with_first_pass: analysisData.filter(t => t.ai_first_pass).length,
+          with_changes: analysisData.filter(t => t.has_changes).length,
+        },
+        tasks: analysisData,
+      };
+
+      // Download as JSON
+      const blob = new Blob([JSON.stringify(exportDoc, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const dateStr = new Date().toISOString().split("T")[0];
+      a.download = `tidy-tasks-ai-analysis-${dateStr}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      alert(`Export failed: ${err instanceof Error ? err.message : "Unknown error"}`);
+    } finally {
+      setExportingAnalysis(false);
     }
   };
 
@@ -662,6 +801,92 @@ export default function SettingsPage() {
                 {importSuccess}
               </div>
             )}
+          </div>
+        </div>
+
+        {/* AI Analysis Export Section */}
+        <div
+          style={{
+            backgroundColor: "var(--panel)",
+            border: "1px solid var(--border)",
+            borderRadius: "8px",
+            padding: "2rem",
+            color: "var(--text)",
+            marginTop: "2rem",
+          }}
+        >
+          <h2 style={{ marginBottom: "1rem", fontSize: "1.25rem" }}>AI Analysis Export</h2>
+          <p style={{ color: "var(--muted)", marginBottom: "1.5rem", fontSize: "0.9rem" }}>
+            Export tasks with AI first-pass data vs current state for analysis. Select a date range to filter tasks.
+          </p>
+
+          <div style={{ display: "flex", gap: "1rem", marginBottom: "1rem", flexWrap: "wrap" }}>
+            <div>
+              <label style={{ display: "block", fontSize: "0.85rem", marginBottom: "0.25rem", color: "var(--text)" }}>
+                Start Date
+              </label>
+              <input
+                type="date"
+                value={analysisStartDate}
+                onChange={(e) => setAnalysisStartDate(e.target.value)}
+                className="input"
+                style={{ minWidth: "150px" }}
+              />
+            </div>
+            <div>
+              <label style={{ display: "block", fontSize: "0.85rem", marginBottom: "0.25rem", color: "var(--text)" }}>
+                End Date
+              </label>
+              <input
+                type="date"
+                value={analysisEndDate}
+                onChange={(e) => setAnalysisEndDate(e.target.value)}
+                className="input"
+                style={{ minWidth: "150px" }}
+              />
+            </div>
+          </div>
+
+          {/* Preview */}
+          {analysisPreview && (
+            <div
+              style={{
+                padding: "1rem",
+                backgroundColor: "var(--panel-2)",
+                borderRadius: "4px",
+                marginBottom: "1rem",
+                border: "1px solid var(--border)",
+              }}
+            >
+              <div style={{ fontSize: "0.9rem", fontWeight: "500", marginBottom: "0.5rem" }}>
+                Preview
+              </div>
+              <div style={{ fontSize: "0.85rem", color: "var(--muted)", lineHeight: "1.6" }}>
+                <div>Total tasks in range: <strong>{analysisPreview.total}</strong></div>
+                <div>Tasks with AI first-pass data: <strong>{analysisPreview.withFirstPass}</strong></div>
+                {analysisPreview.total > 0 && analysisPreview.withFirstPass === 0 && (
+                  <div style={{ color: "var(--warning)", marginTop: "0.5rem" }}>
+                    Note: None of these tasks have AI first-pass data. Only new tasks created after this feature was added will have comparison data.
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          <button
+            onClick={handleExportAnalysis}
+            disabled={exportingAnalysis || !analysisPreview || analysisPreview.total === 0}
+            className="btn btn-primary"
+            style={{
+              padding: "0.75rem 1.5rem",
+              opacity: (exportingAnalysis || !analysisPreview || analysisPreview.total === 0) ? 0.6 : 1,
+              cursor: (exportingAnalysis || !analysisPreview || analysisPreview.total === 0) ? "not-allowed" : "pointer",
+            }}
+          >
+            {exportingAnalysis ? "Exporting..." : `Export Analysis (${analysisPreview?.total || 0} tasks)`}
+          </button>
+          <div style={{ fontSize: "0.85rem", color: "var(--muted)", marginTop: "0.5rem" }}>
+            Downloads a JSON file with raw input, AI first-pass, current state, and computed changes for each task.
           </div>
         </div>
 
