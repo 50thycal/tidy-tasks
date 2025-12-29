@@ -130,7 +130,7 @@ export default function CapturePage() {
     }
   };
 
-  const handleAddSelected = (selectedIds: string[], destination: "inbox" | "active") => {
+  const handleAddSelected = (selectedIds: string[], destination: "follow-up" | "active") => {
     const selectedResults = results.filter(
       (r) => selectedIds.includes(r.id) && r.status === "success"
     );
@@ -151,7 +151,7 @@ export default function CapturePage() {
 
       setToast(
         `Added ${newItems.length} ${newItems.length === 1 ? "task" : "tasks"} to ${
-          destination === "inbox" ? "Inbox" : "Active"
+          destination === "follow-up" ? "Follow-up" : "Active"
         }`
       );
     } catch (error) {

@@ -11,7 +11,7 @@ interface FocusBucketProps {
   prioritizedItems: PrioritizedItem[]; // AI metadata (score, rationale)
   inboxItems: InboxItem[]; // Full task data
   onMarkDone: (id: string) => void;
-  onMoveToInbox: (id: string) => void;
+  onMoveToFollowUp: (id: string) => void;
   onRefresh?: () => void;
   onSendTo?: (taskId: string, targetBucket: "now" | "next" | "later" | "backlog") => void;
   onResetToAI?: () => void;
@@ -23,7 +23,7 @@ export default function FocusBucket({
   prioritizedItems,
   inboxItems,
   onMarkDone,
-  onMoveToInbox,
+  onMoveToFollowUp,
   onRefresh,
   onSendTo,
   onResetToAI,
@@ -149,7 +149,7 @@ export default function FocusBucket({
                 priorityScore={aiData?.priority_score}
                 bucketColor={bucketColor}
                 onMarkDone={() => onMarkDone(taskId)}
-                onMoveToInbox={() => onMoveToInbox(taskId)}
+                onMoveToFollowUp={() => onMoveToFollowUp(taskId)}
                 onRefresh={onRefresh}
                 onSendTo={onSendTo ? (targetBucket) => onSendTo(taskId, targetBucket) : undefined}
               />

@@ -6,7 +6,7 @@ interface ReviewItemRowProps {
   item: InboxItem;
   onMarkDone: (id: string) => void;
   onMoveToActive: (id: string) => void;
-  onMoveToInbox: (id: string) => void;
+  onMoveToFollowUp: (id: string) => void;
   onSnooze: (id: string, days: number) => void;
   onUnsnooze: (id: string) => void;
 }
@@ -15,7 +15,7 @@ export default function ReviewItemRow({
   item,
   onMarkDone,
   onMoveToActive,
-  onMoveToInbox,
+  onMoveToFollowUp,
   onSnooze,
   onUnsnooze,
 }: ReviewItemRowProps) {
@@ -129,7 +129,7 @@ export default function ReviewItemRow({
         currentStatus={item.status}
         onMarkDone={onMarkDone}
         onMoveToActive={onMoveToActive}
-        onMoveToInbox={onMoveToInbox}
+        onMoveToFollowUp={onMoveToFollowUp}
         onSnooze={onSnooze}
         onUnsnooze={onUnsnooze}
       />

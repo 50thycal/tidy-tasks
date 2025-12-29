@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { DndContext, DragEndEvent, closestCenter } from "@dnd-kit/core";
 import type { PrioritizeRequest, PrioritizeResponse, PrioritizedItem, EnergyLevel } from "@/src/types";
-import { getInboxItems, markItemDone, moveItemToInbox } from "@/src/lib/clientStore";
+import { getInboxItems, markItemDone, moveItemToFollowUp } from "@/src/lib/clientStore";
 import { getWorkSettings } from "@/src/lib/settings";
 import { getLayout, upsertLayout } from "@/src/db/focus";
 import { mergeOrder, normalizeBucket } from "@/src/lib/focusMerge";
@@ -239,8 +239,8 @@ export default function FocusPage() {
     setDirty(true);
   };
 
-  const handleMoveToInbox = (id: string) => {
-    moveItemToInbox(id);
+  const handleMoveToFollowUp = (id: string) => {
+    moveItemToFollowUp(id);
     setRefreshKey((prev) => prev + 1);
     setDirty(true);
   };
@@ -511,7 +511,7 @@ export default function FocusPage() {
                 prioritizedItems={prioritizedItems}
                 inboxItems={items}
                 onMarkDone={handleMarkDone}
-                onMoveToInbox={handleMoveToInbox}
+                onMoveToFollowUp={handleMoveToFollowUp}
                 onRefresh={() => setRefreshKey((prev) => prev + 1)}
                 onSendTo={handleSendTo}
                 onResetToAI={() => handleResetBucket("now")}
@@ -522,7 +522,7 @@ export default function FocusPage() {
                 prioritizedItems={prioritizedItems}
                 inboxItems={items}
                 onMarkDone={handleMarkDone}
-                onMoveToInbox={handleMoveToInbox}
+                onMoveToFollowUp={handleMoveToFollowUp}
                 onRefresh={() => setRefreshKey((prev) => prev + 1)}
                 onSendTo={handleSendTo}
                 onResetToAI={() => handleResetBucket("next")}
@@ -533,7 +533,7 @@ export default function FocusPage() {
                 prioritizedItems={prioritizedItems}
                 inboxItems={items}
                 onMarkDone={handleMarkDone}
-                onMoveToInbox={handleMoveToInbox}
+                onMoveToFollowUp={handleMoveToFollowUp}
                 onRefresh={() => setRefreshKey((prev) => prev + 1)}
                 onSendTo={handleSendTo}
                 onResetToAI={() => handleResetBucket("later")}
@@ -544,7 +544,7 @@ export default function FocusPage() {
                 prioritizedItems={prioritizedItems}
                 inboxItems={items}
                 onMarkDone={handleMarkDone}
-                onMoveToInbox={handleMoveToInbox}
+                onMoveToFollowUp={handleMoveToFollowUp}
                 onRefresh={() => setRefreshKey((prev) => prev + 1)}
                 onSendTo={handleSendTo}
                 onResetToAI={() => handleResetBucket("backlog")}

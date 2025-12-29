@@ -13,7 +13,7 @@ interface DraggableTaskCardProps {
   priorityScore?: number;
   bucketColor?: string;
   onMarkDone?: () => void;
-  onMoveToInbox?: () => void;
+  onMoveToFollowUp?: () => void;
   onRefresh?: () => void;
   onSendTo?: (bucket: "now" | "next" | "later" | "backlog") => void;
 }
@@ -25,7 +25,7 @@ export default function DraggableTaskCard({
   priorityScore,
   bucketColor,
   onMarkDone,
-  onMoveToInbox,
+  onMoveToFollowUp,
   onRefresh,
   onSendTo,
 }: DraggableTaskCardProps) {
@@ -152,7 +152,7 @@ export default function DraggableTaskCard({
             status={inboxItem.status}
             originalPrompt={inboxItem.request?.raw_text}
             onToggleDone={onMarkDone}
-            onMove={onMoveToInbox}
+            onMove={onMoveToFollowUp}
             onChange={onRefresh}
           />
         </div>
