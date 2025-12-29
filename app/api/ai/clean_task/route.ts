@@ -4,7 +4,7 @@ import addFormats from "ajv-formats";
 import { redact } from "@/src/lib/redact";
 import { normalizeCleanTaskResponse } from "@/src/lib/datetime";
 import { getSettingsFromRequest } from "@/src/lib/settings";
-import { endOfWeek, containsEOW, isPlainDate, toEndOfDayIso } from "@/src/lib/eow";
+import { endOfWeek, endOfNextWeek, containsEOW, containsEONW, isPlainDate, toEndOfDayIso } from "@/src/lib/eow";
 import { normalizeSubtasks } from "@/src/lib/normalize";
 import { inc } from "@/src/db/metrics";
 import { hit, clientKey } from "@/src/lib/ratelimit";
@@ -208,16 +208,21 @@ ${systemPrompt}`;
     const normalizedResponse = { ...parsedResponse };
 
     // Handle due_at normalization
-    if (typeof normalizedResponse.due_at === "string" && isPlainDate(normalizedResponse.due_at)) {
+    // First, check for EOW phrases - these should OVERRIDE whatever the AI returned
+    // because the user's EOW anchor setting is authoritative
+    if (containsEONW(raw_text)) {
+      // "end of next week" - use next week's anchor day
+      normalizedResponse.due_at = endOfNextWeek(new Date(), settings);
+    } else if (containsEOW(raw_text)) {
+      // "end of week" or "end of the week" - use this week's anchor day
+      normalizedResponse.due_at = endOfWeek(new Date(), settings);
+    } else if (typeof normalizedResponse.due_at === "string" && isPlainDate(normalizedResponse.due_at)) {
       // Convert plain date to end-of-day ISO
       normalizedResponse.due_at = toEndOfDayIso(
         normalizedResponse.due_at,
         settings.timezone,
         settings.endOfDay
       );
-    } else if (!normalizedResponse.due_at && containsEOW(raw_text)) {
-      // If no due_at but text contains "end of week", compute it
-      normalizedResponse.due_at = endOfWeek(new Date(), settings);
     }
 
     // Handle scheduled_for normalization
