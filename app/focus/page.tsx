@@ -590,6 +590,8 @@ export default function FocusPage() {
       <CapturePanel
         isOpen={capturePanelOpen}
         onToggle={() => setCapturePanelOpen(!capturePanelOpen)}
+        onOpen={() => setCapturePanelOpen(true)}
+        onClose={() => setCapturePanelOpen(false)}
         defaultBucket="active"
         onTasksAdded={() => {
           setRefreshKey((prev) => prev + 1);
