@@ -315,14 +315,21 @@ export default function InboxPage() {
                     <span
                       style={{
                         padding: "0.25rem 0.5rem",
-                        backgroundColor: item.status === "active" ? "var(--accent-2)" : "var(--warn)",
+                        backgroundColor:
+                          item.status === "active"
+                            ? "var(--accent-2)"
+                            : item.status === "follow-up"
+                            ? "var(--warn)"
+                            : item.status === "done"
+                            ? "var(--success)"
+                            : "var(--muted)",
                         color: "white",
                         borderRadius: "4px",
                         fontSize: "0.75rem",
                         fontWeight: "500",
                       }}
                     >
-                      {item.status.toUpperCase()}
+                      {item.status === "follow-up" ? "FOLLOW-UP" : item.status.toUpperCase()}
                     </span>
                   </div>
                   <TaskCard
@@ -358,7 +365,7 @@ export default function InboxPage() {
       <CapturePanel
         isOpen={capturePanelOpen}
         onToggle={() => setCapturePanelOpen(!capturePanelOpen)}
-        defaultBucket="inbox"
+        defaultBucket="active"
         onTasksAdded={() => setItems(getInboxItems())}
       />
     </div>

@@ -2,10 +2,10 @@ import { useState } from "react";
 
 interface ActionBarProps {
   itemId: string;
-  currentStatus: "inbox" | "active" | "done" | "snoozed";
+  currentStatus: "active" | "done" | "follow-up" | "snoozed";
   onMarkDone: (id: string) => void;
   onMoveToActive: (id: string) => void;
-  onMoveToInbox: (id: string) => void;
+  onMoveToFollowUp: (id: string) => void;
   onSnooze: (id: string, days: number) => void;
   onUnsnooze: (id: string) => void;
 }
@@ -15,7 +15,7 @@ export default function ActionBar({
   currentStatus,
   onMarkDone,
   onMoveToActive,
-  onMoveToInbox,
+  onMoveToFollowUp,
   onSnooze,
   onUnsnooze,
 }: ActionBarProps) {
@@ -73,10 +73,10 @@ export default function ActionBar({
         </button>
       )}
 
-      {/* Move to Inbox */}
-      {currentStatus !== "inbox" && currentStatus !== "done" && (
+      {/* Move to Follow-up */}
+      {currentStatus !== "follow-up" && currentStatus !== "done" && (
         <button
-          onClick={() => onMoveToInbox(itemId)}
+          onClick={() => onMoveToFollowUp(itemId)}
           style={{
             padding: "0.375rem 0.75rem",
             backgroundColor: "var(--muted)",
@@ -86,9 +86,9 @@ export default function ActionBar({
             fontSize: "0.85rem",
             cursor: "pointer",
           }}
-          title="Move to Inbox (i)"
+          title="Move to Follow-up (waiting on others)"
         >
-          ← Inbox
+          ⏳ Follow-up
         </button>
       )}
 

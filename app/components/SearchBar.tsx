@@ -41,7 +41,7 @@ export default function SearchBar({
   const handleClearAll = () => {
     const cleared: Filters = {
       q: "",
-      statuses: context === "inbox" ? ["inbox", "active"] : undefined,
+      statuses: context === "inbox" ? ["active", "follow-up"] : undefined,
       projects: [],
       tags: [],
       due: "any",
@@ -165,7 +165,7 @@ export default function SearchBar({
                 Status
               </label>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
-                {(["inbox", "active", "done", "snoozed"] as InboxItemStatus[]).map((status) => (
+                {(["active", "follow-up", "done", "snoozed"] as InboxItemStatus[]).map((status) => (
                   <button
                     key={status}
                     onClick={() => toggleStatus(status)}
@@ -177,10 +177,9 @@ export default function SearchBar({
                       borderRadius: "4px",
                       cursor: "pointer",
                       fontSize: "0.85rem",
-                      textTransform: "capitalize",
                     }}
                   >
-                    {status}
+                    {status === "follow-up" ? "Follow-up" : status.charAt(0).toUpperCase() + status.slice(1)}
                   </button>
                 ))}
               </div>

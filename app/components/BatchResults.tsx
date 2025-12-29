@@ -14,7 +14,7 @@ export interface BatchTaskResult {
 
 interface BatchResultsProps {
   results: BatchTaskResult[];
-  onAddSelected: (selectedIds: string[], destination: "inbox" | "active") => void;
+  onAddSelected: (selectedIds: string[], destination: "active" | "follow-up") => void;
   onDiscardSelected: (selectedIds: string[]) => void;
   onRetryFailed: () => void;
   onRetryOne?: (id: string) => void;
@@ -30,7 +30,7 @@ export default function BatchResults({
   onUpdateResult,
 }: BatchResultsProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [destination, setDestination] = useState<"inbox" | "active">("inbox");
+  const [destination, setDestination] = useState<"active" | "follow-up">("active");
 
   const successResults = results.filter((r) => r.status === "success");
   const failedResults = results.filter((r) => r.status === "failed");
@@ -279,11 +279,11 @@ export default function BatchResults({
                 <input
                   type="radio"
                   name="destination"
-                  value="inbox"
-                  checked={destination === "inbox"}
-                  onChange={() => setDestination("inbox")}
+                  value="active"
+                  checked={destination === "active"}
+                  onChange={() => setDestination("active")}
                 />
-                <span style={{ color: "var(--text)" }}>Add to Inbox</span>
+                <span style={{ color: "var(--text)" }}>Add as Active</span>
               </label>
               <label
                 style={{
@@ -296,11 +296,11 @@ export default function BatchResults({
                 <input
                   type="radio"
                   name="destination"
-                  value="active"
-                  checked={destination === "active"}
-                  onChange={() => setDestination("active")}
+                  value="follow-up"
+                  checked={destination === "follow-up"}
+                  onChange={() => setDestination("follow-up")}
                 />
-                <span style={{ color: "var(--text)" }}>Add to Active</span>
+                <span style={{ color: "var(--text)" }}>Add as Follow-up</span>
               </label>
             </div>
           </div>
