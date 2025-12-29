@@ -1,7 +1,7 @@
 import type { CleanTaskRequest, CleanTaskResponse } from "@/src/types";
 import { inc } from "@/src/db/metrics";
 
-export type InboxItemStatus = "inbox" | "active" | "done" | "snoozed";
+export type InboxItemStatus = "active" | "done" | "follow-up" | "snoozed";
 
 export interface InboxItem {
   id: string; // uuid
@@ -148,10 +148,10 @@ export function moveItemToActive(id: string): void {
 }
 
 /**
- * Move an inbox item back to inbox
+ * Move an item to follow-up status (waiting on external input)
  */
-export function moveItemToInbox(id: string): void {
-  updateInboxItemStatus(id, "inbox");
+export function moveItemToFollowUp(id: string): void {
+  updateInboxItemStatus(id, "follow-up");
 }
 
 /**
@@ -173,12 +173,12 @@ export function snoozeItem(id: string, days: number): void {
 }
 
 /**
- * Unsnooze an inbox item (move back to inbox)
+ * Unsnooze an item (move back to active)
  */
 export function unsnoozeItem(id: string): void {
   mutateInboxItem(id, (item) => ({
     ...item,
-    status: "inbox",
+    status: "active",
     snoozed_until: null,
     touched_at: new Date().toISOString(),
   }));

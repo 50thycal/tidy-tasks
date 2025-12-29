@@ -4,7 +4,7 @@ import { todayRange, thisWeekRange, nextWeekRange, isOverdue, isInRange } from "
 
 export interface Filters {
   q: string; // Free text search
-  statuses?: InboxItemStatus[]; // inbox/active/done/snoozed
+  statuses?: InboxItemStatus[]; // active/done/follow-up/snoozed
   projects?: string[]; // OR logic
   tags?: string[]; // OR logic
   due: "any" | "overdue" | "today" | "thisWeek" | "nextWeek" | "none";
@@ -14,7 +14,7 @@ export interface Filters {
 
 export const DEFAULT_FILTERS: Filters = {
   q: "",
-  statuses: ["inbox", "active"],
+  statuses: ["active", "follow-up"],
   projects: [],
   tags: [],
   due: "any",

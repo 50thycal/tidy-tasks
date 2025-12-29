@@ -13,7 +13,7 @@ import { DateText } from "@/src/ui/DateText";
 interface TaskCardProps {
   id?: string; // InboxItem ID for persistence
   result: CleanTaskResponse;
-  status?: "inbox" | "active" | "done" | "snoozed"; // Task status for done toggle
+  status?: "active" | "done" | "follow-up" | "snoozed"; // Task status for done toggle
   originalPrompt?: string; // Raw input before AI cleanup
   onToggleDone?: () => void; // Toggle done/active
   onMove?: () => void; // Move to different status
@@ -265,7 +265,7 @@ export default function TaskCard({
       const taskToValidate = {
         id: id || "temp",
         title: draft.title,
-        status: "inbox" as const,
+        status: "active" as const,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         due_at: draft.due_at,
@@ -580,13 +580,13 @@ export default function TaskCard({
   };
 
   // Handle move to specific bucket/status
-  const handleMoveTo = (destination: "inbox" | "now" | "next" | "later" | "backlog") => {
+  const handleMoveTo = (destination: "follow-up" | "now" | "next" | "later" | "backlog") => {
     if (!id) return;
 
     try {
       // Update status based on destination
-      if (destination === "inbox") {
-        updateInboxItemStatus(id, "inbox");
+      if (destination === "follow-up") {
+        updateInboxItemStatus(id, "follow-up");
       } else {
         // For now/next/later/backlog, set status to active
         updateInboxItemStatus(id, "active");
@@ -1584,11 +1584,11 @@ export default function TaskCard({
                   minWidth: "150px",
                 }}
               >
-                {["inbox", "now", "next", "later", "backlog"].map((dest) => (
+                {["follow-up", "now", "next", "later", "backlog"].map((dest) => (
                   <button
                     key={dest}
                     type="button"
-                    onClick={() => handleMoveTo(dest as "inbox" | "now" | "next" | "later" | "backlog")}
+                    onClick={() => handleMoveTo(dest as "follow-up" | "now" | "next" | "later" | "backlog")}
                     style={{
                       display: "block",
                       width: "100%",

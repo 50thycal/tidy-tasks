@@ -7,11 +7,11 @@ import { inc } from "@/src/db/metrics";
 import type { CleanTaskResponse, CleanTaskRequest } from "@/src/types";
 
 interface FloatingAddTaskButtonProps {
-  defaultBucket?: "inbox" | "now";
+  defaultBucket?: "active" | "now";
   onTaskAdded?: () => void;
 }
 
-export function FloatingAddTaskButton({ defaultBucket = "inbox", onTaskAdded }: FloatingAddTaskButtonProps) {
+export function FloatingAddTaskButton({ defaultBucket = "active", onTaskAdded }: FloatingAddTaskButtonProps) {
   const [open, setOpen] = useState(false);
   const [messyText, setMessyText] = useState("");
   const [loading, setLoading] = useState(false);
@@ -76,7 +76,7 @@ export function FloatingAddTaskButton({ defaultBucket = "inbox", onTaskAdded }: 
         created_at: new Date().toISOString(),
         request,
         result: taskResult,
-        status: defaultBucket === "inbox" ? "inbox" : "active",
+        status: "active",
       };
 
       // If it's going to "now" bucket, set the bucket property

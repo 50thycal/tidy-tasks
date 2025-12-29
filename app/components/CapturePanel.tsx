@@ -10,7 +10,7 @@ import type { CleanTaskRequest, CleanTaskResponse } from "@/src/types";
 interface CapturePanelProps {
   isOpen: boolean;
   onToggle: () => void;
-  defaultBucket?: "inbox" | "active";
+  defaultBucket?: "active" | "follow-up";
   onTasksAdded?: () => void;
 }
 
@@ -23,7 +23,7 @@ interface TaskResult {
   error?: string;
 }
 
-export function CapturePanel({ isOpen, onToggle, defaultBucket = "inbox", onTasksAdded }: CapturePanelProps) {
+export function CapturePanel({ isOpen, onToggle, defaultBucket = "active", onTasksAdded }: CapturePanelProps) {
   const [rawText, setRawText] = useState("");
   const [results, setResults] = useState<TaskResult[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
