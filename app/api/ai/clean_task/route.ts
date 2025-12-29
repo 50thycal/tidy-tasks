@@ -106,17 +106,51 @@ export async function POST(request: NextRequest) {
     // Build project matching instruction if projects exist
     const projectMatchingRule = projectList.length > 0
       ? `\n\nPROJECT MATCHING (CRITICAL): The "project" field MUST be EXACTLY one of: [${projectList.map(p => `"${p}"`).join(", ")}] or null.
-- CASE SENSITIVE: Use the EXACT spelling and case from the list above. "tompkins" in input → "Tompkins" in output (match the list)
-- Fuzzy match input: "the Tompkins project" or "tompkins stuff" → use exact name from list
-- Partial match: "working on BigCorp deliverable" → "BigCorp" (exact case from list)
+- CASE INSENSITIVE INPUT: "tompkins" or "TOMPKINS" → "Tompkins" (use exact case from list)
+- Fuzzy match: "the Tompkins project", "tompkins stuff", "for Tompkins" → "Tompkins"
+- Partial match: "working on BigCorp deliverable" → "BigCorp" (if in list)
+- Look for project names ANYWHERE in the text, not just as explicit mentions
 - If no match found, set project to null (never invent project names)`
       : "";
 
+    // Intent preservation rules to prevent the AI from changing task actions
+    const intentPreservationRule = `
+
+INTENT PRESERVATION (CRITICAL):
+- The cleaned title MUST preserve the original ACTION intent from the input
+- "Send X" must remain a send/email task → "Send X to Y"
+- "Review X" must remain a review task → "Review X for Y"
+- "Follow up with PersonA" must keep PersonA → "Follow up with PersonA about X"
+- DO NOT change the primary action verb type (send→review, review→create, etc.)
+- DO NOT switch the person/contact mentioned in the task
+- DO NOT add workflow steps not explicitly mentioned in the input
+- When uncertain, apply minimal cleanup and preserve original wording`;
+
+    // Importance scoring guidance to reduce clustering around 70
+    const importanceScoringRule = `
+
+IMPORTANCE SCORING (use the FULL 0-100 range, avoid clustering around 70):
+- 90-100: Deadline this week, client-facing deliverable, blocks others, contractual
+- 70-89: Deadline next week, internal milestone, important but not urgent
+- 50-69: No hard deadline, nice-to-have this week, moderate stakes
+- 30-49: Backlog item, someday/maybe, no time pressure
+- 0-29: Optional, exploratory, personal development, long-term
+If uncertain, score LOWER (40-60) rather than defaulting to 70.`;
+
+    // Subtask generation guidance
+    const subtaskRule = `
+
+SUBTASK GENERATION:
+- Generate subtasks when: task has multiple steps, mentions "then"/"after", involves approvals, or effort >= 30 min
+- Skip subtasks when: simple follow-up, single email, < 15 min effort
+- Keep subtasks: actionable (verb-first), atomic (one thing each), 2-5 items max
+- DO NOT generate trivial breakdowns (e.g., "Open email", "Click send")`;
+
     let systemPrompt = `Normalize task text. Use verb-first titles. Today is ${todayDate} (${dayOfWeek}).
 
-DATE RULES: "next [day]" = that day NEXT week. "this [day]" or just "[day]" = upcoming occurrence. Explicit dates like "1/7/26" should be used exactly as given.${projectMatchingRule}
+DATE RULES: "next [day]" = that day NEXT week. "this [day]" or just "[day]" = upcoming occurrence. Explicit dates like "1/7/26" should be used exactly as given.${projectMatchingRule}${intentPreservationRule}${importanceScoringRule}${subtaskRule}
 
-Return ONLY this JSON structure (no extra fields): {title, due_at (YYYY-MM-DD or null), scheduled_for (null unless specific time given), effort_min (5|15|30|60|120), energy (low|med|high), tags[], project (MUST match from list above or null), subtasks[], importance (0-100), notes_append (string or null)}.${contextSection}`;
+Return ONLY this JSON structure (no extra fields): {title, due_at (YYYY-MM-DD or null), scheduled_for (null unless specific time given), effort_min (5|15|30|60|120), energy (low|med|high), tags[] (lowercase, no project names), project (MUST match from list above or null), subtasks[], importance (0-100), notes_append (string or null)}.${contextSection}`;
 
     // If strict mode, prepend stricter instructions
     if (mode === 'strict') {
