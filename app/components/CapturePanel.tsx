@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { bulkAddInboxItems, saveInboxItem, type InboxItem } from "@/src/lib/clientStore";
-import { getWorkSettings } from "@/src/lib/settings";
+import { bulkAddInboxItems, saveInboxItem, type InboxItem, type AIFirstPass } from "@/src/lib/clientStore";
+import { getWorkSettings, addProject } from "@/src/lib/settings";
 import { runWithPool } from "@/src/lib/batchRunner";
 import type { CleanTaskRequest, CleanTaskResponse } from "@/src/types";
 
@@ -15,13 +15,157 @@ interface CapturePanelProps {
   onTasksAdded?: () => void;
 }
 
+/** Extended response that may include suggested_project from API */
+interface CleanTaskResponseWithSuggestion extends CleanTaskResponse {
+  suggested_project?: string | null;
+}
+
 interface TaskResult {
   id: string;
   rawText: string;
   status: "queued" | "running" | "success" | "failed";
   request?: CleanTaskRequest;
-  result?: CleanTaskResponse;
+  result?: CleanTaskResponseWithSuggestion;
   error?: string;
+}
+
+/** Modal for adding a new project */
+interface AddProjectModalProps {
+  suggestedName: string;
+  onAdd: (name: string, notes?: string) => void;
+  onSkip: () => void;
+  onClose: () => void;
+}
+
+function AddProjectModal({ suggestedName, onAdd, onSkip, onClose }: AddProjectModalProps) {
+  const [name, setName] = useState(suggestedName);
+  const [notes, setNotes] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  const handleAdd = () => {
+    if (!name.trim()) {
+      setError("Project name is required");
+      return;
+    }
+    try {
+      onAdd(name.trim(), notes.trim() || undefined);
+    } catch (e: any) {
+      setError(e.message || "Failed to add project");
+    }
+  };
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: "rgba(0,0,0,0.5)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 100,
+      }}
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div
+        style={{
+          backgroundColor: "var(--panel)",
+          borderRadius: "8px",
+          padding: "1.5rem",
+          width: "90%",
+          maxWidth: "400px",
+          boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
+        }}
+      >
+        <h3 style={{ margin: "0 0 1rem", fontSize: "1rem" }}>Add New Project</h3>
+        <p style={{ fontSize: "0.85rem", color: "var(--muted)", marginBottom: "1rem" }}>
+          The AI detected a project that&apos;s not in your list. Would you like to add it?
+        </p>
+
+        <div style={{ marginBottom: "1rem" }}>
+          <label style={{ display: "block", fontSize: "0.8rem", marginBottom: "0.25rem" }}>
+            Project Name
+          </label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            style={{
+              width: "100%",
+              padding: "0.5rem",
+              backgroundColor: "var(--panel-2)",
+              border: "1px solid var(--border)",
+              borderRadius: "4px",
+              color: "var(--text)",
+              fontSize: "0.875rem",
+            }}
+          />
+        </div>
+
+        <div style={{ marginBottom: "1rem" }}>
+          <label style={{ display: "block", fontSize: "0.8rem", marginBottom: "0.25rem" }}>
+            Notes (optional)
+          </label>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Description, aliases, or context..."
+            style={{
+              width: "100%",
+              padding: "0.5rem",
+              backgroundColor: "var(--panel-2)",
+              border: "1px solid var(--border)",
+              borderRadius: "4px",
+              color: "var(--text)",
+              fontSize: "0.875rem",
+              minHeight: "60px",
+              resize: "vertical",
+            }}
+          />
+        </div>
+
+        {error && (
+          <div style={{ color: "var(--danger)", fontSize: "0.8rem", marginBottom: "0.5rem" }}>
+            {error}
+          </div>
+        )}
+
+        <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
+          <button
+            onClick={onSkip}
+            style={{
+              padding: "0.5rem 1rem",
+              backgroundColor: "var(--panel-2)",
+              border: "1px solid var(--border)",
+              borderRadius: "4px",
+              color: "var(--text)",
+              cursor: "pointer",
+              fontSize: "0.85rem",
+            }}
+          >
+            Skip
+          </button>
+          <button
+            onClick={handleAdd}
+            style={{
+              padding: "0.5rem 1rem",
+              backgroundColor: "var(--accent)",
+              border: "none",
+              borderRadius: "4px",
+              color: "white",
+              cursor: "pointer",
+              fontSize: "0.85rem",
+            }}
+          >
+            Add Project
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export function CapturePanel({ isOpen, onToggle, onOpen, onClose, defaultBucket = "active", onTasksAdded }: CapturePanelProps) {
@@ -30,6 +174,13 @@ export function CapturePanel({ isOpen, onToggle, onOpen, onClose, defaultBucket 
   const [isProcessing, setIsProcessing] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
+  // Project suggestion modal state
+  const [showProjectModal, setShowProjectModal] = useState(false);
+  const [pendingSuggestion, setPendingSuggestion] = useState<{
+    projectName: string;
+    taskIndex: number;
+  } | null>(null);
+
   // Show toast temporarily
   useEffect(() => {
     if (toast) {
@@ -37,6 +188,12 @@ export function CapturePanel({ isOpen, onToggle, onOpen, onClose, defaultBucket 
       return () => clearTimeout(timer);
     }
   }, [toast]);
+
+  // Collect unique suggested projects from results
+  const suggestedProjects = results
+    .filter(r => r.status === "success" && r.result?.suggested_project)
+    .map(r => r.result!.suggested_project!)
+    .filter((name, index, arr) => arr.indexOf(name) === index);
 
   const lineCount = rawText.split("\n").filter((line) => line.trim().length > 0).length;
 
@@ -134,13 +291,36 @@ export function CapturePanel({ isOpen, onToggle, onOpen, onClose, defaultBucket 
 
     if (successResults.length === 0) return;
 
-    const newItems: InboxItem[] = successResults.map((r) => ({
-      id: crypto.randomUUID(),
-      created_at: new Date().toISOString(),
-      status: defaultBucket,
-      request: r.request!,
-      result: r.result!,
-    }));
+    const newItems: InboxItem[] = successResults.map((r) => {
+      const result = r.result!;
+
+      // Create ai_first_pass snapshot (excluding suggested_project from result)
+      const aiFirstPass: AIFirstPass = {
+        title: result.title,
+        due_at: result.due_at,
+        scheduled_for: result.scheduled_for || null,
+        effort_min: result.effort_min,
+        energy: result.energy,
+        tags: [...result.tags],
+        project: result.project,
+        subtasks: [...result.subtasks],
+        importance: result.importance,
+        notes_append: result.notes_append || null,
+        suggested_project: result.suggested_project || null,
+      };
+
+      // Remove suggested_project from the result we store (it's not part of the task schema)
+      const { suggested_project, ...cleanResult } = result;
+
+      return {
+        id: crypto.randomUUID(),
+        created_at: new Date().toISOString(),
+        status: defaultBucket,
+        request: r.request!,
+        result: cleanResult as CleanTaskResponse,
+        ai_first_pass: aiFirstPass,
+      };
+    });
 
     try {
       bulkAddInboxItems(newItems);
@@ -155,6 +335,45 @@ export function CapturePanel({ isOpen, onToggle, onOpen, onClose, defaultBucket 
       setToast("Error adding tasks. Please try again.");
       console.error("Error adding tasks:", error);
     }
+  };
+
+  // Handle adding a suggested project
+  const handleAddSuggestedProject = (projectName: string) => {
+    setPendingSuggestion({ projectName, taskIndex: 0 });
+    setShowProjectModal(true);
+  };
+
+  const handleProjectAdded = (name: string, notes?: string) => {
+    try {
+      // Add the project to settings
+      addProject({ name, notes, llmr_due: null, ifr_due: null, ifc_due: null });
+
+      // Update all results that had this suggested_project to use it as their project
+      setResults(prev => prev.map(r => {
+        if (r.result?.suggested_project?.toLowerCase() === name.toLowerCase()) {
+          return {
+            ...r,
+            result: {
+              ...r.result,
+              project: name,
+              suggested_project: null, // Clear the suggestion since it's now added
+            },
+          };
+        }
+        return r;
+      }));
+
+      setToast(`Added project: ${name}`);
+      setShowProjectModal(false);
+      setPendingSuggestion(null);
+    } catch (e: any) {
+      setToast(e.message || "Failed to add project");
+    }
+  };
+
+  const handleSkipProject = () => {
+    setShowProjectModal(false);
+    setPendingSuggestion(null);
   };
 
   const handleDiscard = () => {
@@ -386,6 +605,27 @@ export function CapturePanel({ isOpen, onToggle, onOpen, onClose, defaultBucket 
                           </span>
                         )}
 
+                        {/* Suggested project badge (not in user's list) */}
+                        {!r.result.project && r.result.suggested_project && (
+                          <span
+                            style={{
+                              display: "inline-block",
+                              padding: "0.15rem 0.5rem",
+                              backgroundColor: "var(--warning)",
+                              color: "white",
+                              borderRadius: "4px",
+                              fontSize: "0.7rem",
+                              fontWeight: "500",
+                              marginBottom: "0.5rem",
+                              cursor: "pointer",
+                            }}
+                            title="Click to add this project"
+                            onClick={() => handleAddSuggestedProject(r.result!.suggested_project!)}
+                          >
+                            + {r.result.suggested_project}
+                          </span>
+                        )}
+
                         {/* Task metadata row */}
                         <div
                           style={{
@@ -463,6 +703,45 @@ export function CapturePanel({ isOpen, onToggle, onOpen, onClose, defaultBucket 
                 ))}
               </div>
 
+              {/* Suggested projects section */}
+              {!isProcessing && suggestedProjects.length > 0 && (
+                <div
+                  style={{
+                    padding: "0.75rem",
+                    backgroundColor: "rgba(255, 193, 7, 0.1)",
+                    border: "1px solid var(--warning)",
+                    borderRadius: "6px",
+                    fontSize: "0.8rem",
+                  }}
+                >
+                  <div style={{ fontWeight: "500", marginBottom: "0.5rem", color: "var(--warning)" }}>
+                    New projects detected
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+                    {suggestedProjects.map((name) => (
+                      <button
+                        key={name}
+                        onClick={() => handleAddSuggestedProject(name)}
+                        style={{
+                          padding: "0.25rem 0.5rem",
+                          backgroundColor: "var(--warning)",
+                          color: "white",
+                          border: "none",
+                          borderRadius: "4px",
+                          fontSize: "0.75rem",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.25rem",
+                        }}
+                      >
+                        + Add &quot;{name}&quot;
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Action buttons */}
               {!isProcessing && successCount > 0 && (
                 <div style={{ display: "flex", gap: "0.5rem" }}>
@@ -524,6 +803,16 @@ export function CapturePanel({ isOpen, onToggle, onOpen, onClose, defaultBucket 
           </div>
         )}
       </aside>
+
+      {/* Add Project Modal */}
+      {showProjectModal && pendingSuggestion && (
+        <AddProjectModal
+          suggestedName={pendingSuggestion.projectName}
+          onAdd={handleProjectAdded}
+          onSkip={handleSkipProject}
+          onClose={() => setShowProjectModal(false)}
+        />
+      )}
     </>
   );
 }

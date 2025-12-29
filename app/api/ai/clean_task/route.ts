@@ -110,8 +110,9 @@ export async function POST(request: NextRequest) {
 - Fuzzy match: "the Tompkins project", "tompkins stuff", "for Tompkins" → "Tompkins"
 - Partial match: "working on BigCorp deliverable" → "BigCorp" (if in list)
 - Look for project names ANYWHERE in the text, not just as explicit mentions
-- If no match found, set project to null (never invent project names)`
-      : "";
+- If no match found, set project to null BUT also set "suggested_project" to the detected project name (capitalized properly)
+- suggested_project: If you detect a project/client name in the text that's NOT in the list, put it here (e.g., "Whiskey", "BMI"); otherwise null`
+      : `\n\nPROJECT DETECTION: If you detect a project or client name in the text, set "suggested_project" to that name (properly capitalized). Set "project" to null since there's no project list yet.`;
 
     // Intent preservation rules to prevent the AI from changing task actions
     const intentPreservationRule = `
@@ -150,7 +151,7 @@ SUBTASK GENERATION:
 
 DATE RULES: "next [day]" = that day NEXT week. "this [day]" or just "[day]" = upcoming occurrence. Explicit dates like "1/7/26" should be used exactly as given.${projectMatchingRule}${intentPreservationRule}${importanceScoringRule}${subtaskRule}
 
-Return ONLY this JSON structure (no extra fields): {title, due_at (YYYY-MM-DD or null), scheduled_for (null unless specific time given), effort_min (5|15|30|60|120), energy (low|med|high), tags[] (lowercase, no project names), project (MUST match from list above or null), subtasks[], importance (0-100), notes_append (string or null)}.${contextSection}`;
+Return ONLY this JSON structure: {title, due_at (YYYY-MM-DD or null), scheduled_for (null unless specific time given), effort_min (5|15|30|60|120), energy (low|med|high), tags[] (lowercase, no project names), project (MUST match from list above or null), subtasks[], importance (0-100), notes_append (string or null), suggested_project (detected project name not in list, or null)}.${contextSection}`;
 
     // If strict mode, prepend stricter instructions
     if (mode === 'strict') {
@@ -289,6 +290,10 @@ ${systemPrompt}`;
       normalizedResponse.subtasks = normalizeSubtasks(normalizedResponse.subtasks);
     }
 
+    // Extract suggested_project before validation (not in schema)
+    const suggestedProject = normalizedResponse.suggested_project || null;
+    delete normalizedResponse.suggested_project;
+
     // Validate response against schema
     if (!validateResponse(normalizedResponse)) {
       return NextResponse.json(
@@ -304,8 +309,14 @@ ${systemPrompt}`;
     // Increment metrics on successful AI clean
     await inc('aiCleans');
 
-    // Return validated response
-    return NextResponse.json(normalizedResponse, { status: 200 });
+    // Return validated response with suggested_project as separate field
+    const responsePayload = {
+      ...normalizedResponse,
+      // Include suggested_project if AI detected an unmatched project name
+      ...(suggestedProject ? { suggested_project: suggestedProject } : {}),
+    };
+
+    return NextResponse.json(responsePayload, { status: 200 });
   } catch (error) {
     console.error("Error in /api/ai/clean_task:", error);
     return NextResponse.json(

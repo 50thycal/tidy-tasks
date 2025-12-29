@@ -3,6 +3,25 @@ import { inc } from "@/src/db/metrics";
 
 export type InboxItemStatus = "active" | "done" | "follow-up";
 
+/**
+ * Snapshot of the AI's initial output, before any user edits.
+ * Used for analyzing AI accuracy and calibrating prompts.
+ */
+export interface AIFirstPass {
+  title: string;
+  due_at: string | null;
+  scheduled_for: string | null;
+  effort_min: number;
+  energy: string;
+  tags: string[];
+  project: string | null;
+  subtasks: string[];
+  importance: number;
+  notes_append: string | null;
+  /** If AI detected a project name not in the user's list */
+  suggested_project?: string | null;
+}
+
 export interface InboxItem {
   id: string; // uuid
   created_at: string; // ISO 8601
@@ -11,6 +30,8 @@ export interface InboxItem {
   request: CleanTaskRequest;
   result: CleanTaskResponse;
   status: InboxItemStatus;
+  /** Snapshot of the AI's initial output for comparison */
+  ai_first_pass?: AIFirstPass;
 }
 
 const STORAGE_KEY = "tidy.inbox";
