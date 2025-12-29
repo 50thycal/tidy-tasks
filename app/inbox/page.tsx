@@ -200,9 +200,6 @@ export default function InboxPage() {
 
         {/* Saved Items List */}
         <div>
-          <h2 style={{ fontSize: "1.25rem", marginBottom: "0.5rem" }}>
-            Saved Tasks {items.length > 0 && `(${items.length})`}
-          </h2>
           {items.length > 0 && (
             <div
               style={{
@@ -384,6 +381,8 @@ export default function InboxPage() {
       <CapturePanel
         isOpen={capturePanelOpen}
         onToggle={() => setCapturePanelOpen(!capturePanelOpen)}
+        onOpen={() => setCapturePanelOpen(true)}
+        onClose={() => setCapturePanelOpen(false)}
         defaultBucket="active"
         onTasksAdded={() => setItems(getInboxItems())}
       />

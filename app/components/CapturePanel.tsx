@@ -3,13 +3,14 @@
 import { useState, useEffect } from "react";
 import { bulkAddInboxItems, saveInboxItem, type InboxItem } from "@/src/lib/clientStore";
 import { getWorkSettings, getWorkSettingsV2 } from "@/src/lib/settings";
-import { inc } from "@/src/db/metrics";
 import { runWithPool } from "@/src/lib/batchRunner";
 import type { CleanTaskRequest, CleanTaskResponse } from "@/src/types";
 
 interface CapturePanelProps {
   isOpen: boolean;
   onToggle: () => void;
+  onOpen?: () => void;
+  onClose?: () => void;
   defaultBucket?: "active" | "follow-up";
   onTasksAdded?: () => void;
 }
@@ -23,7 +24,7 @@ interface TaskResult {
   error?: string;
 }
 
-export function CapturePanel({ isOpen, onToggle, defaultBucket = "active", onTasksAdded }: CapturePanelProps) {
+export function CapturePanel({ isOpen, onToggle, onOpen, onClose, defaultBucket = "active", onTasksAdded }: CapturePanelProps) {
   const [rawText, setRawText] = useState("");
   const [results, setResults] = useState<TaskResult[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -165,11 +166,6 @@ export function CapturePanel({ isOpen, onToggle, defaultBucket = "active", onTas
 
     try {
       bulkAddInboxItems(newItems);
-      // Increment metrics for each task
-      for (let i = 0; i < newItems.length; i++) {
-        await inc('tasksCreated');
-        await inc('aiCleans');
-      }
 
       // Clear results and input
       setResults([]);
@@ -194,10 +190,27 @@ export function CapturePanel({ isOpen, onToggle, defaultBucket = "active", onTas
 
   return (
     <>
+      {/* Hover trigger area - invisible strip on right edge */}
+      {!isOpen && (
+        <div
+          onMouseEnter={onOpen}
+          style={{
+            position: "fixed",
+            top: 0,
+            right: 0,
+            width: "20px",
+            height: "100vh",
+            zIndex: 39,
+            cursor: "pointer",
+          }}
+        />
+      )}
+
       {/* Toggle Button - Always visible */}
       <button
         type="button"
         onClick={onToggle}
+        onMouseEnter={!isOpen ? onOpen : undefined}
         style={{
           position: "fixed",
           top: "50%",
@@ -226,6 +239,7 @@ export function CapturePanel({ isOpen, onToggle, defaultBucket = "active", onTas
 
       {/* Slide-out Panel */}
       <aside
+        onMouseLeave={onClose}
         style={{
           position: "fixed",
           top: 0,
