@@ -97,8 +97,54 @@ export function endOfWeek(now: Date, work: WorkSettingsV1): string {
 }
 
 /**
- * Check if text contains "end of week" phrase
+ * Check if text contains "end of week" phrase (this week)
  */
 export function containsEOW(text: string): boolean {
-  return /(end of (the )?week|EOW|eow)/i.test(text);
+  // Match "end of week" or "end of the week" but NOT "end of next week"
+  return /(end of (the )?week|EOW(?!\s+next)|eow(?!\s+next))/i.test(text) &&
+         !containsEONW(text);
+}
+
+/**
+ * Check if text contains "end of next week" phrase
+ */
+export function containsEONW(text: string): boolean {
+  return /(end of next week|EONW|eonw)/i.test(text);
+}
+
+/**
+ * Calculate end of NEXT week datetime based on work settings
+ * @param now - Current date/time
+ * @param work - Work settings
+ * @returns ISO datetime string for end of next week
+ */
+export function endOfNextWeek(now: Date, work: WorkSettingsV1): string {
+  const { eowAnchor, endOfDay } = work;
+
+  const anchorDay = DAY_MAP[eowAnchor];
+  const currentDay = now.getDay();
+
+  // Calculate days until anchor day this week
+  let daysUntilAnchor = (anchorDay - currentDay + 7) % 7;
+
+  // If today is the anchor day, daysUntilAnchor is 0, so we add 7 for this week's anchor
+  // Then add another 7 for next week
+  if (daysUntilAnchor === 0) {
+    daysUntilAnchor = 14; // Next week's anchor day
+  } else {
+    daysUntilAnchor += 7; // This week's anchor + 7 = next week's anchor
+  }
+
+  // Calculate the target date
+  const targetDate = new Date(now);
+  targetDate.setDate(targetDate.getDate() + daysUntilAnchor);
+
+  // Format as YYYY-MM-DD
+  const year = targetDate.getFullYear();
+  const month = String(targetDate.getMonth() + 1).padStart(2, "0");
+  const day = String(targetDate.getDate()).padStart(2, "0");
+  const dateStr = `${year}-${month}-${day}`;
+
+  // Convert to end-of-day ISO
+  return toEndOfDayIso(dateStr, work.timezone, endOfDay);
 }
