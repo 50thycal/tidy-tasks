@@ -6,7 +6,7 @@ import SearchBar from "@/app/components/SearchBar";
 import NotifyBanner from "@/app/components/NotifyBanner";
 import InstallCTA from "@/app/components/InstallCTA";
 import BulkBar from "@/app/components/BulkBar";
-import { FloatingAddTaskButton } from "@/app/components/FloatingAddTaskButton";
+import { CapturePanel } from "@/app/components/CapturePanel";
 import {
   getInboxItems,
   updateInboxItemStatus,
@@ -26,6 +26,7 @@ export default function InboxPage() {
   const [mounted, setMounted] = useState(false);
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [capturePanelOpen, setCapturePanelOpen] = useState(false);
 
   // Load items from localStorage on mount
   useEffect(() => {
@@ -139,7 +140,7 @@ export default function InboxPage() {
 
         <h1 style={{ marginBottom: "1rem" }}>Inbox</h1>
         <p style={{ color: "var(--muted)", marginBottom: "2rem" }}>
-          Your task inbox. Use the + button to quickly add tasks, or go to Capture for bulk AI cleanup.
+          Your task inbox. Use the side panel to add and clean tasks with AI.
         </p>
 
         {/* Saved Items List */}
@@ -170,7 +171,7 @@ export default function InboxPage() {
                 color: "var(--muted)",
               }}
             >
-              No tasks yet. Use the + button to add your first task, or visit Capture to import multiple tasks.
+              No tasks yet. Use the side panel to add your first task.
             </div>
           ) : filteredItems.length === 0 ? (
             <div
@@ -243,8 +244,13 @@ export default function InboxPage() {
         onCancel={handleBulkCancel}
       />
 
-      {/* Floating Add Task Button */}
-      <FloatingAddTaskButton defaultBucket="inbox" onTaskAdded={() => setItems(getInboxItems())} />
+      {/* Capture Panel */}
+      <CapturePanel
+        isOpen={capturePanelOpen}
+        onToggle={() => setCapturePanelOpen(!capturePanelOpen)}
+        defaultBucket="inbox"
+        onTasksAdded={() => setItems(getInboxItems())}
+      />
     </div>
   );
 }
