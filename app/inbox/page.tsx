@@ -21,12 +21,29 @@ import { applyFilters, DEFAULT_FILTERS, type Filters } from "@/src/lib/filter";
 import { getDistinctProjects, getDistinctTags } from "@/src/db/queries";
 import { getQuickDateActions } from "@/src/lib/quickdates";
 
+type SortField = "created_at" | "due_at" | "project" | "importance" | "title";
+type SortDirection = "asc" | "desc";
+
+interface SortConfig {
+  field: SortField;
+  direction: SortDirection;
+}
+
+const SORT_OPTIONS: { value: SortField; label: string }[] = [
+  { value: "created_at", label: "Created Date" },
+  { value: "due_at", label: "Due Date" },
+  { value: "project", label: "Project" },
+  { value: "importance", label: "Importance" },
+  { value: "title", label: "Title" },
+];
+
 export default function InboxPage() {
   const [items, setItems] = useState<InboxItem[]>([]);
   const [mounted, setMounted] = useState(false);
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [capturePanelOpen, setCapturePanelOpen] = useState(false);
+  const [sort, setSort] = useState<SortConfig>({ field: "created_at", direction: "desc" });
 
   // Load items from localStorage on mount
   useEffect(() => {
@@ -45,6 +62,44 @@ export default function InboxPage() {
   const filteredItems = useMemo(() => {
     return applyFilters(items, filters, settings);
   }, [items, filters, settings]);
+
+  // Sort function
+  const sortItems = (itemsToSort: InboxItem[]): InboxItem[] => {
+    return [...itemsToSort].sort((a, b) => {
+      let comparison = 0;
+
+      switch (sort.field) {
+        case "created_at":
+          comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+          break;
+        case "due_at": {
+          const aDue = a.result?.due_at ? new Date(a.result.due_at).getTime() : Infinity;
+          const bDue = b.result?.due_at ? new Date(b.result.due_at).getTime() : Infinity;
+          comparison = aDue - bDue;
+          break;
+        }
+        case "project": {
+          const aProject = a.result?.project || "";
+          const bProject = b.result?.project || "";
+          comparison = aProject.localeCompare(bProject);
+          break;
+        }
+        case "importance":
+          comparison = (a.result?.importance || 0) - (b.result?.importance || 0);
+          break;
+        case "title":
+          comparison = (a.result?.title || "").localeCompare(b.result?.title || "");
+          break;
+      }
+
+      return sort.direction === "asc" ? comparison : -comparison;
+    });
+  };
+
+  // Apply sorting to filtered items
+  const sortedItems = useMemo(() => {
+    return sortItems(filteredItems);
+  }, [filteredItems, sort]);
 
   // Handle toggle done
   const handleToggleDone = (id: string) => {
@@ -157,8 +212,63 @@ export default function InboxPage() {
               projects={projects}
               tags={tags}
               context="inbox"
-              resultCount={filteredItems.length}
+              resultCount={sortedItems.length}
             />
+          )}
+
+          {/* Sort Controls */}
+          {items.length > 0 && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.75rem",
+                marginBottom: "1rem",
+                flexWrap: "wrap",
+              }}
+            >
+              <span style={{ fontSize: "0.85rem", color: "var(--muted)" }}>Sort by:</span>
+              <select
+                value={sort.field}
+                onChange={(e) => setSort({ ...sort, field: e.target.value as SortField })}
+                style={{
+                  padding: "0.4rem 0.75rem",
+                  backgroundColor: "var(--panel-2)",
+                  color: "var(--text)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "6px",
+                  fontSize: "0.85rem",
+                  cursor: "pointer",
+                }}
+              >
+                {SORT_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() =>
+                  setSort({ ...sort, direction: sort.direction === "asc" ? "desc" : "asc" })
+                }
+                style={{
+                  padding: "0.4rem 0.75rem",
+                  backgroundColor: "var(--panel-2)",
+                  color: "var(--text)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "6px",
+                  fontSize: "0.85rem",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.25rem",
+                }}
+                title={sort.direction === "asc" ? "Ascending" : "Descending"}
+              >
+                {sort.direction === "asc" ? "↑ Asc" : "↓ Desc"}
+              </button>
+            </div>
           )}
 
           {items.length === 0 ? (
@@ -173,7 +283,7 @@ export default function InboxPage() {
             >
               No tasks yet. Use the side panel to add your first task.
             </div>
-          ) : filteredItems.length === 0 ? (
+          ) : sortedItems.length === 0 ? (
             <div
               style={{
                 padding: "2rem",
@@ -187,7 +297,7 @@ export default function InboxPage() {
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-              {filteredItems.map((item) => (
+              {sortedItems.map((item) => (
                 <div key={item.id}>
                   <div
                     style={{
