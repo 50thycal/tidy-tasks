@@ -11,7 +11,7 @@ import CapacityBar from "@/app/components/CapacityBar";
 import FocusBucket from "@/app/components/FocusBucket";
 import FocusControls from "@/app/components/FocusControls";
 import SearchBar from "@/app/components/SearchBar";
-import { FloatingAddTaskButton } from "@/app/components/FloatingAddTaskButton";
+import { CapturePanel } from "@/app/components/CapturePanel";
 import { applyFilters, DEFAULT_FILTERS_FOCUS, type Filters } from "@/src/lib/filter";
 import { getDistinctProjects, getDistinctTags } from "@/src/db/queries";
 import { Skeleton } from "@/src/ui/Skeleton";
@@ -29,6 +29,7 @@ export default function FocusPage() {
   const [dirty, setDirty] = useState(false);
   const [capacity, setCapacity] = useState(60);
   const [capacityPlus2h, setCapacityPlus2h] = useState(false);
+  const [capturePanelOpen, setCapturePanelOpen] = useState(false);
 
   // Local ordering overrides
   const [bucketIds, setBucketIds] = useState<{
@@ -585,8 +586,16 @@ export default function FocusPage() {
         </div>
       </div>
 
-      {/* Floating Add Task Button */}
-      <FloatingAddTaskButton defaultBucket="now" onTaskAdded={() => setRefreshKey((prev) => prev + 1)} />
+      {/* Capture Panel */}
+      <CapturePanel
+        isOpen={capturePanelOpen}
+        onToggle={() => setCapturePanelOpen(!capturePanelOpen)}
+        defaultBucket="active"
+        onTasksAdded={() => {
+          setRefreshKey((prev) => prev + 1);
+          setDirty(true);
+        }}
+      />
     </DndContext>
   );
 }
