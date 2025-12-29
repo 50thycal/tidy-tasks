@@ -18,6 +18,13 @@ addFormats(ajv);
 const validateRequest = ajv.compile(requestSchema);
 const validateResponse = ajv.compile(responseSchema);
 
+// Helper to get day of week name from a date string (YYYY-MM-DD)
+function getDayOfWeek(dateStr: string): string {
+  const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const date = new Date(dateStr + "T12:00:00Z"); // Use noon UTC to avoid timezone issues
+  return days[date.getUTCDay()];
+}
+
 export async function POST(request: NextRequest) {
   // Check for API key
   if (!process.env.OPENAI_API_KEY) {
@@ -91,9 +98,18 @@ export async function POST(request: NextRequest) {
     }
 
     // Prepare system prompt from SPEC.md
-    let systemPrompt = `Normalize task text. Use verb-first titles. Parse natural language dates relative to ${
-      today || new Date().toISOString().split("T")[0]
-    }. Estimate effort ∈ {5,15,30,60,120} and energy ∈ {low,med,high}. Infer importance (0–100), tags, and project if obvious. If compound, split into subtasks. Return STRICT JSON with keys: title, due_at (ISO 8601 or null), scheduled_for (ISO 8601 or null), effort_min, energy, tags[], project (or null), subtasks[], importance (0–100), notes_append (optional).${contextSection}`;
+    const todayDate = today || new Date().toISOString().split("T")[0];
+    const dayOfWeek = getDayOfWeek(todayDate);
+
+    let systemPrompt = `Normalize task text. Use verb-first titles.
+
+DATE PARSING RULES (today is ${todayDate}, a ${dayOfWeek}):
+- "next [day]" means the [day] of NEXT week, not this week (e.g., if today is Sunday Dec 29, "next Friday" = Friday Jan 9, not Jan 3)
+- "this [day]" or just "[day]" means the upcoming occurrence this week (e.g., "Friday" or "this Friday" = the nearest future Friday)
+- "tomorrow" = the day after today
+- Always verify the day of week matches the date you return (e.g., if user says "Friday", the due_at date MUST fall on a Friday)
+
+Estimate effort ∈ {5,15,30,60,120} and energy ∈ {low,med,high}. Infer importance (0–100), tags, and project if obvious. If compound, split into subtasks. Return STRICT JSON with keys: title, due_at (ISO 8601 or null), scheduled_for (ISO 8601 or null), effort_min, energy, tags[], project (or null), subtasks[], importance (0–100), notes_append (optional).${contextSection}`;
 
     // If strict mode, prepend stricter instructions
     if (mode === 'strict') {
