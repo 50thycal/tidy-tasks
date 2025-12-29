@@ -105,10 +105,10 @@ export async function POST(request: NextRequest) {
 
     // Build project matching instruction if projects exist
     const projectMatchingRule = projectList.length > 0
-      ? `\n\nPROJECT MATCHING (CRITICAL): The "project" field MUST be one of: [${projectList.map(p => `"${p}"`).join(", ")}] or null.
-- Fuzzy match: "the Tompkins project" or "Tompkins stuff" → "Tompkins"
-- Partial match: "working on BigCorp deliverable" → "BigCorp"
-- Contextual: If task clearly relates to a project, assign it even without explicit mention
+      ? `\n\nPROJECT MATCHING (CRITICAL): The "project" field MUST be EXACTLY one of: [${projectList.map(p => `"${p}"`).join(", ")}] or null.
+- CASE SENSITIVE: Use the EXACT spelling and case from the list above. "tompkins" in input → "Tompkins" in output (match the list)
+- Fuzzy match input: "the Tompkins project" or "tompkins stuff" → use exact name from list
+- Partial match: "working on BigCorp deliverable" → "BigCorp" (exact case from list)
 - If no match found, set project to null (never invent project names)`
       : "";
 
