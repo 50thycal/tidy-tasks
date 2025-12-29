@@ -11,12 +11,6 @@ import {
 import ProjectsTable from "@/app/components/Settings/ProjectsTable";
 import { exportAndDownloadJson, exportAndDownloadCsv, type BackupDoc } from "@/src/lib/export";
 import { validateBackup, importBackup, getBackupPreview, type ImportResult } from "@/src/lib/import";
-import { reset as resetMetrics } from "@/src/db/metrics";
-import { getPermission, requestPermission, clearDismissed } from "@/src/lib/notify";
-import { buildDigest, formatNotificationTitle, formatNotificationBody } from "@/src/lib/digest";
-import { notify, showInAppToast } from "@/src/lib/notify";
-import { saveDigest } from "@/src/db/digest";
-import { getInboxItems } from "@/src/lib/clientStore";
 import { invalidateAndReload } from "@/src/lib/sw-control";
 
 const ALL_DAYS: DayOfWeek[] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -43,11 +37,6 @@ export default function SettingsPage() {
   const [importing, setImporting] = useState(false);
   const [exporting, setExporting] = useState(false);
 
-  // Notifications state
-  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
-  const [digestTime, setDigestTime] = useState("09:00");
-  const [permissionStatus, setPermissionStatus] = useState<"default" | "granted" | "denied">("default");
-
   // Privacy state
   const [privacyEnabled, setPrivacyEnabled] = useState(false);
   const [redactionMode, setRedactionMode] = useState<"none" | "emails_phones" | "emails_phones_names">("emails_phones");
@@ -58,19 +47,12 @@ export default function SettingsPage() {
     const stored = getStoredSettings();
     if (stored?.work) {
       setWork(stored.work);
-      // Load notification settings
-      if (stored.work.notifications) {
-        setNotificationsEnabled(stored.work.notifications.enabled);
-        setDigestTime(stored.work.notifications.digestTime || "09:00");
-      }
       // Load privacy settings
       if (stored.work.privacy) {
         setPrivacyEnabled(stored.work.privacy.enabled);
         setRedactionMode(stored.work.privacy.redactionMode);
       }
     }
-    // Check permission status
-    setPermissionStatus(getPermission());
   }, []);
 
   const handleSave = () => {
@@ -80,10 +62,6 @@ export default function SettingsPage() {
       version: 2,
       work: {
         ...work,
-        notifications: {
-          enabled: notificationsEnabled,
-          digestTime,
-        },
         privacy: {
           enabled: privacyEnabled,
           redactionMode,
@@ -217,52 +195,6 @@ export default function SettingsPage() {
       setImportError(err instanceof Error ? err.message : "Import failed");
     } finally {
       setImporting(false);
-    }
-  };
-
-  const handleResetMetrics = async () => {
-    if (confirm("Reset all metrics counters to zero?")) {
-      await resetMetrics();
-      alert("Metrics reset successfully");
-    }
-  };
-
-  // Notification handlers
-  const handleToggleNotifications = async () => {
-    if (!notificationsEnabled) {
-      // Enabling - request permission
-      const permission = await requestPermission();
-      setPermissionStatus(permission);
-      if (permission === "granted") {
-        setNotificationsEnabled(true);
-        clearDismissed();
-      } else {
-        alert("Notification permission denied. You can still use in-app digests.");
-      }
-    } else {
-      // Disabling
-      setNotificationsEnabled(false);
-    }
-  };
-
-  const handleSendDigestNow = () => {
-    const items = getInboxItems();
-    const now = new Date();
-    const digest = buildDigest(now, work, items);
-
-    // Save digest
-    saveDigest(digest);
-
-    // Show notification if permission granted
-    if (permissionStatus === "granted" && notificationsEnabled) {
-      const title = formatNotificationTitle(digest);
-      const body = formatNotificationBody(digest);
-      notify(title, body, {
-        data: { url: "/review?digest=today" },
-      });
-    } else {
-      // Fallback to in-app toast
-      showInAppToast(digest.text);
     }
   };
 
@@ -526,115 +458,6 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* Notifications & Digest */}
-        <div
-          style={{
-            backgroundColor: "var(--panel)",
-            border: "1px solid var(--border)",
-            borderRadius: "8px",
-            padding: "2rem",
-            color: "var(--text)",
-            marginTop: "2rem",
-          }}
-        >
-          <h2 style={{ marginBottom: "1rem", fontSize: "1.25rem" }}>Notifications & Digest</h2>
-          <p style={{ color: "var(--muted)", marginBottom: "1.5rem", fontSize: "0.9rem" }}>
-            Get a daily digest and reminders. Local-only. No data leaves your device.
-          </p>
-
-          {/* Enable Notifications Toggle */}
-          <div style={{ marginBottom: "1.5rem" }}>
-            <label
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "0.75rem",
-                cursor: "pointer",
-                padding: "0.75rem",
-                borderRadius: "4px",
-                backgroundColor: notificationsEnabled ? "color-mix(in srgb, var(--accent) 15%, transparent)" : "transparent",
-                border: "1px solid var(--border)",
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={notificationsEnabled}
-                onChange={handleToggleNotifications}
-                style={{ cursor: "pointer" }}
-              />
-              <div>
-                <div style={{ fontWeight: "500", color: "var(--text)" }}>
-                  Enable Notifications
-                </div>
-                <div style={{ fontSize: "0.85rem", color: "var(--muted)", marginTop: "0.25rem" }}>
-                  {permissionStatus === "granted"
-                    ? "Browser notifications enabled"
-                    : permissionStatus === "denied"
-                    ? "Permission denied. Using in-app digest only."
-                    : "Click to request permission"}
-                </div>
-              </div>
-            </label>
-          </div>
-
-          {/* Digest Time */}
-          <div style={{ marginBottom: "1.5rem" }}>
-            <label
-              htmlFor="digestTime"
-              style={{ display: "block", fontWeight: "500", marginBottom: "0.5rem", color: "var(--text)" }}
-            >
-              Digest Time (HH:MM)
-            </label>
-            <input
-              id="digestTime"
-              type="time"
-              value={digestTime}
-              onChange={(e) => setDigestTime(e.target.value)}
-              className="input"
-              style={{ maxWidth: "200px" }}
-            />
-            <div style={{ fontSize: "0.85rem", color: "var(--muted)", marginTop: "0.25rem" }}>
-              Daily digest will be generated at this time in your timezone ({work.timezone})
-            </div>
-          </div>
-
-          {/* Send Digest Now */}
-          <div style={{ marginBottom: "1.5rem" }}>
-            <button
-              onClick={handleSendDigestNow}
-              style={{
-                padding: "0.75rem 1.5rem",
-                backgroundColor: "var(--panel-2)",
-                color: "var(--text)",
-                border: "1px solid var(--border)",
-                borderRadius: "4px",
-                fontSize: "1rem",
-                cursor: "pointer",
-              }}
-            >
-              Send Digest Now (Test)
-            </button>
-            <div style={{ fontSize: "0.85rem", color: "var(--muted)", marginTop: "0.5rem" }}>
-              Generates and sends a digest immediately with current task state
-            </div>
-          </div>
-
-          {/* Info Text */}
-          <div
-            style={{
-              padding: "1rem",
-              backgroundColor: "var(--panel-2)",
-              borderRadius: "4px",
-              fontSize: "0.85rem",
-              color: "var(--muted)",
-              marginTop: "1.5rem",
-            }}
-          >
-            The digest shows: overdue tasks, due today, due next 7 days, and stale active tasks (no activity for 7+ days).
-            All processing happens locally in your browser.
-          </div>
-        </div>
-
         {/* AI & Privacy */}
         <div
           style={{
@@ -815,7 +638,7 @@ export default function SettingsPage() {
               </button>
             </div>
             <div style={{ fontSize: "0.85rem", color: "var(--muted)", marginTop: "0.5rem" }}>
-              JSON includes all data: tasks, settings, summaries, metrics, focus layouts
+              JSON includes all data: tasks, settings, summaries, focus layouts
             </div>
           </div>
 
@@ -869,7 +692,7 @@ export default function SettingsPage() {
                     <div>
                       <div style={{ fontWeight: "500" }}>Append / Merge</div>
                       <div style={{ fontSize: "0.85rem", color: "var(--muted)" }}>
-                        Add new items, skip duplicates, replace settings/metrics
+                        Add new items, skip duplicates, replace settings
                       </div>
                     </div>
                   </label>
@@ -926,7 +749,6 @@ export default function SettingsPage() {
                         <div>Settings: {preview.settings ? "Yes" : "No"}</div>
                         <div>Summaries: {preview.summaries}</div>
                         <div>Focus Layouts: {preview.layouts}</div>
-                        <div>Metrics: {preview.metrics ? "Yes" : "No"}</div>
                         <div>Exported: {new Date(preview.exportedAt).toLocaleString()}</div>
                       </>
                     );
@@ -985,30 +807,6 @@ export default function SettingsPage() {
                 {importSuccess}
               </div>
             )}
-          </div>
-
-          {/* Reset Metrics */}
-          <div style={{ marginTop: "2rem", paddingTop: "1.5rem", borderTop: "1px solid var(--border)" }}>
-            <h3 style={{ fontSize: "1rem", marginBottom: "0.75rem", color: "var(--text)" }}>
-              Reset Metrics
-            </h3>
-            <button
-              onClick={handleResetMetrics}
-              style={{
-                padding: "0.75rem 1.5rem",
-                backgroundColor: "var(--panel-2)",
-                color: "var(--text)",
-                border: "1px solid var(--border)",
-                borderRadius: "4px",
-                fontSize: "1rem",
-                cursor: "pointer",
-              }}
-            >
-              Reset All Metrics to Zero
-            </button>
-            <div style={{ fontSize: "0.85rem", color: "var(--muted)", marginTop: "0.5rem" }}>
-              Clears all counters (tasks created, completed, AI cleans, prioritizations)
-            </div>
           </div>
         </div>
 
