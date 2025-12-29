@@ -406,16 +406,16 @@ export function CapturePanel({ isOpen, onToggle, defaultBucket = "inbox", onTask
                           }}
                         >
                           {/* Due date */}
-                          {r.result.due_date && (
+                          {r.result.due_at && (
                             <span style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
-                              📅 {r.result.due_date}
+                              📅 {new Date(r.result.due_at).toLocaleDateString()}
                             </span>
                           )}
 
                           {/* Duration */}
-                          {r.result.duration && (
+                          {r.result.effort_min && (
                             <span style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
-                              ⏱️ {r.result.duration}
+                              ⏱️ {r.result.effort_min >= 60 ? `${r.result.effort_min / 60}h` : `${r.result.effort_min}m`}
                             </span>
                           )}
 
@@ -427,16 +427,16 @@ export function CapturePanel({ isOpen, onToggle, defaultBucket = "inbox", onTask
                           )}
                         </div>
 
-                        {/* Difficulty badge */}
-                        {r.result.difficulty && (
+                        {/* Energy badge */}
+                        {r.result.energy && (
                           <span
                             style={{
                               display: "inline-block",
                               padding: "0.15rem 0.4rem",
                               backgroundColor:
-                                r.result.difficulty === "high"
+                                r.result.energy === "high"
                                   ? "var(--danger)"
-                                  : r.result.difficulty === "medium"
+                                  : r.result.energy === "med"
                                   ? "var(--warning)"
                                   : "var(--success)",
                               color: "white",
@@ -447,7 +447,7 @@ export function CapturePanel({ isOpen, onToggle, defaultBucket = "inbox", onTask
                               textTransform: "uppercase",
                             }}
                           >
-                            {r.result.difficulty}
+                            {r.result.energy === "med" ? "MEDIUM" : r.result.energy}
                           </span>
                         )}
                       </div>
