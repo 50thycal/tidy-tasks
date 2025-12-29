@@ -101,15 +101,11 @@ export async function POST(request: NextRequest) {
     const todayDate = today || new Date().toISOString().split("T")[0];
     const dayOfWeek = getDayOfWeek(todayDate);
 
-    let systemPrompt = `Normalize task text. Use verb-first titles.
+    let systemPrompt = `Normalize task text. Use verb-first titles. Today is ${todayDate} (${dayOfWeek}).
 
-DATE PARSING RULES (today is ${todayDate}, a ${dayOfWeek}):
-- "next [day]" means the [day] of NEXT week, not this week (e.g., if today is Sunday Dec 29, "next Friday" = Friday Jan 9, not Jan 3)
-- "this [day]" or just "[day]" means the upcoming occurrence this week (e.g., "Friday" or "this Friday" = the nearest future Friday)
-- "tomorrow" = the day after today
-- Always verify the day of week matches the date you return (e.g., if user says "Friday", the due_at date MUST fall on a Friday)
+DATE RULES: "next [day]" = that day NEXT week. "this [day]" or just "[day]" = upcoming occurrence. Explicit dates like "1/7/26" should be used exactly as given.
 
-Estimate effort ∈ {5,15,30,60,120} and energy ∈ {low,med,high}. Infer importance (0–100), tags, and project if obvious. If compound, split into subtasks. Return STRICT JSON with keys: title, due_at (ISO 8601 or null), scheduled_for (ISO 8601 or null), effort_min, energy, tags[], project (or null), subtasks[], importance (0–100), notes_append (optional).${contextSection}`;
+Return ONLY this JSON structure (no extra fields): {title, due_at (YYYY-MM-DD or null), scheduled_for (null unless specific time given), effort_min (5|15|30|60|120), energy (low|med|high), tags[], project (string or null), subtasks[], importance (0-100), notes_append (string or null)}.${contextSection}`;
 
     // If strict mode, prepend stricter instructions
     if (mode === 'strict') {
