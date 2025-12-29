@@ -7,8 +7,6 @@ interface ReviewItemRowProps {
   onMarkDone: (id: string) => void;
   onMoveToActive: (id: string) => void;
   onMoveToFollowUp: (id: string) => void;
-  onSnooze: (id: string, days: number) => void;
-  onUnsnooze: (id: string) => void;
 }
 
 export default function ReviewItemRow({
@@ -16,8 +14,6 @@ export default function ReviewItemRow({
   onMarkDone,
   onMoveToActive,
   onMoveToFollowUp,
-  onSnooze,
-  onUnsnooze,
 }: ReviewItemRowProps) {
   const { result } = item;
 
@@ -109,20 +105,6 @@ export default function ReviewItemRow({
         </div>
       )}
 
-      {/* Snoozed until indicator */}
-      {item.status === "snoozed" && item.snoozed_until && (
-        <div
-          style={{
-            fontSize: "0.85rem",
-            color: "var(--warn)",
-            marginBottom: "0.75rem",
-            fontWeight: "500",
-          }}
-        >
-          ⏰ Snoozed until {formatFriendlyDate(item.snoozed_until)}
-        </div>
-      )}
-
       {/* Action bar */}
       <ActionBar
         itemId={item.id}
@@ -130,8 +112,6 @@ export default function ReviewItemRow({
         onMarkDone={onMarkDone}
         onMoveToActive={onMoveToActive}
         onMoveToFollowUp={onMoveToFollowUp}
-        onSnooze={onSnooze}
-        onUnsnooze={onUnsnooze}
       />
     </div>
   );

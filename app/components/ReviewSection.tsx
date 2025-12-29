@@ -9,8 +9,6 @@ interface ReviewSectionProps {
   onMarkDone: (id: string) => void;
   onMoveToActive: (id: string) => void;
   onMoveToFollowUp: (id: string) => void;
-  onSnooze: (id: string, days: number) => void;
-  onUnsnooze: (id: string) => void;
 }
 
 export default function ReviewSection({
@@ -20,8 +18,6 @@ export default function ReviewSection({
   onMarkDone,
   onMoveToActive,
   onMoveToFollowUp,
-  onSnooze,
-  onUnsnooze,
 }: ReviewSectionProps) {
   const [expanded, setExpanded] = useState(defaultExpanded);
 
@@ -109,8 +105,6 @@ export default function ReviewSection({
                 onMarkDone={onMarkDone}
                 onMoveToActive={onMoveToActive}
                 onMoveToFollowUp={onMoveToFollowUp}
-                onSnooze={onSnooze}
-                onUnsnooze={onUnsnooze}
               />
             ))
           )}

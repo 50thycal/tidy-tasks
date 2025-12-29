@@ -165,7 +165,7 @@ export default function SearchBar({
                 Status
               </label>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
-                {(["active", "follow-up", "done", "snoozed"] as InboxItemStatus[]).map((status) => (
+                {(["active", "follow-up", "done"] as InboxItemStatus[]).map((status) => (
                   <button
                     key={status}
                     onClick={() => toggleStatus(status)}

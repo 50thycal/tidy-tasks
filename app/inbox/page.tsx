@@ -200,9 +200,30 @@ export default function InboxPage() {
 
         {/* Saved Items List */}
         <div>
-          <h2 style={{ fontSize: "1.25rem", marginBottom: "1rem" }}>
+          <h2 style={{ fontSize: "1.25rem", marginBottom: "0.5rem" }}>
             Saved Tasks {items.length > 0 && `(${items.length})`}
           </h2>
+          {items.length > 0 && (
+            <div
+              style={{
+                display: "flex",
+                gap: "1rem",
+                marginBottom: "1rem",
+                fontSize: "0.9rem",
+                flexWrap: "wrap",
+              }}
+            >
+              <span style={{ color: "var(--accent-2)" }}>
+                {items.filter((i) => i.status === "active").length} Active
+              </span>
+              <span style={{ color: "var(--warn)" }}>
+                {items.filter((i) => i.status === "follow-up").length} Follow-up
+              </span>
+              <span style={{ color: "var(--success)" }}>
+                {items.filter((i) => i.status === "done").length} Done
+              </span>
+            </div>
+          )}
 
           {/* Search and Filter */}
           {items.length > 0 && (
@@ -320,9 +341,7 @@ export default function InboxPage() {
                             ? "var(--accent-2)"
                             : item.status === "follow-up"
                             ? "var(--warn)"
-                            : item.status === "done"
-                            ? "var(--success)"
-                            : "var(--muted)",
+                            : "var(--success)",
                         color: "white",
                         borderRadius: "4px",
                         fontSize: "0.75rem",

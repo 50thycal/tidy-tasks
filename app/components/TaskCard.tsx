@@ -13,7 +13,7 @@ import { DateText } from "@/src/ui/DateText";
 interface TaskCardProps {
   id?: string; // InboxItem ID for persistence
   result: CleanTaskResponse;
-  status?: "active" | "done" | "follow-up" | "snoozed"; // Task status for done toggle
+  status?: "active" | "done" | "follow-up"; // Task status for done toggle
   originalPrompt?: string; // Raw input before AI cleanup
   onToggleDone?: () => void; // Toggle done/active
   onMove?: () => void; // Move to different status
