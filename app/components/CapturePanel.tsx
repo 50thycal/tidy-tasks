@@ -408,7 +408,19 @@ export function CapturePanel({ isOpen, onToggle, defaultBucket = "inbox", onTask
                           {/* Due date */}
                           {r.result.due_at && (
                             <span style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
-                              📅 {new Date(r.result.due_at).toLocaleDateString()}
+                              📅 {(() => {
+                                // Handle both plain dates (YYYY-MM-DD) and ISO datetimes
+                                const dateStr = r.result.due_at;
+                                if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+                                  // Plain date - parse as local to avoid timezone shift
+                                  const [y, m, d] = dateStr.split('-').map(Number);
+                                  return new Date(y, m - 1, d).toLocaleDateString();
+                                }
+                                // ISO datetime - extract date part and parse as local
+                                const datePart = dateStr.split('T')[0];
+                                const [y, m, d] = datePart.split('-').map(Number);
+                                return new Date(y, m - 1, d).toLocaleDateString();
+                              })()}
                             </span>
                           )}
 
