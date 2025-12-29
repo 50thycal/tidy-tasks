@@ -1,14 +1,13 @@
 import type { CleanTaskRequest, CleanTaskResponse } from "@/src/types";
 import { inc } from "@/src/db/metrics";
 
-export type InboxItemStatus = "active" | "done" | "follow-up" | "snoozed";
+export type InboxItemStatus = "active" | "done" | "follow-up";
 
 export interface InboxItem {
   id: string; // uuid
   created_at: string; // ISO 8601
   updated_at?: string; // ISO 8601
   touched_at?: string; // ISO 8601 (updated whenever status changes)
-  snoozed_until?: string | null; // ISO 8601 (optional)
   request: CleanTaskRequest;
   result: CleanTaskResponse;
   status: InboxItemStatus;
@@ -152,36 +151,6 @@ export function moveItemToActive(id: string): void {
  */
 export function moveItemToFollowUp(id: string): void {
   updateInboxItemStatus(id, "follow-up");
-}
-
-/**
- * Snooze an inbox item for N days
- */
-export function snoozeItem(id: string, days: number): void {
-  mutateInboxItem(id, (item) => {
-    const now = new Date();
-    const snoozeUntil = new Date(now);
-    snoozeUntil.setDate(snoozeUntil.getDate() + days);
-
-    return {
-      ...item,
-      status: "snoozed",
-      snoozed_until: snoozeUntil.toISOString(),
-      touched_at: now.toISOString(),
-    };
-  });
-}
-
-/**
- * Unsnooze an item (move back to active)
- */
-export function unsnoozeItem(id: string): void {
-  mutateInboxItem(id, (item) => ({
-    ...item,
-    status: "active",
-    snoozed_until: null,
-    touched_at: new Date().toISOString(),
-  }));
 }
 
 /**
