@@ -244,3 +244,48 @@ export function getDefaultWorkSettings(): WorkSettingsV1 {
     notifications: undefined,
   };
 }
+
+/**
+ * Add a new project to settings (browser only)
+ * Returns the created project with its ID
+ */
+export function addProject(project: Omit<ProjectMeta, 'id' | 'updated_at'>): ProjectMeta {
+  if (typeof window === "undefined") {
+    throw new Error("addProject can only be called in browser");
+  }
+
+  const stored = getStoredSettings();
+  const settings = stored || { version: 2, work: getDefaultWorkSettingsV2() };
+
+  const newProject: ProjectMeta = {
+    ...project,
+    id: crypto.randomUUID(),
+    updated_at: new Date().toISOString(),
+  };
+
+  // Ensure projects array exists
+  if (!settings.work.projects) {
+    settings.work.projects = [];
+  }
+
+  // Check for duplicate name (case-insensitive)
+  const exists = settings.work.projects.some(
+    p => p.name.toLowerCase() === project.name.toLowerCase()
+  );
+  if (exists) {
+    throw new Error(`Project "${project.name}" already exists`);
+  }
+
+  settings.work.projects.push(newProject);
+  saveSettings(settings);
+
+  return newProject;
+}
+
+/**
+ * Get all project names as a simple array
+ */
+export function getProjectNames(): string[] {
+  const v2 = getWorkSettingsV2();
+  return v2.projects?.map(p => p.name) || [];
+}
