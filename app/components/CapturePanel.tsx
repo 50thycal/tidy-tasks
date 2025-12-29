@@ -201,7 +201,7 @@ export function CapturePanel({ isOpen, onToggle, defaultBucket = "inbox", onTask
         style={{
           position: "fixed",
           top: "50%",
-          right: isOpen ? "320px" : "0",
+          right: isOpen ? "420px" : "0",
           transform: "translateY(-50%)",
           zIndex: 40,
           width: "2rem",
@@ -229,8 +229,8 @@ export function CapturePanel({ isOpen, onToggle, defaultBucket = "inbox", onTask
         style={{
           position: "fixed",
           top: 0,
-          right: isOpen ? 0 : "-320px",
-          width: "320px",
+          right: isOpen ? 0 : "-420px",
+          width: "420px",
           height: "100vh",
           backgroundColor: "var(--panel)",
           borderLeft: "1px solid var(--border)",
@@ -371,11 +371,84 @@ export function CapturePanel({ isOpen, onToggle, defaultBucket = "inbox", onTask
                     )}
                     {r.status === "success" && r.result && (
                       <div>
-                        <div style={{ fontWeight: "500", color: "var(--text)" }}>{r.result.title}</div>
+                        {/* Title */}
+                        <div style={{ fontWeight: "500", color: "var(--text)", marginBottom: "0.5rem" }}>
+                          {r.result.title}
+                        </div>
+
+                        {/* Project badge */}
                         {r.result.project && (
-                          <div style={{ fontSize: "0.75rem", color: "var(--muted)", marginTop: "0.25rem" }}>
+                          <span
+                            style={{
+                              display: "inline-block",
+                              padding: "0.15rem 0.5rem",
+                              backgroundColor: "var(--accent)",
+                              color: "white",
+                              borderRadius: "4px",
+                              fontSize: "0.7rem",
+                              fontWeight: "500",
+                              marginBottom: "0.5rem",
+                            }}
+                          >
                             {r.result.project}
-                          </div>
+                          </span>
+                        )}
+
+                        {/* Task metadata row */}
+                        <div
+                          style={{
+                            display: "flex",
+                            flexWrap: "wrap",
+                            gap: "0.5rem",
+                            fontSize: "0.75rem",
+                            color: "var(--muted)",
+                            marginTop: "0.25rem",
+                          }}
+                        >
+                          {/* Due date */}
+                          {r.result.due_date && (
+                            <span style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
+                              📅 {r.result.due_date}
+                            </span>
+                          )}
+
+                          {/* Duration */}
+                          {r.result.duration && (
+                            <span style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
+                              ⏱️ {r.result.duration}
+                            </span>
+                          )}
+
+                          {/* Importance */}
+                          {r.result.importance !== undefined && (
+                            <span style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
+                              ⚡ {r.result.importance}/100
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Difficulty badge */}
+                        {r.result.difficulty && (
+                          <span
+                            style={{
+                              display: "inline-block",
+                              padding: "0.15rem 0.4rem",
+                              backgroundColor:
+                                r.result.difficulty === "high"
+                                  ? "var(--danger)"
+                                  : r.result.difficulty === "medium"
+                                  ? "var(--warning)"
+                                  : "var(--success)",
+                              color: "white",
+                              borderRadius: "4px",
+                              fontSize: "0.65rem",
+                              fontWeight: "500",
+                              marginTop: "0.5rem",
+                              textTransform: "uppercase",
+                            }}
+                          >
+                            {r.result.difficulty}
+                          </span>
                         )}
                       </div>
                     )}
