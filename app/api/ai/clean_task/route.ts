@@ -52,7 +52,11 @@ export async function POST(request: NextRequest) {
     // Parse request body
     const body = await request.json();
 
-    // Validate request against schema
+    // Extract settings BEFORE validation - AJV with removeAdditional:true strips unknown fields
+    // The settings field contains project list and work context needed for AI matching
+    const settingsV2 = body.settings as any;
+
+    // Validate request against schema (this removes `settings` from body)
     if (!validateRequest(body)) {
       return NextResponse.json(
         { error: "Invalid request", details: validateRequest.errors },
@@ -61,9 +65,6 @@ export async function POST(request: NextRequest) {
     }
 
     const { raw_text, today, timezone, mode } = body as unknown as CleanTaskRequest & { mode?: 'default' | 'strict' };
-
-    // Extract work context from settings (v2 fields)
-    const settingsV2 = body.settings as any;
     let contextSection = "";
     let projectList: string[] = [];
 
