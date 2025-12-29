@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { bulkAddInboxItems, saveInboxItem, type InboxItem } from "@/src/lib/clientStore";
-import { getWorkSettings, getWorkSettingsV2 } from "@/src/lib/settings";
+import { getWorkSettings } from "@/src/lib/settings";
 import { runWithPool } from "@/src/lib/batchRunner";
 import type { CleanTaskRequest, CleanTaskResponse } from "@/src/types";
 
@@ -50,20 +50,6 @@ export function CapturePanel({ isOpen, onToggle, onOpen, onClose, defaultBucket 
 
     setIsProcessing(true);
 
-    // Get privacy settings
-    const settingsV2 = getWorkSettingsV2();
-    const privacyEnabled = settingsV2.privacy?.enabled ?? false;
-    const redactionMode = settingsV2.privacy?.redactionMode ?? "emails_phones";
-
-    let redactionEntities: Array<"emails" | "phones" | "proper_names"> = [];
-    if (privacyEnabled) {
-      if (redactionMode === "emails_phones") {
-        redactionEntities = ["emails", "phones"];
-      } else if (redactionMode === "emails_phones_names") {
-        redactionEntities = ["emails", "phones", "proper_names"];
-      }
-    }
-
     // Initialize all tasks as queued
     const initialResults: TaskResult[] = lines.map((line, index) => ({
       id: `task-${Date.now()}-${index}`,
@@ -82,10 +68,6 @@ export function CapturePanel({ isOpen, onToggle, onOpen, onClose, defaultBucket 
         raw_text: line,
         today,
         timezone: settings.timezone,
-        redaction: {
-          enabled: privacyEnabled,
-          entities: redactionEntities,
-        },
       };
 
       const response = await fetch("/api/ai/clean_task", {
@@ -120,10 +102,6 @@ export function CapturePanel({ isOpen, onToggle, onOpen, onClose, defaultBucket 
                   raw_text: lines[index],
                   today,
                   timezone: settings.timezone,
-                  redaction: {
-                    enabled: privacyEnabled,
-                    entities: redactionEntities,
-                  },
                 },
               }
             : {}),

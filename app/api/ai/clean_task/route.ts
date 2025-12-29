@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Ajv from "ajv";
 import addFormats from "ajv-formats";
-import { redact } from "@/src/lib/redact";
-import { normalizeCleanTaskResponse } from "@/src/lib/datetime";
 import { getSettingsFromRequest } from "@/src/lib/settings";
 import { endOfWeek, endOfNextWeek, containsEOW, containsEONW, isPlainDate, toEndOfDayIso } from "@/src/lib/eow";
 import { normalizeSubtasks } from "@/src/lib/normalize";
@@ -62,15 +60,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { raw_text, today, timezone, redaction, mode } = body as unknown as CleanTaskRequest & { mode?: 'default' | 'strict' };
-
-    // Apply redaction if enabled
-    const shouldRedact = redaction?.enabled !== false;
-    const textToSend = shouldRedact ? redact({ text: raw_text }).text : raw_text;
+    const { raw_text, today, timezone, mode } = body as unknown as CleanTaskRequest & { mode?: 'default' | 'strict' };
 
     // Extract work context from settings (v2 fields)
     const settingsV2 = body.settings as any;
     let contextSection = "";
+    let projectList: string[] = [];
 
     if (settingsV2) {
       // Build context from v2 fields
@@ -83,9 +78,16 @@ export async function POST(request: NextRequest) {
         contextParts.push(`Role: ${roleParts.join(". ")}`);
       }
 
+      // Build rich project list with notes/aliases if available
       if (settingsV2.projects && settingsV2.projects.length > 0) {
-        const projectNames = settingsV2.projects.map((p: any) => p.name).join(", ");
-        contextParts.push(`Active projects: ${projectNames}`);
+        projectList = settingsV2.projects.map((p: any) => p.name);
+        const projectDescriptions = settingsV2.projects.map((p: any) => {
+          if (p.notes) {
+            return `- ${p.name}: ${p.notes}`;
+          }
+          return `- ${p.name}`;
+        });
+        contextParts.push(`Active projects:\n${projectDescriptions.join("\n")}`);
       }
 
       if (settingsV2.work_context) {
@@ -101,11 +103,20 @@ export async function POST(request: NextRequest) {
     const todayDate = today || new Date().toISOString().split("T")[0];
     const dayOfWeek = getDayOfWeek(todayDate);
 
+    // Build project matching instruction if projects exist
+    const projectMatchingRule = projectList.length > 0
+      ? `\n\nPROJECT MATCHING (CRITICAL): The "project" field MUST be one of: [${projectList.map(p => `"${p}"`).join(", ")}] or null.
+- Fuzzy match: "the Tompkins project" or "Tompkins stuff" → "Tompkins"
+- Partial match: "working on BigCorp deliverable" → "BigCorp"
+- Contextual: If task clearly relates to a project, assign it even without explicit mention
+- If no match found, set project to null (never invent project names)`
+      : "";
+
     let systemPrompt = `Normalize task text. Use verb-first titles. Today is ${todayDate} (${dayOfWeek}).
 
-DATE RULES: "next [day]" = that day NEXT week. "this [day]" or just "[day]" = upcoming occurrence. Explicit dates like "1/7/26" should be used exactly as given.
+DATE RULES: "next [day]" = that day NEXT week. "this [day]" or just "[day]" = upcoming occurrence. Explicit dates like "1/7/26" should be used exactly as given.${projectMatchingRule}
 
-Return ONLY this JSON structure (no extra fields): {title, due_at (YYYY-MM-DD or null), scheduled_for (null unless specific time given), effort_min (5|15|30|60|120), energy (low|med|high), tags[], project (string or null), subtasks[], importance (0-100), notes_append (string or null)}.${contextSection}`;
+Return ONLY this JSON structure (no extra fields): {title, due_at (YYYY-MM-DD or null), scheduled_for (null unless specific time given), effort_min (5|15|30|60|120), energy (low|med|high), tags[], project (MUST match from list above or null), subtasks[], importance (0-100), notes_append (string or null)}.${contextSection}`;
 
     // If strict mode, prepend stricter instructions
     if (mode === 'strict') {
@@ -136,7 +147,7 @@ ${systemPrompt}`;
       model: modelName,
       messages: [
         { role: "system", content: systemPrompt },
-        { role: "user", content: textToSend },
+        { role: "user", content: raw_text },
       ],
       response_format: { type: "json_object" as const },
       temperature: 0.7,
