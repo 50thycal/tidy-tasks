@@ -4,7 +4,7 @@ interface CapacityBarProps {
 }
 
 export default function CapacityBar({ usedMinutes, maxMinutes }: CapacityBarProps) {
-  const percentage = Math.min((usedMinutes / maxMinutes) * 100, 100);
+  const percentage = maxMinutes > 0 ? Math.min((usedMinutes / maxMinutes) * 100, 100) : 0;
   const isOverCapacity = usedMinutes > maxMinutes;
 
   return (

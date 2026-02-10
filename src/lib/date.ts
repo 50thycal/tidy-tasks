@@ -1,9 +1,11 @@
+import { getTimezoneOffset } from "date-fns-tz";
+
 /**
- * Convert separate date and time strings to ISO 8601 with timezone
+ * Convert separate date and time strings to ISO 8601 with timezone offset
  * @param dateStr - Date in YYYY-MM-DD format
  * @param timeStr - Time in HH:MM format (24-hour)
  * @param tz - IANA timezone (e.g., "America/Phoenix")
- * @returns ISO 8601 string or null if either input is missing
+ * @returns ISO 8601 string with correct tz offset, or null if either input is missing
  */
 export function toIsoFromDateTime(
   dateStr: string | null,
@@ -13,20 +15,21 @@ export function toIsoFromDateTime(
   if (!dateStr || !timeStr) return null;
 
   try {
-    // Combine date and time
     const combined = `${dateStr}T${timeStr}:00`;
+    const approxDate = new Date(`${combined}Z`);
 
-    // Create a date object
-    const date = new Date(combined);
+    if (isNaN(approxDate.getTime())) return null;
 
-    // Check if valid
-    if (isNaN(date.getTime())) return null;
+    // Get the real offset for the given IANA timezone
+    const offsetMs = getTimezoneOffset(tz, approxDate);
+    const totalMinutes = offsetMs / 60_000;
+    const offsetSign = totalMinutes >= 0 ? "+" : "-";
+    const absMinutes = Math.abs(totalMinutes);
+    const offsetHours = Math.floor(absMinutes / 60);
+    const offsetMins = absMinutes % 60;
+    const offsetString = `${offsetSign}${String(offsetHours).padStart(2, "0")}:${String(offsetMins).padStart(2, "0")}`;
 
-    // Format to ISO with timezone offset
-    // We'll use toLocaleString to get the timezone-aware representation
-    const isoString = date.toISOString();
-
-    return isoString;
+    return `${combined}${offsetString}`;
   } catch (error) {
     console.error("Error converting date/time to ISO:", error);
     return null;

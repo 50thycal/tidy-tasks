@@ -284,6 +284,9 @@ export default function TaskCard({
         return;
       }
 
+      // Update local state immediately so the view reflects saved changes
+      setLocalTask(prev => ({ ...prev, ...draft } as CleanTaskResponse));
+
       // Persist to localStorage if we have an ID
       if (id) {
         updateInboxItemResult(id, draft);
@@ -296,9 +299,6 @@ export default function TaskCard({
 
       // Exit edit mode
       setIsEditMode(false);
-
-      // Show success feedback (optional toast)
-      console.log("Task saved successfully");
     } catch (error) {
       console.error("Error saving task:", error);
       setFieldErrors({ general: ["Failed to save task"] });
@@ -1842,6 +1842,7 @@ export default function TaskCard({
           <option value={15}>15 min</option>
           <option value={30}>30 min</option>
           <option value={60}>60 min</option>
+          <option value={90}>90 min</option>
           <option value={120}>120 min</option>
         </select>
         {fieldErrors.effort_min && (

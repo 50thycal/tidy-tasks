@@ -31,7 +31,7 @@ export default function SearchBar({
     }, 200);
 
     return () => clearTimeout(timer);
-  }, [searchInput]);
+  }, [searchInput, value, onChange]);
 
   // Update local state when external value changes
   useEffect(() => {

@@ -16,17 +16,24 @@ export function mergeOrder(saved: string[], ai: string[]): string[] {
   return out;
 }
 
+const VALID_BUCKETS = ["now", "next", "later", "backlog"] as const;
+type BucketLower = typeof VALID_BUCKETS[number];
+
 /**
  * Get bucket name in lowercase for API/storage consistency
  */
-export function normalizeBucket(bucket: string): "now" | "next" | "later" | "backlog" {
-  return bucket.toLowerCase() as "now" | "next" | "later" | "backlog";
+export function normalizeBucket(bucket: string): BucketLower {
+  const lower = bucket.toLowerCase();
+  if (VALID_BUCKETS.includes(lower as BucketLower)) {
+    return lower as BucketLower;
+  }
+  return "backlog"; // Safe default for unrecognized values
 }
 
 /**
  * Get bucket name in title case for display
  */
 export function bucketToTitle(bucket: string): "Now" | "Next" | "Later" | "Backlog" {
-  const lower = bucket.toLowerCase();
-  return (lower.charAt(0).toUpperCase() + lower.slice(1)) as "Now" | "Next" | "Later" | "Backlog";
+  const normalized = normalizeBucket(bucket);
+  return (normalized.charAt(0).toUpperCase() + normalized.slice(1)) as "Now" | "Next" | "Later" | "Backlog";
 }

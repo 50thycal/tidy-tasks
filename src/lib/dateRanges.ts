@@ -33,17 +33,15 @@ export function thisWeekRange(now: Date, settings: WorkSettingsV1): [string, str
   const startStr = formatDate(monday);
   const startISO = `${startStr}T00:00:00`;
 
-  // Find end-of-week anchor day
+  // Find end-of-week anchor day for THIS week
+  // We need the anchor day that falls between Monday and Sunday of the current week.
+  // Use Monday as the reference point to avoid the weekend look-forward bug.
   const anchorDayNum = dayOfWeekToNumber(settings.eowAnchor);
-  let daysToAnchor = (anchorDayNum - dayOfWeek + 7) % 7;
+  const mondayDayNum = monday.getDay(); // Should be 1 (Monday)
+  let daysFromMondayToAnchor = (anchorDayNum - mondayDayNum + 7) % 7;
 
-  if (daysToAnchor === 0) {
-    // Today is the anchor day
-    daysToAnchor = 0;
-  }
-
-  const anchorDate = new Date(now);
-  anchorDate.setDate(anchorDate.getDate() + daysToAnchor);
+  const anchorDate = new Date(monday);
+  anchorDate.setDate(anchorDate.getDate() + daysFromMondayToAnchor);
 
   const endStr = formatDate(anchorDate);
   const endISO = `${endStr}T${settings.endOfDay}:00`;

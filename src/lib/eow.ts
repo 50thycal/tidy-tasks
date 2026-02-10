@@ -1,4 +1,5 @@
 import type { WorkSettingsV1, DayOfWeek } from "@/src/types";
+import { getTimezoneOffset } from "date-fns-tz";
 
 /**
  * Check if a string is a plain date (YYYY-MM-DD)
@@ -34,16 +35,20 @@ export function toEndOfDayIso(
 ): string {
   try {
     const [hours, minutes] = endOfDayHHMM.split(":").map(Number);
-    const date = new Date(`${dateYYYYMMDD}T${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:00`);
+    const hh = hours.toString().padStart(2, "0");
+    const mm = minutes.toString().padStart(2, "0");
 
-    // Get timezone offset
-    const offset = date.getTimezoneOffset();
-    const offsetHours = Math.floor(Math.abs(offset) / 60);
-    const offsetMinutes = Math.abs(offset) % 60;
-    const offsetSign = offset <= 0 ? "+" : "-";
-    const offsetString = `${offsetSign}${String(offsetHours).padStart(2, "0")}:${String(offsetMinutes).padStart(2, "0")}`;
+    // Use date-fns-tz to get the real offset for the given IANA timezone
+    const approxDate = new Date(`${dateYYYYMMDD}T${hh}:${mm}:00Z`);
+    const offsetMs = getTimezoneOffset(tz, approxDate);
+    const totalMinutes = offsetMs / 60_000;
+    const offsetSign = totalMinutes >= 0 ? "+" : "-";
+    const absMinutes = Math.abs(totalMinutes);
+    const offsetHours = Math.floor(absMinutes / 60);
+    const offsetMins = absMinutes % 60;
+    const offsetString = `${offsetSign}${String(offsetHours).padStart(2, "0")}:${String(offsetMins).padStart(2, "0")}`;
 
-    return `${dateYYYYMMDD}T${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:00${offsetString}`;
+    return `${dateYYYYMMDD}T${hh}:${mm}:00${offsetString}`;
   } catch (error) {
     console.error("Error converting date:", error);
     throw error;
@@ -57,7 +62,7 @@ export function toEndOfDayIso(
  * @returns ISO datetime string for end of week
  */
 export function endOfWeek(now: Date, work: WorkSettingsV1): string {
-  const { eowAnchor, endOfDay, eowRollover, workDays } = work;
+  const { eowAnchor, endOfDay, eowRollover } = work;
 
   const anchorDay = DAY_MAP[eowAnchor];
   const currentDay = now.getDay();
@@ -127,13 +132,10 @@ export function endOfNextWeek(now: Date, work: WorkSettingsV1): string {
   // Calculate days until anchor day this week
   let daysUntilAnchor = (anchorDay - currentDay + 7) % 7;
 
-  // If today is the anchor day, daysUntilAnchor is 0, so we add 7 for this week's anchor
-  // Then add another 7 for next week
-  if (daysUntilAnchor === 0) {
-    daysUntilAnchor = 14; // Next week's anchor day
-  } else {
-    daysUntilAnchor += 7; // This week's anchor + 7 = next week's anchor
-  }
+  // Add 7 to get next week's anchor day
+  // When daysUntilAnchor is 0 (today is anchor day), +7 gives next week's anchor
+  // When daysUntilAnchor > 0, +7 gives next week's occurrence
+  daysUntilAnchor += 7;
 
   // Calculate the target date
   const targetDate = new Date(now);

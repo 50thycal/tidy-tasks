@@ -50,102 +50,100 @@ export default function DraggableTaskCard({
   return (
     <div ref={setNodeRef} style={style}>
       <div>
-        {/* Priority score and rationale banner */}
-        {showBanner && (
+        {/* Priority score and rationale banner (or minimal drag handle) */}
+        <div
+          style={{
+            padding: showBanner ? "0.75rem 1rem" : "0.25rem 0.5rem",
+            backgroundColor: bucketColor
+              ? `color-mix(in srgb, ${bucketColor} 15%, transparent)`
+              : "var(--panel)",
+            borderRadius: "8px 8px 0 0",
+            border: "1px solid var(--border)",
+            borderBottom: "none",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          {/* Drag handle - always rendered */}
           <div
+            {...attributes}
+            {...listeners}
             style={{
-              padding: "0.75rem 1rem",
-              backgroundColor: bucketColor
-                ? `color-mix(in srgb, ${bucketColor} 15%, transparent)`
-                : "var(--panel)",
-              borderRadius: "8px 8px 0 0",
-              border: "1px solid var(--border)",
-              borderBottom: "none",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
+              cursor: "grab",
+              padding: "0.25rem",
+              marginRight: "0.5rem",
+              color: "var(--muted)",
+              fontSize: "1.2rem",
+              userSelect: "none",
             }}
+            title="Drag to reorder"
           >
-            {/* Drag handle */}
-            <div
-              {...attributes}
-              {...listeners}
-              style={{
-                cursor: "grab",
-                padding: "0.25rem",
-                marginRight: "0.5rem",
-                color: "var(--muted)",
-                fontSize: "1.2rem",
-                userSelect: "none",
-              }}
-              title="Drag to reorder"
-            >
-              ⋮⋮
-            </div>
-
-            {rationale && (
-              <p
-                style={{
-                  fontSize: "0.9rem",
-                  color: "var(--muted)",
-                  margin: 0,
-                  fontStyle: "italic",
-                  flex: 1,
-                }}
-              >
-                {rationale}
-              </p>
-            )}
-
-            {priorityScore !== undefined && (
-              <span
-                style={{
-                  fontSize: "0.9rem",
-                  fontWeight: "600",
-                  color: bucketColor || "var(--accent)",
-                  marginLeft: "1rem",
-                }}
-              >
-                Score: {priorityScore}
-              </span>
-            )}
-
-            {/* Send to menu */}
-            {onSendTo && (
-              <div style={{ position: "relative", marginLeft: "0.5rem" }}>
-                <select
-                  onChange={(e) => {
-                    if (e.target.value) {
-                      onSendTo(e.target.value as "now" | "next" | "later" | "backlog");
-                      e.target.value = ""; // Reset selection
-                    }
-                  }}
-                  style={{
-                    padding: "0.25rem 0.5rem",
-                    fontSize: "0.75rem",
-                    backgroundColor: "var(--panel)",
-                    color: "var(--text)",
-                    border: "1px solid var(--border)",
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                  }}
-                  defaultValue=""
-                >
-                  <option value="" disabled>
-                    Send to...
-                  </option>
-                  <option value="now">Now</option>
-                  <option value="next">Next</option>
-                  <option value="later">Later</option>
-                  <option value="backlog">Backlog</option>
-                </select>
-              </div>
-            )}
+            ⋮⋮
           </div>
-        )}
+
+          {rationale && (
+            <p
+              style={{
+                fontSize: "0.9rem",
+                color: "var(--muted)",
+                margin: 0,
+                fontStyle: "italic",
+                flex: 1,
+              }}
+            >
+              {rationale}
+            </p>
+          )}
+
+          {priorityScore !== undefined && priorityScore > 0 && (
+            <span
+              style={{
+                fontSize: "0.9rem",
+                fontWeight: "600",
+                color: bucketColor || "var(--accent)",
+                marginLeft: "1rem",
+              }}
+            >
+              Score: {priorityScore}
+            </span>
+          )}
+
+          {/* Send to menu */}
+          {onSendTo && (
+            <div style={{ position: "relative", marginLeft: "0.5rem" }}>
+              <select
+                onChange={(e) => {
+                  if (e.target.value) {
+                    onSendTo(e.target.value as "now" | "next" | "later" | "backlog");
+                    e.target.value = ""; // Reset selection
+                  }
+                }}
+                style={{
+                  padding: "0.25rem 0.5rem",
+                  fontSize: "0.75rem",
+                  backgroundColor: "var(--panel)",
+                  color: "var(--text)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "4px",
+                  cursor: "pointer",
+                }}
+                defaultValue=""
+              >
+                <option value="" disabled>
+                  Send to...
+                </option>
+                <option value="now">Now</option>
+                <option value="next">Next</option>
+                <option value="later">Later</option>
+                <option value="backlog">Backlog</option>
+              </select>
+            </div>
+          )}
+        </div>
 
         {/* TaskCard with actions inside */}
-        <div style={{ borderRadius: showBanner ? "0 0 8px 8px" : "8px", overflow: "hidden" }}>
+        <div style={{ borderRadius: "0 0 8px 8px", overflow: "hidden" }}>
           <TaskCard
             id={inboxItem.id}
             result={inboxItem.result}

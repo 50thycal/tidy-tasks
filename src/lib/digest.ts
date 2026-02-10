@@ -5,6 +5,7 @@
 
 import type { InboxItem } from "./clientStore";
 import type { WorkSettings } from "@/src/types";
+import { fromZonedTime } from "date-fns-tz";
 
 export interface DigestCounts {
   overdue: number;
@@ -32,35 +33,19 @@ export interface Digest {
 }
 
 /**
- * Get start of day in timezone
+ * Get start of day in timezone (returns UTC Date representing midnight in tz)
  */
 function startOfDay(date: Date, timezone: string): Date {
   const dateStr = date.toLocaleDateString("en-CA", { timeZone: timezone }); // YYYY-MM-DD
-  const startStr = `${dateStr}T00:00:00`;
-
-  // Parse in the target timezone
-  const parts = dateStr.split("-");
-  const year = parseInt(parts[0], 10);
-  const month = parseInt(parts[1], 10) - 1;
-  const day = parseInt(parts[2], 10);
-
-  const localDate = new Date(year, month, day, 0, 0, 0, 0);
-  return localDate;
+  return fromZonedTime(`${dateStr}T00:00:00`, timezone);
 }
 
 /**
- * Get end of day in timezone
+ * Get end of day in timezone (returns UTC Date representing 23:59:59.999 in tz)
  */
 function endOfDay(date: Date, timezone: string): Date {
   const dateStr = date.toLocaleDateString("en-CA", { timeZone: timezone }); // YYYY-MM-DD
-
-  const parts = dateStr.split("-");
-  const year = parseInt(parts[0], 10);
-  const month = parseInt(parts[1], 10) - 1;
-  const day = parseInt(parts[2], 10);
-
-  const localDate = new Date(year, month, day, 23, 59, 59, 999);
-  return localDate;
+  return fromZonedTime(`${dateStr}T23:59:59.999`, timezone);
 }
 
 /**
@@ -120,7 +105,7 @@ export function buildDigest(
   settings: WorkSettings,
   items: InboxItem[]
 ): Digest {
-  const timezone = settings.timezone || "America/Phoenix";
+  const timezone = settings.timezone || "America/Los_Angeles";
 
   // Filter to non-done tasks
   const activeTasks = items.filter((item) => item.status !== "done");
