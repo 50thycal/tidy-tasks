@@ -28,7 +28,7 @@ export async function submitQuick(
         },
         body: JSON.stringify({
           raw_text: trimmed,
-          timezone: options.timezone || "America/Phoenix",
+          timezone: options.timezone || "America/Los_Angeles",
           today: new Date().toISOString().split("T")[0],
         }),
       });

@@ -53,8 +53,8 @@ export function saveCapacity(minutes: number, plus2h: boolean): void {
 
 /**
  * Get the effective max_focus_minutes value
- * If plus2h is true, returns 240, otherwise returns minutes
+ * If plus2h is true, adds 120 to the user's minutes setting
  */
 export function getEffectiveMinutes(capacity: FocusCapacity): number {
-  return capacity.plus2h ? 240 : capacity.minutes;
+  return capacity.plus2h ? capacity.minutes + 120 : capacity.minutes;
 }

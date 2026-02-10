@@ -43,7 +43,11 @@ export async function POST(request: NextRequest) {
     // Parse request body
     const body = await request.json();
 
-    // Validate request against schema
+    // Extract settings BEFORE validation - AJV with removeAdditional:true strips unknown fields
+    const settingsV2 = body.settings as any;
+    const settings = getSettingsFromRequest(body);
+
+    // Validate request against schema (this removes `settings` from body)
     if (!validateRequest(body)) {
       return NextResponse.json(
         { error: "Invalid request", details: validateRequest.errors },
@@ -59,12 +63,6 @@ export async function POST(request: NextRequest) {
       calendar_windows = [],
       tasks,
     } = body as unknown as PrioritizeRequest;
-
-    // Get settings from request or use defaults
-    const settings = getSettingsFromRequest(body);
-
-    // Extract work context from settings (v2 fields)
-    const settingsV2 = body.settings as any;
     let contextSection = "";
 
     if (settingsV2) {
@@ -153,20 +151,22 @@ export async function POST(request: NextRequest) {
       temperature: 0.7,
     };
 
-    // 🔍 Debug mode - return payload instead of calling OpenAI
-    const url = new URL(request.url);
-    const debugParam = url.searchParams.get("debug");
-    const debugHeader = request.headers.get("x-debug-ai");
+    // 🔍 Debug mode - return payload instead of calling OpenAI (development only)
+    if (process.env.NODE_ENV === "development") {
+      const url = new URL(request.url);
+      const debugParam = url.searchParams.get("debug");
+      const debugHeader = request.headers.get("x-debug-ai");
 
-    if (debugParam === "1" || debugHeader === "1") {
-      return NextResponse.json(
-        {
-          debug: true,
-          payload: openAiPayload,
-          note: "Debug mode: OpenAI was not called. This is the exact payload that would be sent."
-        },
-        { status: 200 }
-      );
+      if (debugParam === "1" || debugHeader === "1") {
+        return NextResponse.json(
+          {
+            debug: true,
+            payload: openAiPayload,
+            note: "Debug mode: OpenAI was not called. This is the exact payload that would be sent."
+          },
+          { status: 200 }
+        );
+      }
     }
 
     const openaiResponse = await fetch(
@@ -186,8 +186,8 @@ export async function POST(request: NextRequest) {
       const errorText = await openaiResponse.text();
       console.error("OpenAI API error:", errorText);
       return NextResponse.json(
-        { error: "Failed to call OpenAI API", details: errorText },
-        { status: 500 }
+        { error: "AI service unavailable. Please try again." },
+        { status: 502 }
       );
     }
 
@@ -206,9 +206,10 @@ export async function POST(request: NextRequest) {
     try {
       parsedResponse = JSON.parse(content);
     } catch (e) {
+      console.error("Failed to parse OpenAI JSON response:", content);
       return NextResponse.json(
-        { error: "Failed to parse OpenAI JSON response", details: content },
-        { status: 500 }
+        { error: "AI returned an invalid response. Please try again." },
+        { status: 502 }
       );
     }
 
@@ -251,7 +252,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Error in /api/ai/prioritize_tasks:", error);
     return NextResponse.json(
-      { error: "Internal server error", details: String(error) },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

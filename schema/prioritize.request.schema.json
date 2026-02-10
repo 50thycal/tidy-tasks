@@ -52,7 +52,7 @@
         "properties": {
           "id": { "type": "string" },
           "title": { "type": "string", "minLength": 1 },
-          "status": { "type": "string", "enum": ["inbox", "active", "done", "snoozed"] },
+          "status": { "type": "string", "enum": ["inbox", "active", "done", "follow-up", "snoozed"] },
           "importance": { "type": "integer", "minimum": 0, "maximum": 100 },
           "effort_min": { "type": "integer", "enum": [5, 15, 30, 60, 90, 120] },
           "energy": { "type": "string", "enum": ["low", "med", "high"] },

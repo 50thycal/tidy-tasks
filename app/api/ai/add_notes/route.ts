@@ -118,20 +118,22 @@ Return JSON with cleaned note and suggested tags.`;
       temperature: 0.7,
     };
 
-    // 🔍 Debug mode - return payload instead of calling OpenAI
-    const url = new URL(request.url);
-    const debugParam = url.searchParams.get("debug");
-    const debugHeader = request.headers.get("x-debug-ai");
+    // 🔍 Debug mode - return payload instead of calling OpenAI (development only)
+    if (process.env.NODE_ENV === "development") {
+      const url = new URL(request.url);
+      const debugParam = url.searchParams.get("debug");
+      const debugHeader = request.headers.get("x-debug-ai");
 
-    if (debugParam === "1" || debugHeader === "1") {
-      return NextResponse.json(
-        {
-          debug: true,
-          payload: openAiPayload,
-          note: "Debug mode: OpenAI was not called. This is the exact payload that would be sent."
-        },
-        { status: 200 }
-      );
+      if (debugParam === "1" || debugHeader === "1") {
+        return NextResponse.json(
+          {
+            debug: true,
+            payload: openAiPayload,
+            note: "Debug mode: OpenAI was not called. This is the exact payload that would be sent."
+          },
+          { status: 200 }
+        );
+      }
     }
 
     const openaiResponse = await fetch(
@@ -151,8 +153,8 @@ Return JSON with cleaned note and suggested tags.`;
       const errorText = await openaiResponse.text();
       console.error("OpenAI API error:", errorText);
       return NextResponse.json(
-        { error: "Failed to call OpenAI API", details: errorText },
-        { status: 500 }
+        { error: "AI service unavailable. Please try again." },
+        { status: 502 }
       );
     }
 
@@ -171,9 +173,10 @@ Return JSON with cleaned note and suggested tags.`;
     try {
       parsedResponse = JSON.parse(content);
     } catch (e) {
+      console.error("Failed to parse OpenAI JSON response:", content);
       return NextResponse.json(
-        { error: "Failed to parse OpenAI JSON response", details: content },
-        { status: 500 }
+        { error: "AI returned an invalid response. Please try again." },
+        { status: 502 }
       );
     }
 
@@ -208,7 +211,7 @@ Return JSON with cleaned note and suggested tags.`;
   } catch (error) {
     console.error("Error in /api/ai/add_notes:", error);
     return NextResponse.json(
-      { error: "Internal server error", details: String(error) },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

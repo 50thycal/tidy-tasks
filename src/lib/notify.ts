@@ -101,7 +101,7 @@ export function showInAppToast(message: string, duration: number = 5000): void {
     toast.style.opacity = "0";
     toast.style.transition = "opacity 0.3s ease-out";
     setTimeout(() => {
-      document.body.removeChild(toast);
+      if (toast.parentNode) toast.parentNode.removeChild(toast);
     }, 300);
   }, duration);
 }

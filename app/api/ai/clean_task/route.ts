@@ -55,6 +55,7 @@ export async function POST(request: NextRequest) {
     // Extract settings BEFORE validation - AJV with removeAdditional:true strips unknown fields
     // The settings field contains project list and work context needed for AI matching
     const settingsV2 = body.settings as any;
+    const settingsForNormalize = getSettingsFromRequest(body);
 
     // Validate request against schema (this removes `settings` from body)
     if (!validateRequest(body)) {
@@ -152,14 +153,14 @@ SUBTASK GENERATION:
 
 DATE RULES: "next [day]" = that day NEXT week. "this [day]" or just "[day]" = upcoming occurrence. Explicit dates like "1/7/26" should be used exactly as given.${projectMatchingRule}${intentPreservationRule}${importanceScoringRule}${subtaskRule}
 
-Return ONLY this JSON structure: {title, due_at (YYYY-MM-DD or null), scheduled_for (null unless specific time given), effort_min (5|15|30|60|120), energy (low|med|high), tags[] (lowercase, no project names), project (MUST match from list above or null), subtasks[], importance (0-100), notes_append (string or null), suggested_project (detected project name not in list, or null)}.${contextSection}`;
+Return ONLY this JSON structure: {title, due_at (YYYY-MM-DD or null), scheduled_for (null unless specific time given), effort_min (5|15|30|60|90|120), energy (low|med|high), tags[] (lowercase, no project names), project (MUST match from list above or null), subtasks[], importance (0-100), notes_append (string or null), suggested_project (detected project name not in list, or null)}.${contextSection}`;
 
     // If strict mode, prepend stricter instructions
     if (mode === 'strict') {
       systemPrompt = `STRICT MODE: Return the absolute minimal valid JSON for CleanTaskResponse. Enforce:
 - subtasks: string[] only (max 3); if unsure, []
 - tags: string[] only (max 5, lowercase); if unsure, []
-- energy ∈ {low,med,high}; effort_min ∈ {5,15,30,60,120}
+- energy ∈ {low,med,high}; effort_min ∈ {5,15,30,60,90,120}
 - importance: integer 0–100
 - due_at/scheduled_for: ISO 8601 or null; never plain words
 If any field is uncertain, omit or use null/[] rather than inventing values.
@@ -189,20 +190,22 @@ ${systemPrompt}`;
       temperature: 0.7,
     };
 
-    // 🔍 Debug mode - return payload instead of calling OpenAI
-    const url = new URL(request.url);
-    const debugParam = url.searchParams.get("debug");
-    const debugHeader = request.headers.get("x-debug-ai");
+    // 🔍 Debug mode - return payload instead of calling OpenAI (development only)
+    if (process.env.NODE_ENV === "development") {
+      const url = new URL(request.url);
+      const debugParam = url.searchParams.get("debug");
+      const debugHeader = request.headers.get("x-debug-ai");
 
-    if (debugParam === "1" || debugHeader === "1") {
-      return NextResponse.json(
-        {
-          debug: true,
-          payload: openAiPayload,
-          note: "Debug mode: OpenAI was not called. This is the exact payload that would be sent."
-        },
-        { status: 200 }
-      );
+      if (debugParam === "1" || debugHeader === "1") {
+        return NextResponse.json(
+          {
+            debug: true,
+            payload: openAiPayload,
+            note: "Debug mode: OpenAI was not called. This is the exact payload that would be sent."
+          },
+          { status: 200 }
+        );
+      }
     }
 
     const openaiResponse = await fetch(
@@ -222,8 +225,8 @@ ${systemPrompt}`;
       const errorText = await openaiResponse.text();
       console.error("OpenAI API error:", errorText);
       return NextResponse.json(
-        { error: "Failed to call OpenAI API", details: errorText },
-        { status: 500 }
+        { error: "AI service unavailable. Please try again." },
+        { status: 502 }
       );
     }
 
@@ -242,14 +245,15 @@ ${systemPrompt}`;
     try {
       parsedResponse = JSON.parse(content);
     } catch (e) {
+      console.error("Failed to parse OpenAI JSON response:", content);
       return NextResponse.json(
-        { error: "Failed to parse OpenAI JSON response", details: content },
-        { status: 500 }
+        { error: "AI returned an invalid response. Please try again." },
+        { status: 502 }
       );
     }
 
-    // Get settings from request or use defaults
-    const settings = getSettingsFromRequest(body);
+    // Use settings extracted before AJV validation (body.settings was stripped)
+    const settings = settingsForNormalize;
 
     // Normalize response (convert plain dates to ISO datetimes, handle null notes, EOW)
     const normalizedResponse = { ...parsedResponse };
@@ -344,7 +348,7 @@ ${systemPrompt}`;
   } catch (error) {
     console.error("Error in /api/ai/clean_task:", error);
     return NextResponse.json(
-      { error: "Internal server error", details: String(error) },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

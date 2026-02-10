@@ -8,7 +8,7 @@ const STORAGE_KEY = "tidy.settings";
 export function getDefaultWorkSettingsV2(): WorkSettingsV2 {
   return {
     version: 2,
-    timezone: process.env.TZ || "America/Los_Angeles",
+    timezone: (typeof process !== "undefined" && process.env?.TZ) || "America/Los_Angeles",
     work_days: ["mon", "tue", "wed", "thu", "fri"],
     end_of_day: "17:00",
     eow_anchor: "Fri",

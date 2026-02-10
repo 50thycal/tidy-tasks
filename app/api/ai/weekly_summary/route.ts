@@ -51,11 +51,12 @@ export async function POST(request: NextRequest) {
       return updatedDate >= weekStartDate && updatedDate <= weekEndDate;
     });
 
+    const now = new Date();
     const overdue_active = tasks.filter((t) => {
       if (t.status !== "active") return false;
       if (!t.due_at) return false;
       const dueDate = new Date(t.due_at);
-      return dueDate < weekEndDate;
+      return dueDate < now;
     });
 
     const upcoming = tasks.filter((t) => {
@@ -190,7 +191,7 @@ Activity: Created ${context.activity_counts.created}, Completed ${context.activi
       const errorText = await openaiResponse.text();
       console.error("OpenAI API error:", errorText);
       return NextResponse.json(
-        { error: "Failed to call OpenAI API", details: errorText },
+        { error: "AI service unavailable. Please try again." },
         { status: 502 }
       );
     }
@@ -210,8 +211,9 @@ Activity: Created ${context.activity_counts.created}, Completed ${context.activi
     try {
       parsedResponse = JSON.parse(content);
     } catch (e) {
+      console.error("Failed to parse OpenAI JSON response:", content);
       return NextResponse.json(
-        { error: "Failed to parse OpenAI JSON response", details: content },
+        { error: "AI returned an invalid response. Please try again." },
         { status: 502 }
       );
     }
@@ -229,7 +231,7 @@ Activity: Created ${context.activity_counts.created}, Completed ${context.activi
   } catch (error) {
     console.error("Error in /api/ai/weekly_summary:", error);
     return NextResponse.json(
-      { error: "Internal server error", details: String(error) },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

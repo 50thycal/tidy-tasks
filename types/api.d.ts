@@ -1,7 +1,7 @@
 // /types/api.d.ts
 
 // ---------- Core Types ----------
-export type TaskStatus = "active" | "done" | "follow-up" | "snoozed";
+export type TaskStatus = "inbox" | "active" | "done" | "follow-up" | "snoozed";
 export type PriorityBucket = "now" | "next" | "later" | "backlog";
 export type EnergyLevel = "low" | "med" | "high";
 export type PlannedDay = "mon" | "tue" | "wed" | "thu" | "fri" | "weekend";

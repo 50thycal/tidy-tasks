@@ -76,15 +76,8 @@ export function nextAnchorISO(
     if (rollover === "next-workweek-if-past-eod" && isPastEOD) {
       // If we're past EOD on the anchor day, jump to next week
       daysUntilAnchor = 7;
-    } else if (rollover === "same-week") {
-      // For same-week mode, if it's 0, use today
-      daysUntilAnchor = 0;
     }
-  }
-
-  // If daysUntilAnchor is still 0 but we haven't handled it, default to next week
-  if (daysUntilAnchor === 0 && rollover === "next-workweek-if-past-eod") {
-    daysUntilAnchor = 7;
+    // Otherwise (before EOD, or same-week mode), use today (daysUntilAnchor stays 0)
   }
 
   const targetDate = new Date(now);

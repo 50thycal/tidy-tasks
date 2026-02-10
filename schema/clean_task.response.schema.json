@@ -35,7 +35,7 @@
     },
     "effort_min": {
       "type": "integer",
-      "enum": [5, 15, 30, 60, 120],
+      "enum": [5, 15, 30, 60, 90, 120],
       "description": "Estimated focused effort in minutes."
     },
     "energy": {
