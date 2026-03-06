@@ -6,7 +6,7 @@ import SearchBar from "@/app/components/SearchBar";
 import NotifyBanner from "@/app/components/NotifyBanner";
 import InstallCTA from "@/app/components/InstallCTA";
 import BulkBar from "@/app/components/BulkBar";
-import { CapturePanel } from "@/app/components/CapturePanel";
+import { InlineCapture } from "@/app/components/InlineCapture";
 import {
   getInboxItems,
   updateInboxItemStatus,
@@ -30,7 +30,7 @@ interface SortConfig {
 }
 
 const SORT_OPTIONS: { value: SortField; label: string }[] = [
-  { value: "created_at", label: "Created Date" },
+  { value: "created_at", label: "Created" },
   { value: "due_at", label: "Due Date" },
   { value: "project", label: "Project" },
   { value: "importance", label: "Importance" },
@@ -42,28 +42,22 @@ export default function InboxPage() {
   const [mounted, setMounted] = useState(false);
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [capturePanelOpen, setCapturePanelOpen] = useState(false);
   const [sort, setSort] = useState<SortConfig>({ field: "created_at", direction: "desc" });
 
-  // Load items from localStorage on mount
   useEffect(() => {
     setMounted(true);
     setItems(getInboxItems());
   }, []);
 
-  // Get work settings
   const settings = getWorkSettings();
 
-  // Compute distinct values for filters
   const projects = useMemo(() => getDistinctProjects(), [items]);
   const tags = useMemo(() => getDistinctTags(), [items]);
 
-  // Apply filters to items
   const filteredItems = useMemo(() => {
     return applyFilters(items, filters, settings);
   }, [items, filters, settings]);
 
-  // Sort function
   const sortItems = (itemsToSort: InboxItem[]): InboxItem[] => {
     return [...itemsToSort].sort((a, b) => {
       let comparison = 0;
@@ -96,12 +90,10 @@ export default function InboxPage() {
     });
   };
 
-  // Apply sorting to filtered items
   const sortedItems = useMemo(() => {
     return sortItems(filteredItems);
   }, [filteredItems, sort]);
 
-  // Handle toggle done
   const handleToggleDone = (id: string) => {
     const item = items.find((i) => i.id === id);
     if (!item) return;
@@ -110,26 +102,21 @@ export default function InboxPage() {
     setItems(getInboxItems());
   };
 
-  // Handle move (opens move dialog or moves to default location)
   const handleMove = (id: string) => {
-    // For now, just move to active as default behavior
     updateInboxItemStatus(id, "active");
     setItems(getInboxItems());
   };
 
-  // Handle move to active (legacy)
   const handleMoveToActive = (id: string) => {
     updateInboxItemStatus(id, "active");
     setItems(getInboxItems());
   };
 
-  // Handle delete
   const handleDelete = (id: string) => {
     deleteInboxItem(id);
     setItems(getInboxItems());
   };
 
-  // Bulk selection handlers
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -172,56 +159,85 @@ export default function InboxPage() {
     setSelectedIds(new Set());
   };
 
-  // Don't render until mounted (to avoid hydration mismatch)
+  // Status counts
+  const activeCount = items.filter((i) => i.status === "active").length;
+  const followUpCount = items.filter((i) => i.status === "follow-up").length;
+  const doneCount = items.filter((i) => i.status === "done").length;
+
   if (!mounted) {
     return (
       <div style={{ padding: "2rem" }}>
         <div style={{ maxWidth: "800px", margin: "0 auto" }}>
           <h1>Inbox</h1>
-          <p>Loading...</p>
+          <p style={{ color: "var(--muted)" }}>Loading...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div style={{ padding: "2rem", minHeight: "100vh" }}>
-      <div style={{ maxWidth: "800px", margin: "0 auto" }}>
-        {/* Notification Banner */}
-        <NotifyBanner />
+    <div style={{ minHeight: "100vh" }}>
+      {/* Notification Banner */}
+      <NotifyBanner />
+      <InstallCTA />
 
-        {/* Install CTA */}
-        <InstallCTA />
-
-        <h1 style={{ marginBottom: "1rem" }}>Inbox</h1>
-        <p style={{ color: "var(--muted)", marginBottom: "2rem" }}>
-          Your task inbox. Use the side panel to add and clean tasks with AI.
-        </p>
-
-        {/* Saved Items List */}
-        <div>
-          {items.length > 0 && (
-            <div
+      {/* Page Header */}
+      <div style={{ marginBottom: "1.5rem" }}>
+        <h1 style={{ marginBottom: "0.5rem", fontSize: "1.75rem" }}>Inbox</h1>
+        {items.length > 0 && (
+          <div
+            style={{
+              display: "flex",
+              gap: "0.75rem",
+              fontSize: "0.85rem",
+            }}
+          >
+            <span
+              className="badge"
               style={{
-                display: "flex",
-                gap: "1rem",
-                marginBottom: "1rem",
-                fontSize: "0.9rem",
-                flexWrap: "wrap",
+                backgroundColor: "color-mix(in srgb, var(--accent-2) 15%, transparent)",
+                color: "var(--accent-2)",
+                border: "1px solid color-mix(in srgb, var(--accent-2) 30%, transparent)",
               }}
             >
-              <span style={{ color: "var(--accent-2)" }}>
-                {items.filter((i) => i.status === "active").length} Active
-              </span>
-              <span style={{ color: "var(--warn)" }}>
-                {items.filter((i) => i.status === "follow-up").length} Follow-up
-              </span>
-              <span style={{ color: "var(--success)" }}>
-                {items.filter((i) => i.status === "done").length} Done
-              </span>
-            </div>
-          )}
+              {activeCount} active
+            </span>
+            <span
+              className="badge"
+              style={{
+                backgroundColor: "color-mix(in srgb, var(--warn) 15%, transparent)",
+                color: "var(--warn)",
+                border: "1px solid color-mix(in srgb, var(--warn) 30%, transparent)",
+              }}
+            >
+              {followUpCount} follow-up
+            </span>
+            <span
+              className="badge"
+              style={{
+                backgroundColor: "color-mix(in srgb, var(--muted) 15%, transparent)",
+                color: "var(--muted)",
+                border: "1px solid color-mix(in srgb, var(--muted) 30%, transparent)",
+              }}
+            >
+              {doneCount} done
+            </span>
+          </div>
+        )}
+      </div>
 
+      {/* Two-column layout */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr",
+          gap: "1.5rem",
+          alignItems: "start",
+        }}
+        className="lg:grid-cols-[1fr_380px]"
+      >
+        {/* Left Column - Task List */}
+        <div style={{ minWidth: 0 }}>
           {/* Search and Filter */}
           {items.length > 0 && (
             <SearchBar
@@ -240,109 +256,130 @@ export default function InboxPage() {
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: "0.75rem",
+                gap: "0.5rem",
                 marginBottom: "1rem",
                 flexWrap: "wrap",
               }}
             >
-              <span style={{ fontSize: "0.85rem", color: "var(--muted)" }}>Sort by:</span>
-              <select
-                value={sort.field}
-                onChange={(e) => setSort({ ...sort, field: e.target.value as SortField })}
-                style={{
-                  padding: "0.4rem 0.75rem",
-                  backgroundColor: "var(--panel-2)",
-                  color: "var(--text)",
-                  border: "1px solid var(--border)",
-                  borderRadius: "6px",
-                  fontSize: "0.85rem",
-                  cursor: "pointer",
-                }}
-              >
+              <span style={{ fontSize: "0.8rem", color: "var(--muted)" }}>Sort:</span>
+              <div style={{ display: "flex", gap: "0.25rem", flexWrap: "wrap" }}>
                 {SORT_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => {
+                      if (sort.field === opt.value) {
+                        setSort({ ...sort, direction: sort.direction === "asc" ? "desc" : "asc" });
+                      } else {
+                        setSort({ field: opt.value, direction: "desc" });
+                      }
+                    }}
+                    style={{
+                      padding: "0.3rem 0.6rem",
+                      backgroundColor: sort.field === opt.value ? "var(--accent)" : "var(--panel-2)",
+                      color: sort.field === opt.value ? "white" : "var(--muted)",
+                      border: sort.field === opt.value ? "1px solid var(--accent)" : "1px solid var(--border)",
+                      borderRadius: "6px",
+                      fontSize: "0.78rem",
+                      cursor: "pointer",
+                      fontWeight: sort.field === opt.value ? "500" : "400",
+                      transition: "all 0.15s ease",
+                    }}
+                  >
                     {opt.label}
-                  </option>
+                    {sort.field === opt.value && (
+                      <span style={{ marginLeft: "0.25rem" }}>
+                        {sort.direction === "asc" ? "↑" : "↓"}
+                      </span>
+                    )}
+                  </button>
                 ))}
-              </select>
-              <button
-                type="button"
-                onClick={() =>
-                  setSort({ ...sort, direction: sort.direction === "asc" ? "desc" : "asc" })
-                }
-                style={{
-                  padding: "0.4rem 0.75rem",
-                  backgroundColor: "var(--panel-2)",
-                  color: "var(--text)",
-                  border: "1px solid var(--border)",
-                  borderRadius: "6px",
-                  fontSize: "0.85rem",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.25rem",
-                }}
-                title={sort.direction === "asc" ? "Ascending" : "Descending"}
-              >
-                {sort.direction === "asc" ? "↑ Asc" : "↓ Desc"}
-              </button>
+              </div>
             </div>
           )}
 
+          {/* Task List */}
           {items.length === 0 ? (
             <div
               style={{
-                padding: "2rem",
+                padding: "3rem 2rem",
                 textAlign: "center",
-                backgroundColor: "var(--panel-2)",
-                borderRadius: "8px",
+                backgroundColor: "var(--panel)",
+                borderRadius: "12px",
+                border: "1px solid var(--border)",
                 color: "var(--muted)",
               }}
             >
-              No tasks yet. Use the side panel to add your first task.
+              <div style={{ fontSize: "2rem", marginBottom: "0.75rem", opacity: 0.5 }}>
+                { /* inbox icon */ }
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: "inline-block" }}>
+                  <polyline points="22 12 16 12 14 15 10 15 8 12 2 12" />
+                  <path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />
+                </svg>
+              </div>
+              <p style={{ fontSize: "1rem", marginBottom: "0.5rem", color: "var(--text)" }}>
+                Your inbox is empty
+              </p>
+              <p style={{ fontSize: "0.85rem" }}>
+                Add your first tasks using the panel on the right
+              </p>
             </div>
           ) : sortedItems.length === 0 ? (
             <div
               style={{
                 padding: "2rem",
                 textAlign: "center",
-                backgroundColor: "var(--panel-2)",
-                borderRadius: "8px",
+                backgroundColor: "var(--panel)",
+                borderRadius: "12px",
+                border: "1px solid var(--border)",
                 color: "var(--muted)",
               }}
             >
               No tasks match your filters. Try adjusting or clearing filters.
             </div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
               {sortedItems.map((item) => (
                 <div key={item.id}>
                   <div
                     style={{
-                      fontSize: "0.85rem",
+                      fontSize: "0.78rem",
                       color: "var(--muted)",
-                      marginBottom: "0.5rem",
+                      marginBottom: "0.35rem",
                       display: "flex",
-                      gap: "1rem",
+                      gap: "0.75rem",
                       alignItems: "center",
                     }}
                   >
                     <span>
-                      Created: {new Date(item.created_at).toLocaleString()}
+                      {new Date(item.created_at).toLocaleDateString(undefined, {
+                        month: "short",
+                        day: "numeric",
+                      })}
                     </span>
                     <span
+                      className="badge"
                       style={{
-                        padding: "0.25rem 0.5rem",
-                        backgroundColor:
-                          item.status === "active"
-                            ? "var(--accent-2)"
-                            : item.status === "follow-up"
-                            ? "var(--warn)"
-                            : "var(--success)",
-                        color: "white",
-                        borderRadius: "4px",
-                        fontSize: "0.75rem",
+                        padding: "0.1rem 0.4rem",
+                        fontSize: "0.65rem",
                         fontWeight: "500",
+                        ...(item.status === "active"
+                          ? {
+                              backgroundColor: "color-mix(in srgb, var(--accent-2) 15%, transparent)",
+                              color: "var(--accent-2)",
+                              border: "1px solid color-mix(in srgb, var(--accent-2) 30%, transparent)",
+                            }
+                          : item.status === "follow-up"
+                          ? {
+                              backgroundColor: "color-mix(in srgb, var(--warn) 15%, transparent)",
+                              color: "var(--warn)",
+                              border: "1px solid color-mix(in srgb, var(--warn) 30%, transparent)",
+                            }
+                          : {
+                              backgroundColor: "color-mix(in srgb, var(--muted) 15%, transparent)",
+                              color: "var(--muted)",
+                              border: "1px solid color-mix(in srgb, var(--muted) 30%, transparent)",
+                            }),
                       }}
                     >
                       {item.status === "follow-up" ? "FOLLOW-UP" : item.status.toUpperCase()}
@@ -366,6 +403,22 @@ export default function InboxPage() {
             </div>
           )}
         </div>
+
+        {/* Right Column - Add Tasks (always visible) */}
+        <div className="hidden lg:block">
+          <InlineCapture
+            defaultBucket="active"
+            onTasksAdded={() => setItems(getInboxItems())}
+          />
+        </div>
+
+        {/* Mobile: Inline capture at bottom */}
+        <div className="lg:hidden">
+          <InlineCapture
+            defaultBucket="active"
+            onTasksAdded={() => setItems(getInboxItems())}
+          />
+        </div>
       </div>
 
       {/* Bulk selection bar */}
@@ -375,16 +428,6 @@ export default function InboxPage() {
         onMove={handleBulkMove}
         onDue={handleBulkDue}
         onCancel={handleBulkCancel}
-      />
-
-      {/* Capture Panel */}
-      <CapturePanel
-        isOpen={capturePanelOpen}
-        onToggle={() => setCapturePanelOpen(!capturePanelOpen)}
-        onOpen={() => setCapturePanelOpen(true)}
-        onClose={() => setCapturePanelOpen(false)}
-        defaultBucket="active"
-        onTasksAdded={() => setItems(getInboxItems())}
       />
     </div>
   );
