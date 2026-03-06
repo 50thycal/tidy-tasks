@@ -305,15 +305,3 @@ h4 {
   }
 }
 
-.inbox-capture-desktop {
-  display: none;
-}
-
-@media (min-width: 1024px) {
-  .inbox-capture-desktop {
-    display: block;
-  }
-  .inbox-capture-mobile {
-    display: none;
-  }
-}
