@@ -8,7 +8,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div
       style={{
         display: "flex",
-        minHeight: "100vh",
+        height: "100vh",
         backgroundColor: "var(--background)",
         color: "var(--text)",
         flexDirection: "column",
