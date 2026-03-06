@@ -397,7 +397,7 @@ export default function InboxPage() {
         </div>
 
         {/* Right Column - Add Tasks (side-by-side on desktop, below on mobile) */}
-        <div>
+        <div style={{ position: "sticky", top: "1rem", alignSelf: "start" }}>
           <InlineCapture
             defaultBucket="active"
             onTasksAdded={() => setItems(getInboxItems())}
