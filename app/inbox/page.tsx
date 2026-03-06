@@ -227,15 +227,7 @@ export default function InboxPage() {
       </div>
 
       {/* Two-column layout */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr",
-          gap: "1.5rem",
-          alignItems: "start",
-        }}
-        className="lg:grid-cols-[1fr_380px]"
-      >
+      <div className="inbox-grid">
         {/* Left Column - Task List */}
         <div style={{ minWidth: 0 }}>
           {/* Search and Filter */}
@@ -404,16 +396,8 @@ export default function InboxPage() {
           )}
         </div>
 
-        {/* Right Column - Add Tasks (always visible) */}
-        <div className="hidden lg:block">
-          <InlineCapture
-            defaultBucket="active"
-            onTasksAdded={() => setItems(getInboxItems())}
-          />
-        </div>
-
-        {/* Mobile: Inline capture at bottom */}
-        <div className="lg:hidden">
+        {/* Right Column - Add Tasks (side-by-side on desktop, below on mobile) */}
+        <div>
           <InlineCapture
             defaultBucket="active"
             onTasksAdded={() => setItems(getInboxItems())}

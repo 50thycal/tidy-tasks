@@ -290,3 +290,18 @@ h4 {
     max-width: 1200px;
   }
 }
+
+/* Inbox two-column layout */
+.inbox-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (min-width: 1024px) {
+  .inbox-grid {
+    grid-template-columns: 1fr 380px;
+  }
+}
+
