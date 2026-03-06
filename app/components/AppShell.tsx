@@ -27,7 +27,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       >
         <div
           style={{
-            maxWidth: "900px",
+            maxWidth: "1200px",
             margin: "0 auto",
             padding: "1rem",
           }}
