@@ -1,4 +1,4 @@
-import type { CleanTaskRequest, CleanTaskResponse } from "@/src/types";
+import type { CleanTaskRequest, CleanTaskResponse, EmailContext } from "@/src/types";
 import { inc } from "@/src/db/metrics";
 
 export type InboxItemStatus = "active" | "done" | "follow-up";
@@ -32,6 +32,8 @@ export interface InboxItem {
   status: InboxItemStatus;
   /** Snapshot of the AI's initial output for comparison */
   ai_first_pass?: AIFirstPass;
+  /** Email context for tasks extracted from emails */
+  email_context?: EmailContext;
 }
 
 const STORAGE_KEY = "tidy.inbox";

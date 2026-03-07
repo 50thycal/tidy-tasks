@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ParseEmailResponse",
+  "type": "object",
+  "required": ["sender", "subject", "email_date", "action_items"],
+  "properties": {
+    "sender": { "type": "string" },
+    "subject": { "type": "string" },
+    "email_date": { "type": ["string", "null"] },
+    "action_items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["title", "owner", "contact", "due_at", "follow_up_by", "effort_min", "energy", "importance", "tags", "project", "notes"],
+        "properties": {
+          "title": { "type": "string" },
+          "owner": { "type": "string", "enum": ["mine", "theirs"] },
+          "contact": { "type": "string" },
+          "due_at": { "type": ["string", "null"] },
+          "follow_up_by": { "type": ["string", "null"] },
+          "effort_min": { "type": "integer", "enum": [5, 15, 30, 60, 90, 120] },
+          "energy": { "type": "string", "enum": ["low", "med", "high"] },
+          "importance": { "type": "integer", "minimum": 0, "maximum": 100 },
+          "tags": { "type": "array", "items": { "type": "string" } },
+          "project": { "type": ["string", "null"] },
+          "notes": { "type": ["string", "null"] }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

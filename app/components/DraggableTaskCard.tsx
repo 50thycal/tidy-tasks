@@ -149,6 +149,7 @@ export default function DraggableTaskCard({
             result={inboxItem.result}
             status={inboxItem.status}
             originalPrompt={inboxItem.request?.raw_text}
+            emailContext={inboxItem.email_context}
             onToggleDone={onMarkDone}
             onMove={onMoveToFollowUp}
             onChange={onRefresh}

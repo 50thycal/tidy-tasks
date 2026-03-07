@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, KeyboardEvent } from "react";
-import type { CleanTaskResponse } from "@/src/types";
+import type { CleanTaskResponse, EmailContext } from "@/src/types";
 import { updateInboxItemResult, updateInboxItemStatus } from "@/src/lib/clientStore";
 import { getWorkSettings } from "@/src/lib/settings";
 import { validateTask } from "@/src/lib/validate";
@@ -15,6 +15,7 @@ interface TaskCardProps {
   result: CleanTaskResponse;
   status?: "active" | "done" | "follow-up"; // Task status for done toggle
   originalPrompt?: string; // Raw input before AI cleanup
+  emailContext?: EmailContext; // Email context for follow-up items
   onToggleDone?: () => void; // Toggle done/active
   onMove?: () => void; // Move to different status
   onEdit?: () => void; // Open edit mode
@@ -30,6 +31,7 @@ export default function TaskCard({
   result,
   status,
   originalPrompt,
+  emailContext,
   onToggleDone,
   onMove,
   onEdit,
@@ -1176,6 +1178,45 @@ export default function TaskCard({
               })()}
             </div>
 
+          </div>
+        )}
+
+        {/* Email context badge for follow-up items */}
+        {emailContext && (
+          <div
+            style={{
+              marginBottom: "0.75rem",
+              padding: "0.5rem 0.75rem",
+              backgroundColor: "color-mix(in srgb, var(--accent) 10%, transparent)",
+              border: "1px solid color-mix(in srgb, var(--accent) 25%, var(--border))",
+              borderRadius: "8px",
+              fontSize: "0.8rem",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.75rem",
+              flexWrap: "wrap",
+            }}
+          >
+            <span style={{ color: "var(--accent)", fontWeight: "500" }}>
+              {status === "follow-up" ? `Waiting on: ${emailContext.contact}` : `Contact: ${emailContext.contact}`}
+            </span>
+            {emailContext.follow_up_by && (() => {
+              const followUpDate = new Date(emailContext.follow_up_by);
+              const now = new Date();
+              const isOverdue = followUpDate < now;
+              return (
+                <span style={{
+                  color: isOverdue ? "#ef4444" : "var(--muted)",
+                  fontWeight: isOverdue ? "600" : "400",
+                }}>
+                  Follow up: {followUpDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                  {isOverdue && " (overdue)"}
+                </span>
+              );
+            })()}
+            <span style={{ color: "var(--muted)", fontSize: "0.75rem" }}>
+              Re: {emailContext.subject}
+            </span>
           </div>
         )}
 

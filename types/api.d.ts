@@ -157,6 +157,42 @@ export interface WeeklySummaryResponse {
   next_focus: string;    // concrete plan for next week
 }
 
+// ---------- Parse Email ----------
+export interface ParseEmailRequest {
+  email_text: string;
+  today?: string;       // YYYY-MM-DD
+  timezone?: string;    // IANA TZ
+}
+
+export interface EmailActionItem {
+  title: string;                    // verb-first action
+  owner: "mine" | "theirs";        // who owns this action
+  contact: string;                  // person involved
+  due_at: string | null;           // ISO date if mentioned
+  follow_up_by: string | null;     // suggested follow-up date
+  effort_min: 5 | 15 | 30 | 60 | 90 | 120;
+  energy: EnergyLevel;
+  importance: number;               // 0-100
+  tags: string[];
+  project: string | null;
+  notes: string | null;             // context from email
+}
+
+export interface ParseEmailResponse {
+  sender: string;
+  subject: string;
+  email_date: string | null;
+  action_items: EmailActionItem[];
+}
+
+export interface EmailContext {
+  sender: string;
+  subject: string;
+  email_date: string | null;
+  contact: string;
+  follow_up_by: string | null;
+}
+
 // ---------- Minimal Client (optional) ----------
 export interface TidyApiClient {
   cleanTask(req: CleanTaskRequest, opts?: RequestInit): Promise<CleanTaskResponse>;

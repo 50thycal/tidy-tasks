@@ -382,6 +382,7 @@ export default function InboxPage() {
                     result={item.result}
                     status={item.status}
                     originalPrompt={item.request?.raw_text}
+                    emailContext={item.email_context}
                     onToggleDone={() => handleToggleDone(item.id)}
                     onMove={() => handleMove(item.id)}
                     onDelete={() => handleDelete(item.id)}
