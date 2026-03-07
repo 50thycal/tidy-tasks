@@ -7,6 +7,7 @@ import { useMetrics } from "@/src/hooks/useMetrics";
 const NAV_ITEMS = [
   { href: "/inbox", label: "Inbox", icon: "📥" },
   { href: "/focus", label: "Focus", icon: "🎯" },
+  { href: "/email", label: "Email Drop", icon: "📧" },
   { href: "/settings", label: "Settings", icon: "⚙️" },
 ];
 

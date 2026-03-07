@@ -16,6 +16,10 @@ export type {
   WeeklySummaryResponse,
   WeeklySummaryTask,
   TidyApiClient,
+  ParseEmailRequest,
+  ParseEmailResponse,
+  EmailActionItem,
+  EmailContext,
 } from "@/types/api";
 
 export { createTidyApiClient } from "@/types/api";
