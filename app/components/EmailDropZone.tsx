@@ -26,7 +26,7 @@ export default function EmailDropZone({ onEmailsParsed, isProcessing }: EmailDro
       const unsupported = fileArray.filter((f) => !isSupportedEmailFile(f));
       if (unsupported.length > 0 && fileArray.length === unsupported.length) {
         setParseError(
-          `Unsupported file type: ${unsupported.map((f) => f.name).join(", ")}. Use .eml or .txt files.`
+          `Unsupported file type: ${unsupported.map((f) => f.name).join(", ")}. Use .eml, .msg, or .txt files.`
         );
         return;
       }
@@ -146,7 +146,7 @@ export default function EmailDropZone({ onEmailsParsed, isProcessing }: EmailDro
         <div style={{ fontSize: "0.875rem", color: "var(--muted)" }}>
           {isProcessing
             ? "AI is extracting action items"
-            : "Drag .eml or .txt files, or click to browse"}
+            : "Drag .eml, .msg, or .txt files, or click to browse"}
         </div>
 
         <input
