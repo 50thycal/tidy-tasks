@@ -341,7 +341,8 @@ export async function parseMsgFile(file: File): Promise<string> {
   }
 
   // Build mini-stream from Root Entry
-  let miniStream: Uint8Array<ArrayBufferLike> = new Uint8Array(0);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let miniStream: any = new Uint8Array(0);
   const rootEntry = entries[0];
   if (rootEntry && rootEntry.startSector >= 0) {
     miniStream = readChain(rootEntry.startSector);
