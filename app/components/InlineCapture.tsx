@@ -222,8 +222,6 @@ export function InlineCapture({ defaultBucket = "active", onTasksAdded }: Inline
   return (
     <div
       style={{
-        position: "sticky",
-        top: "1rem",
         display: "flex",
         flexDirection: "column",
         gap: "0rem",
