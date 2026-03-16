@@ -416,19 +416,23 @@ export async function parseMsgFile(file: File): Promise<string> {
   const PROP_DISPLAY_CC_A = "__substg1.0_0E03001E";
   const PROP_BODY_W = "__substg1.0_1000001F";
   const PROP_BODY_A = "__substg1.0_1000001E";
+  const PROP_BODY_HTML_W = "__substg1.0_1013001F";
+  const PROP_BODY_HTML_A = "__substg1.0_1013001E";
+  // Some .msg files store HTML body as binary (PT_BINARY = 0102)
+  const PROP_BODY_HTML_BIN = "__substg1.0_10130102";
 
-  // Build lookup map
+  // Build lookup map (case-insensitive — some .msg files use lowercase hex in stream names)
   const entryMap = new Map<string, DirEntry>();
   for (const e of entries) {
-    entryMap.set(e.name, e);
+    entryMap.set(e.name.toLowerCase(), e);
   }
 
   function readProp(unicodeName: string, ansiName: string): string {
-    const uEntry = entryMap.get(unicodeName);
+    const uEntry = entryMap.get(unicodeName.toLowerCase());
     if (uEntry && uEntry.size > 0) {
       return decodeUtf16Le(readEntryData(uEntry)).trim();
     }
-    const aEntry = entryMap.get(ansiName);
+    const aEntry = entryMap.get(ansiName.toLowerCase());
     if (aEntry && aEntry.size > 0) {
       const data = readEntryData(aEntry);
       return new TextDecoder("utf-8").decode(data).trim();
@@ -441,7 +445,23 @@ export async function parseMsgFile(file: File): Promise<string> {
   const senderEmail = readProp(PROP_SENDER_EMAIL_W, PROP_SENDER_EMAIL_A);
   const displayTo = readProp(PROP_DISPLAY_TO_W, PROP_DISPLAY_TO_A);
   const displayCc = readProp(PROP_DISPLAY_CC_W, PROP_DISPLAY_CC_A);
-  const body = readProp(PROP_BODY_W, PROP_BODY_A);
+  let body = readProp(PROP_BODY_W, PROP_BODY_A);
+
+  // If no plain text body, fall back to HTML body and strip tags
+  if (!body) {
+    let htmlBody = readProp(PROP_BODY_HTML_W, PROP_BODY_HTML_A);
+    // Also try the binary HTML property (PT_BINARY = 0102)
+    if (!htmlBody) {
+      const binEntry = entryMap.get(PROP_BODY_HTML_BIN.toLowerCase());
+      if (binEntry && binEntry.size > 0) {
+        const data = readEntryData(binEntry);
+        htmlBody = new TextDecoder("utf-8").decode(data).trim();
+      }
+    }
+    if (htmlBody) {
+      body = stripHtml(htmlBody);
+    }
+  }
 
   // Build output
   const parts: string[] = [];
