@@ -29,6 +29,7 @@ export default function EmailActionItems({
   onDismiss,
 }: EmailActionItemsProps) {
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [addedItems, setAddedItems] = useState<Set<string>>(new Set());
 
   const successResults = results.filter(
     (r) => r.status === "success" && r.data
@@ -60,8 +61,9 @@ export default function EmailActionItems({
     });
   }
 
-  const mineItems = allItems.filter((i) => i.actionItem.owner === "mine");
-  const theirsItems = allItems.filter((i) => i.actionItem.owner === "theirs");
+  const visibleItems = allItems.filter((i) => !addedItems.has(i.key));
+  const mineItems = visibleItems.filter((i) => i.actionItem.owner === "mine");
+  const theirsItems = visibleItems.filter((i) => i.actionItem.owner === "theirs");
 
   const toggleSelect = (key: string) => {
     setSelectedItems((prev) => {
@@ -89,7 +91,7 @@ export default function EmailActionItems({
   };
 
   const handleAddSelected = (destination: "active" | "follow-up") => {
-    const selected = allItems.filter((i) => selectedItems.has(i.key));
+    const selected = visibleItems.filter((i) => selectedItems.has(i.key));
     if (selected.length === 0) return;
 
     onAddToInbox(
@@ -100,7 +102,12 @@ export default function EmailActionItems({
       destination
     );
 
-    // Remove added items from selection
+    // Mark items as added and clear from selection
+    setAddedItems((prev) => {
+      const next = new Set(prev);
+      selected.forEach((s) => next.add(s.key));
+      return next;
+    });
     setSelectedItems((prev) => {
       const next = new Set(prev);
       selected.forEach((s) => next.delete(s.key));
@@ -109,21 +116,35 @@ export default function EmailActionItems({
   };
 
   const handleAddAllMine = () => {
-    const items = mineItems.map((i) => ({
-      actionItem: i.actionItem,
-      emailMeta: i.emailMeta,
-    }));
-    if (items.length === 0) return;
-    onAddToInbox(items, "active");
+    if (mineItems.length === 0) return;
+    onAddToInbox(
+      mineItems.map((i) => ({
+        actionItem: i.actionItem,
+        emailMeta: i.emailMeta,
+      })),
+      "active"
+    );
+    setAddedItems((prev) => {
+      const next = new Set(prev);
+      mineItems.forEach((i) => next.add(i.key));
+      return next;
+    });
   };
 
   const handleAddAllTheirs = () => {
-    const items = theirsItems.map((i) => ({
-      actionItem: i.actionItem,
-      emailMeta: i.emailMeta,
-    }));
-    if (items.length === 0) return;
-    onAddToInbox(items, "follow-up");
+    if (theirsItems.length === 0) return;
+    onAddToInbox(
+      theirsItems.map((i) => ({
+        actionItem: i.actionItem,
+        emailMeta: i.emailMeta,
+      })),
+      "follow-up"
+    );
+    setAddedItems((prev) => {
+      const next = new Set(prev);
+      theirsItems.forEach((i) => next.add(i.key));
+      return next;
+    });
   };
 
   const formatDate = (dateStr: string | null) => {
@@ -140,9 +161,9 @@ export default function EmailActionItems({
   };
 
   if (
-    successResults.length === 0 &&
     processingResults.length === 0 &&
-    failedResults.length === 0
+    failedResults.length === 0 &&
+    visibleItems.length === 0
   ) {
     return null;
   }
