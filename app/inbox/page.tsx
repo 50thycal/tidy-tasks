@@ -7,6 +7,8 @@ import NotifyBanner from "@/app/components/NotifyBanner";
 import InstallCTA from "@/app/components/InstallCTA";
 import BulkBar from "@/app/components/BulkBar";
 import { InlineCapture } from "@/app/components/InlineCapture";
+import EmailDropZone from "@/app/components/EmailDropZone";
+import EmailActionItems, { type EmailResult } from "@/app/components/EmailActionItems";
 import {
   getInboxItems,
   updateInboxItemStatus,
@@ -14,12 +16,14 @@ import {
   bulkMarkDone,
   bulkMoveToBucket,
   bulkSetDue,
+  bulkAddInboxItems,
   type InboxItem,
 } from "@/src/lib/clientStore";
-import { getWorkSettings } from "@/src/lib/settings";
+import { getWorkSettings, getWorkSettingsV2 } from "@/src/lib/settings";
 import { applyFilters, DEFAULT_FILTERS, type Filters } from "@/src/lib/filter";
 import { getDistinctProjects, getDistinctTags } from "@/src/db/queries";
 import { getQuickDateActions } from "@/src/lib/quickdates";
+import type { EmailActionItem, CleanTaskRequest, CleanTaskResponse } from "@/src/types";
 
 type SortField = "created_at" | "due_at" | "project" | "importance" | "title";
 type SortDirection = "asc" | "desc";
@@ -44,10 +48,22 @@ export default function InboxPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [sort, setSort] = useState<SortConfig>({ field: "created_at", direction: "desc" });
 
+  // Email upload state
+  const [emailResults, setEmailResults] = useState<EmailResult[]>([]);
+  const [isEmailProcessing, setIsEmailProcessing] = useState(false);
+  const [emailToast, setEmailToast] = useState<string | null>(null);
+
   useEffect(() => {
     setMounted(true);
     setItems(getInboxItems());
   }, []);
+
+  useEffect(() => {
+    if (emailToast) {
+      const timer = setTimeout(() => setEmailToast(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [emailToast]);
 
   const settings = getWorkSettings();
 
@@ -157,6 +173,150 @@ export default function InboxPage() {
 
   const handleBulkCancel = () => {
     setSelectedIds(new Set());
+  };
+
+  // Email handlers
+  const handleEmailsParsed = async (
+    emails: Array<{ fileName: string; text: string }>
+  ) => {
+    setIsEmailProcessing(true);
+
+    const emailSettings = getWorkSettings();
+    const settingsV2 = getWorkSettingsV2();
+    const today = new Date().toISOString().split("T")[0];
+
+    const newResults: EmailResult[] = emails.map((email, idx) => ({
+      id: `email-${Date.now()}-${idx}`,
+      fileName: email.fileName,
+      status: "processing" as const,
+    }));
+
+    setEmailResults((prev) => [...newResults, ...prev]);
+
+    for (let i = 0; i < emails.length; i++) {
+      const email = emails[i];
+      const resultId = newResults[i].id;
+
+      try {
+        const response = await fetch("/api/ai/parse_email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email_text: email.text,
+            today,
+            timezone: emailSettings.timezone,
+            settings: settingsV2,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || `HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        setEmailResults((prev) =>
+          prev.map((r) =>
+            r.id === resultId
+              ? { ...r, status: "success" as const, data }
+              : r
+          )
+        );
+      } catch (err) {
+        console.error(`Failed to process ${email.fileName}:`, err);
+        setEmailResults((prev) =>
+          prev.map((r) =>
+            r.id === resultId
+              ? {
+                  ...r,
+                  status: "failed" as const,
+                  error: err instanceof Error ? err.message : "Unknown error",
+                }
+              : r
+          )
+        );
+      }
+    }
+
+    setIsEmailProcessing(false);
+  };
+
+  const handleEmailAddToInbox = (
+    emailItems: Array<{
+      actionItem: EmailActionItem;
+      emailMeta: {
+        sender: string;
+        subject: string;
+        email_date: string | null;
+      };
+    }>,
+    destination: "active" | "follow-up"
+  ) => {
+    const today = new Date().toISOString().split("T")[0];
+    const emailSettings = getWorkSettings();
+
+    const newItems: InboxItem[] = emailItems.map(({ actionItem, emailMeta }) => {
+      const request: CleanTaskRequest = {
+        raw_text: `[Email] ${actionItem.title} (from ${emailMeta.sender})`,
+        today,
+        timezone: emailSettings.timezone,
+      };
+
+      const result: CleanTaskResponse = {
+        title: actionItem.title,
+        due_at: actionItem.owner === "theirs" ? actionItem.follow_up_by : actionItem.due_at,
+        effort_min: actionItem.effort_min,
+        energy: actionItem.energy,
+        tags: [
+          ...actionItem.tags,
+          "email",
+          ...(actionItem.owner === "theirs" ? ["waiting"] : []),
+        ],
+        project: actionItem.project,
+        subtasks: [],
+        importance: actionItem.importance,
+        notes_append: [
+          actionItem.notes,
+          `Contact: ${actionItem.contact}`,
+          `Email: "${emailMeta.subject}" from ${emailMeta.sender}`,
+        ]
+          .filter(Boolean)
+          .join("\n"),
+      };
+
+      return {
+        id: crypto.randomUUID(),
+        created_at: new Date().toISOString(),
+        status: destination,
+        request,
+        result,
+        email_context: {
+          sender: emailMeta.sender,
+          subject: emailMeta.subject,
+          email_date: emailMeta.email_date,
+          contact: actionItem.contact,
+          follow_up_by: actionItem.follow_up_by,
+        },
+      };
+    });
+
+    try {
+      bulkAddInboxItems(newItems);
+      setItems(getInboxItems());
+      setEmailToast(
+        `Added ${newItems.length} ${newItems.length === 1 ? "task" : "tasks"} to ${
+          destination === "follow-up" ? "Follow-up" : "Active"
+        }`
+      );
+    } catch (error) {
+      setEmailToast("Error adding tasks. Please try again.");
+      console.error("Error adding tasks:", error);
+    }
+  };
+
+  const handleEmailDismiss = (resultId: string) => {
+    setEmailResults((prev) => prev.filter((r) => r.id !== resultId));
   };
 
   // Status counts
@@ -398,10 +558,28 @@ export default function InboxPage() {
         </div>
 
         {/* Right Column - Add Tasks (side-by-side on desktop, below on mobile) */}
-        <div style={{ position: "sticky", top: "1rem", alignSelf: "start" }}>
-          <InlineCapture
-            defaultBucket="active"
-            onTasksAdded={() => setItems(getInboxItems())}
+        <div style={{ alignSelf: "start", display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+          <div style={{ position: "sticky", top: "1rem" }}>
+            <InlineCapture
+              defaultBucket="active"
+              onTasksAdded={() => setItems(getInboxItems())}
+            />
+
+            <div style={{ marginTop: "1.5rem" }}>
+              <h3 style={{ fontSize: "1rem", fontWeight: "600", marginBottom: "0.75rem", color: "var(--text)" }}>
+                Import from Email
+              </h3>
+              <EmailDropZone
+                onEmailsParsed={handleEmailsParsed}
+                isProcessing={isEmailProcessing}
+              />
+            </div>
+          </div>
+
+          <EmailActionItems
+            results={emailResults}
+            onAddToInbox={handleEmailAddToInbox}
+            onDismiss={handleEmailDismiss}
           />
         </div>
       </div>
@@ -414,6 +592,26 @@ export default function InboxPage() {
         onDue={handleBulkDue}
         onCancel={handleBulkCancel}
       />
+
+      {/* Email toast */}
+      {emailToast && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: "2rem",
+            right: "2rem",
+            padding: "1rem 1.5rem",
+            backgroundColor: "var(--panel)",
+            color: "var(--text)",
+            borderRadius: "0.75rem",
+            border: "1px solid var(--border)",
+            boxShadow: "0 4px 8px rgba(0,0,0,0.3)",
+            zIndex: 1000,
+          }}
+        >
+          {emailToast}
+        </div>
+      )}
     </div>
   );
 }
