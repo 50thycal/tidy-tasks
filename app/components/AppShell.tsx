@@ -23,6 +23,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         style={{
           flex: 1,
           overflowY: "auto",
+          display: "flex",
+          flexDirection: "column",
+          minHeight: 0,
         }}
       >
         <div
@@ -30,6 +33,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             maxWidth: "1200px",
             margin: "0 auto",
             padding: "1rem",
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            width: "100%",
+            minHeight: 0,
           }}
           className="sm:px-6 sm:py-6"
         >

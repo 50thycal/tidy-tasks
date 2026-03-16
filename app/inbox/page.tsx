@@ -336,7 +336,7 @@ export default function InboxPage() {
   }
 
   return (
-    <div style={{ minHeight: "100vh" }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       {/* Notification Banner */}
       <NotifyBanner />
       <InstallCTA />
@@ -389,7 +389,7 @@ export default function InboxPage() {
       {/* Two-column layout */}
       <div className="inbox-grid">
         {/* Left Column - Task List */}
-        <div style={{ minWidth: 0 }}>
+        <div style={{ minWidth: 0, paddingRight: "0.5rem", paddingBottom: "2rem" }}>
           {/* Search and Filter */}
           {items.length > 0 && (
             <SearchBar
@@ -557,23 +557,21 @@ export default function InboxPage() {
           )}
         </div>
 
-        {/* Right Column - Add Tasks (side-by-side on desktop, below on mobile) */}
-        <div style={{ alignSelf: "start", display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-          <div style={{ position: "sticky", top: "1rem" }}>
-            <InlineCapture
-              defaultBucket="active"
-              onTasksAdded={() => setItems(getInboxItems())}
-            />
+        {/* Right Column - Add Tasks & Email (independent scroll) */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem", paddingLeft: "0.5rem", paddingBottom: "2rem" }}>
+          <InlineCapture
+            defaultBucket="active"
+            onTasksAdded={() => setItems(getInboxItems())}
+          />
 
-            <div style={{ marginTop: "1.5rem" }}>
-              <h3 style={{ fontSize: "1rem", fontWeight: "600", marginBottom: "0.75rem", color: "var(--text)" }}>
-                Import from Email
-              </h3>
-              <EmailDropZone
-                onEmailsParsed={handleEmailsParsed}
-                isProcessing={isEmailProcessing}
-              />
-            </div>
+          <div>
+            <h3 style={{ fontSize: "1rem", fontWeight: "600", marginBottom: "0.75rem", color: "var(--text)" }}>
+              Import from Email
+            </h3>
+            <EmailDropZone
+              onEmailsParsed={handleEmailsParsed}
+              isProcessing={isEmailProcessing}
+            />
           </div>
 
           <EmailActionItems

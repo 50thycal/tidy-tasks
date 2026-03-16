@@ -296,11 +296,19 @@ h4 {
   display: grid;
   grid-template-columns: 1fr;
   gap: 1.5rem;
+  min-height: 0;
 }
 
 @media (min-width: 1024px) {
   .inbox-grid {
     grid-template-columns: 1fr 380px;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .inbox-grid > * {
+    overflow-y: auto;
+    min-height: 0;
   }
 }
 
