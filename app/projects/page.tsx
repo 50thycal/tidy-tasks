@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { getRegistry, nextMilestone, setPinned, addManualProject, reportAgeDays, type Project, type RegistryDoc } from "@/src/lib/registry";
+import { getRegistry, nextMilestone, setPinned, addManualProject, reportAgeDays, recomputeMine, registryLeads, type Project, type RegistryDoc } from "@/src/lib/registry";
+import { syncRegistryToSettings } from "@/src/lib/registrySync";
 import { ingestFiles } from "@/src/lib/feedIngest";
 import { getWorkSettingsV2 } from "@/src/lib/settings";
 
@@ -17,8 +18,22 @@ export default function ProjectsPage() {
 
   const reload = () => setDoc(getRegistry());
   useEffect(() => {
+    // If the last name was set after the report was imported, pick up "mine" now
+    const d = getRegistry();
+    if (myLast && d.projects.length && !d.projects.some((p) => p.mine)) {
+      if (recomputeMine(myLast) > 0) syncRegistryToSettings();
+    }
     reload();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const rematch = () => {
+    const n = recomputeMine(myLast);
+    if (n > 0) syncRegistryToSettings();
+    const leads = registryLeads();
+    setMsg(n > 0 ? `${n} project${n === 1 ? "" : "s"} matched "${myLast}".` : `No project has a BMcD lead containing "${myLast}". Leads in the registry: ${leads.join(", ") || "none"}.`);
+    reload();
+  };
 
   const followed = useMemo(() => (doc?.projects ?? []).filter((p) => p.mine || p.pinned), [doc]);
   const others = useMemo(() => {
@@ -38,8 +53,11 @@ export default function ProjectsPage() {
       const r = await ingestFiles(Array.from(files));
       if (r.registryImport) {
         const ri = r.registryImport;
-        setMsg(`Imported: ${ri.mine} of ${ri.projects} projects are yours (lead = "${myLast || "not set"}"). ${ri.changes.length} change${ri.changes.length === 1 ? "" : "s"} since last import.${ri.warnings.length ? ` ${ri.warnings.length} warning(s) in console.` : ""}`);
-        if (ri.warnings.length) console.warn("Progress report warnings:", ri.warnings);
+        let text = `Imported: ${ri.mine} of ${ri.projects} projects are yours (lead = "${myLast || "not set"}"). ${ri.changes.length} change${ri.changes.length === 1 ? "" : "s"} since last import.`;
+        if (ri.mine === 0 && ri.leads.length) text += ` No lead matched. Leads found in the report: ${ri.leads.join(", ")}.`;
+        if (ri.mine === 0 && !ri.leads.length) text += ` The report had no BMcD lead values at all; check the column headers.`;
+        if (ri.warnings.length) text += ` Warnings: ${ri.warnings.join(" · ")}`;
+        setMsg(text);
       } else if (r.errors.length) setMsg(r.errors.join(" "));
       else setMsg("That file is not the progress report. It was added to the feed instead.");
       reload();
@@ -76,6 +94,11 @@ export default function ProjectsPage() {
           <button type="button" className="btn btn-primary" disabled={busy} onClick={() => fileRef.current?.click()}>
             {busy ? "Importing…" : "Import progress report"}
           </button>
+          {doc && doc.projects.length > 0 && myLast && (
+            <button type="button" className="btn" disabled={busy} onClick={rematch} title="Re-check which projects list you as BMcD lead">
+              Match my name
+            </button>
+          )}
         </div>
       </div>
 

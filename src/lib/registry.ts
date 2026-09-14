@@ -475,3 +475,25 @@ export function reportAgeDays(doc: RegistryDoc = getRegistry()): number | null {
   const ms = Date.now() - new Date(doc.last_issue_date + "T12:00:00").getTime();
   return Math.floor(ms / 86_400_000);
 }
+
+/** Re-evaluate the "mine" flag against a last name without re-importing. Returns count marked mine. */
+export function recomputeMine(myLastName: string | null | undefined): number {
+  const doc = getRegistry();
+  const my = (myLastName ?? "").trim().toLowerCase();
+  let n = 0;
+  doc.projects = doc.projects.map((p) => {
+    const mine = !!my && p.work_orders.some((w) => (w.bmcd_lead ?? "").toLowerCase().includes(my));
+    if (mine) n++;
+    return { ...p, mine };
+  });
+  doc.projects.sort(projectSort);
+  saveRegistry(doc);
+  return n;
+}
+
+/** Distinct BMcD lead names currently in the registry. */
+export function registryLeads(): string[] {
+  const set = new Set<string>();
+  for (const p of getRegistry().projects) for (const w of p.work_orders) if (w.bmcd_lead) set.add(w.bmcd_lead);
+  return Array.from(set).sort();
+}
