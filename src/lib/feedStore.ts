@@ -74,7 +74,42 @@ export interface FeedBlob {
   created_at: string;
 }
 
+/** Living agenda for a project: running outline that meeting prep edits by proposal. */
+export interface AgendaBullet {
+  id: string;
+  text: string;
+  depth: number; // 0 = top-level bullet under its section
+  added_at: string; // ISO
+  source_item_ids: string[];
+  stale?: boolean;
+}
+
+export interface AgendaSection {
+  id: string;
+  heading: string;
+  bullets: AgendaBullet[];
+}
+
+export interface AgendaSnapshot {
+  meeting_id: string;
+  date: string; // YYYY-MM-DD
+  text: string; // plain-text outline at finalize time
+  covered_item_ids: string[];
+}
+
+export interface LivingAgenda {
+  project_id: string;
+  sections: AgendaSection[];
+  updated_at: string;
+  last_meeting_at: string | null;
+  snapshots: AgendaSnapshot[]; // newest first
+}
+
 interface TidyFeedDB extends DBSchema {
+  agendas: {
+    key: string;
+    value: LivingAgenda;
+  };
   feed_items: {
     key: string;
     value: FeedItem;
@@ -92,7 +127,7 @@ interface TidyFeedDB extends DBSchema {
 }
 
 const DB_NAME = "tidy-feed";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 let dbPromise: Promise<IDBPDatabase<TidyFeedDB>> | null = null;
 
@@ -102,13 +137,18 @@ function db(): Promise<IDBPDatabase<TidyFeedDB>> {
   }
   if (!dbPromise) {
     dbPromise = openDB<TidyFeedDB>(DB_NAME, DB_VERSION, {
-      upgrade(database) {
-        const items = database.createObjectStore("feed_items", { keyPath: "id" });
-        items.createIndex("by_project", "project_id");
-        items.createIndex("by_captured", "captured_at");
-        items.createIndex("by_hash", "content_hash");
-        items.createIndex("by_status", "status");
-        database.createObjectStore("blobs", { keyPath: "id" });
+      upgrade(database, oldVersion) {
+        if (oldVersion < 1) {
+          const items = database.createObjectStore("feed_items", { keyPath: "id" });
+          items.createIndex("by_project", "project_id");
+          items.createIndex("by_captured", "captured_at");
+          items.createIndex("by_hash", "content_hash");
+          items.createIndex("by_status", "status");
+          database.createObjectStore("blobs", { keyPath: "id" });
+        }
+        if (oldVersion < 2) {
+          database.createObjectStore("agendas", { keyPath: "project_id" });
+        }
       },
     });
   }
@@ -202,7 +242,51 @@ export async function getBlob(id: string): Promise<FeedBlob | undefined> {
 
 export async function clearFeed(): Promise<void> {
   const d = await db();
-  await Promise.all([d.clear("feed_items"), d.clear("blobs")]);
+  await Promise.all([d.clear("feed_items"), d.clear("blobs"), d.clear("agendas")]);
+}
+
+// ---------------------------------------------------------------------------
+// Agendas
+// ---------------------------------------------------------------------------
+
+export async function getAgenda(projectId: string): Promise<LivingAgenda | undefined> {
+  const d = await db();
+  return d.get("agendas", projectId);
+}
+
+export async function putAgenda(agenda: LivingAgenda): Promise<void> {
+  const d = await db();
+  await d.put("agendas", { ...agenda, updated_at: new Date().toISOString() });
+}
+
+export async function getAllAgendas(): Promise<LivingAgenda[]> {
+  const d = await db();
+  return d.getAll("agendas");
+}
+
+export async function importAgendas(agendas: LivingAgenda[], mode: "append" | "replace"): Promise<number> {
+  const d = await db();
+  if (mode === "replace") await d.clear("agendas");
+  const tx = d.transaction("agendas", "readwrite");
+  let n = 0;
+  for (const a of agendas) {
+    if (mode === "append" && (await tx.store.get(a.project_id))) continue;
+    await tx.store.put(a);
+    n++;
+  }
+  await tx.done;
+  return n;
+}
+
+/** Mark feed items as covered by a meeting. */
+export async function markItemsCovered(ids: string[], meetingId: string): Promise<void> {
+  const d = await db();
+  const tx = d.transaction("feed_items", "readwrite");
+  for (const id of ids) {
+    const it = await tx.store.get(id);
+    if (it) await tx.store.put({ ...it, status: "covered", covered_in_meeting: meetingId });
+  }
+  await tx.done;
 }
 
 /** Export-friendly snapshot (no blobs). */
