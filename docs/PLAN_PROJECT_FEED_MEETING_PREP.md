@@ -336,11 +336,195 @@ is reused for the three new routes.
   degrades to "one item, whole text" rather than failing, so the worst case is a less
   precise date, never a lost item.
 
-Open questions for you, none blocking Phase 1:
-1. Is the meeting cadence per project stored in settings (weekly vs biweekly), so the
-   "stale" threshold and the Pulse schedule can follow it?
-2. Do you want the copied-out outline in plain text with indentation (pastes into
-   Teams/OneNote) or Markdown (pastes into Word via Paste Special)? Both is cheap.
-3. Should feed items be shareable with your team at some point? If yes, the IndexedDB
-   choice still works but a later sync layer should be designed in now rather than
-   bolted on.
+Open questions, answered 2026-09-14:
+1. Meeting cadence per project: yes, and it lives on the per-project page (section 5).
+2. Copied-out outline: plain text with indentation only.
+3. Sharing feed items with the team: no. Local-only storage is confirmed, so IndexedDB
+   stays and no sync layer is designed in. The backup export must include the feed.
+
+---
+
+## 5. Project registry from the Substation Design Progress Report
+
+Added 2026-09-14 after reviewing `ITC_Substation_Design_Progress_Report.xlsm`
+(issue dated 2026-09-02).
+
+### 5.1 What is in the workbook
+
+Three sheets, no macros that matter for parsing (openpyxl reports no VBA archive, and
+SheetJS reads `.xlsm` the same as `.xlsx`).
+
+| Sheet | Shape | Use |
+|---|---|---|
+| `NewProgressReport` | Flat. One row per work order, 20 columns: Region, Work Order, Substation Name, Description, Status, ITC Assign Date, ITC Project Lead, ITC Supervisor, BMcD Project Lead, DTE/CE WO, Next Milestone, Next Milestone Due, IFC, IFC on Track?, BMcD Project #, Proposal Submitted, PO Received, Latest Additional Authorization, Site Visit, Comments | Primary import source. 209 rows: 104 ACTIVE, 78 FUTURE, 26 COMPLETE |
+| `Active Projects` | Blocked. A project header row (has a Work Order) followed by milestone sub-rows (LLMR, Panel Requisition, Installation & PR&C Package, Design Complete, and project-specific ones like "AG & BG Design Complete Phase 1") each with Proposed / Target / Final issue date and % complete. Also carries BMcD Civil, Structural and Project Services names and BMI Approval | Secondary import for the milestone table per work order and the discipline leads |
+| `Completed Projects` | Same block layout, historical, includes "AS BUILTS RECEIVED?" | Optional. Useful for the as-built tasks you already track |
+
+Two facts that shape the model:
+
+- **Work order is the key, not the substation name.** Blackstone has two work orders,
+  Tompkins has four. A Tidy project is a substation, and it owns one or more work orders.
+- **Date adjustments are red text in the workbook.** Reading font color in the browser
+  is unreliable with SheetJS community edition, so the importer detects adjustments by
+  data instead: a milestone whose Target differs from Proposed is an adjustment, and
+  any value that differs from the previous import is a change. That is more useful than
+  the color anyway, because it says what moved and by how much.
+
+Your rows today (BMcD Project Lead = Wampol): 11 work orders across 8 substations.
+Blackstone (2, delayed, waiting on fiber points list), Tompkins (4, complete),
+Cannoli / Panattoni (delayed, Phase 1 target 9/30, Panel Req 9/23), Kings Point
+(delayed, waiting on DTE), Hunters Creek (on track, LLMR 12/1), Jewell (complete),
+Northwest (Design Complete 9/2).
+
+### 5.2 Data model
+
+`ProjectMeta` in settings is replaced by a proper registry. The three fixed date fields
+(`llmr_due`, `ifr_due`, `ifc_due`) go away in favor of the milestone list, which is what
+the report actually has. A one-time migration maps existing names onto registry entries.
+
+```ts
+interface Project {
+  id: string;
+  name: string;                    // "Cannoli" (display name you choose)
+  report_names: string[];          // ["Cannoli / Panattoni"] as spelled in the report
+  aliases: string[];               // ["A0007085", "198694", "Panattoni", "SNAP"] auto-seeded from WOs and project #s
+  mine: boolean;                   // true when BMcD lead matches settings.my_last_name, or you pin it
+  pinned: boolean;                 // manually added even though you are not the lead
+  work_orders: WorkOrder[];
+  meeting: { cadence: "weekly" | "biweekly" | "none"; weekday: number; };   // section 5.4
+  stale_after_days: number;        // derived from cadence, editable
+  notes?: string;
+}
+
+interface WorkOrder {
+  wo: string;                      // "A0007085"  (stable key)
+  bmcd_project_no: string | null;  // "198694"
+  region: "ITCT" | "METC" | "ITCM" | "ITCGP" | string;
+  description: string;
+  status: "ACTIVE" | "FUTURE" | "COMPLETE";
+  itc_assign_date: string | null;
+  itc_lead: string | null;         // "Wann"
+  itc_supervisor: string | null;   // "Coon"
+  bmcd_lead: string | null;        // "Wampol"
+  bmcd_civil?: string | null;      // from Active Projects
+  bmcd_structural?: string | null;
+  bmcd_project_services?: string | null;
+  bmi_approval?: "YES" | "NO" | null;
+  dte_ce_wo?: string | null;
+  next_milestone: string | null;
+  next_milestone_due: string | null;   // ISO or "TBD"
+  ifc: string | null;
+  ifc_on_track: "YES" | "DELAYED" | "COMPLETE" | null;
+  proposal_submitted?: string | null;
+  po_received?: string | null;
+  latest_authorization?: string | null;
+  site_visit?: string | null;
+  comments: string | null;         // "Schedule Delay: Waiting on scope clarification"
+  milestones: Milestone[];
+}
+
+interface Milestone {
+  label: string;                   // "AG & BG Design Complete Phase 1"
+  proposed: string | null;
+  target: string | null;           // ISO or "TBD"
+  final: string | null;
+  pct_complete: number;            // 0..1
+  adjusted: boolean;               // target !== proposed
+}
+
+interface RegistryImport {
+  id: string;
+  issue_date: string;              // from the sheet header, "2026-09-02"
+  imported_at: string;
+  file_hash: string;
+  changes: RegistryChange[];       // diff against the previous import
+}
+
+interface RegistryChange {
+  wo: string;
+  field: string;                   // "milestones.AG & BG Design Complete Phase 1.target"
+  from: string | null;
+  to: string | null;
+}
+```
+
+### 5.3 Importer behavior
+
+1. Drop the `.xlsm` anywhere (same universal drop panel). The importer recognizes it by
+   the `NewProgressReport` header row, so a renamed file still works.
+2. Parse the flat sheet into `WorkOrder`s. Parse `Active Projects` to attach milestones
+   and discipline leads, matching on work order. Rows without a work order in the flat
+   sheet (none today) are skipped and listed in the import summary.
+3. Group into `Project`s by substation name. `mine` is set where BMcD lead matches your
+   last name from settings. Everything else is imported too but hidden by default, so
+   "add a project that is not mine" is a search box over the full 209, not a form.
+4. Diff against the previous import and write `RegistryChange`s. Each change on one of
+   your projects (or a pinned one) also becomes a feed item of kind `registry_change`
+   with `source_date = issue_date`, so it is triaged like everything else and lands in
+   the meeting prep under a Schedule heading. Example: "AG & BG Design Complete Phase 1
+   target moved from 9/16 to 9/30".
+5. Stale-import nag. The report is issued periodically. When the latest `issue_date` is
+   older than 21 days the project page shows a soft prompt to drop the new one.
+6. Aliases are auto-seeded from work order numbers, BMcD project numbers and the report
+   name. These are exactly the strings that appear in email subjects
+   ("[EXT] Cannoli - A0007085 - RDR and CDR Questions"), so project auto-detection for
+   the feed gets much more accurate the moment the report is imported.
+
+No AI call is involved in the import itself. It is deterministic parsing plus a diff.
+The AI only sees the resulting change items.
+
+### 5.4 Per-project page (`/projects/[id]`)
+
+This replaces the projects table in Settings as the place project information lives.
+
+- **Header**: name, region, work orders with status chips, ITC lead and supervisor,
+  BMcD discipline leads, and the report comment line ("Schedule Delay: ...").
+- **Milestones**: table per work order with proposed / target / final / % complete, red
+  highlight where adjusted, and a "changed since last import" marker.
+- **Meeting settings**: cadence, weekday, stale threshold, and a link to the living
+  agenda. Last meeting date and next expected meeting date computed from cadence.
+- **Open items**: tasks for this project, waiting-on actions by person, open RFIs (from
+  the RFI log importer), pending change-log items.
+- **Feed**: the project's feed, filtered.
+- **Actions**: Prep meeting, Copy outline, Pin / unpin project.
+
+A `/projects` index lists your projects first (sorted by next milestone due), then
+pinned, with a search box over the rest of the registry for adding one.
+
+### 5.5 Other ways the report helps
+
+- **Contacts registry seeding.** ITC Project Lead, ITC Supervisor, BMcD Civil,
+  Structural and Project Services are all people tied to a project. Importing them
+  pre-populates the contacts registry from section 2.2 with org and project links, so
+  "Lake" or "Wann" resolves without you typing anyone in.
+- **Sender-to-project routing.** An email from an ITC lead who is on exactly one of
+  your active projects routes to that project even when the subject has no alias.
+- **Portfolio view for Pulse.** Your 11 work orders sorted by next milestone due date,
+  with `ifc_on_track` and the comment line, is the top of the Monday brief. Today that
+  reads: Northwest Design Complete 9/2 (was it issued?), Cannoli Panel Req 9/23 and
+  Phase 1 9/30, Hunters Creek LLMR 12/1, and three work orders sitting at TBD.
+- **Milestone drift becomes two-directional.** Section 2.3 has the AI proposing
+  milestone updates from the feed. With the registry, those proposals are compared to
+  the report's dates, so the app can tell you "your notes say IFC is 9/30 but the
+  report still says 9/16" before the next report issue. That is the reminder to update
+  the report row, and the app can draft the Comments text for you from the feed.
+- **Project-scoped work from other people's projects.** Pinning any of the other 198
+  work orders gives you the same page and feed, which covers the "tasks on other
+  people's projects" case without polluting your list.
+- **As-builts.** The Completed sheet's "AS BUILTS RECEIVED?" column can feed a small
+  checklist for the as-built tasks you already create by hand.
+- **Not worth doing.** Reading the red font, the FUTURE rows as projects (78 rows with
+  almost no data), and the Completed sheet's full history beyond as-builts.
+
+### 5.6 Build order update
+
+The registry importer moves into **Phase 1** because aliases and contacts are what make
+project auto-detection work for every other input, and the per-project page becomes the
+home for meeting settings that Phase 2 needs. Phase 4's spreadsheet work (RFI log and
+change log importers) shares the same SheetJS plumbing, so it gets cheaper.
+
+| Phase | Added scope |
+|---|---|
+| 1. Feed foundation | + registry model, `.xlsm` importer, diff, migration from `ProjectMeta`, `/projects` index and `/projects/[id]` page with meeting settings |
+| 3. Court view | + contacts seeded from the registry |
+| 5. Project Pulse | + portfolio view from the registry, two-way milestone drift, draft Comments text |
