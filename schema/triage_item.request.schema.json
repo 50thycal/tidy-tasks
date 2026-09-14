@@ -1,0 +1,31 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TriageItemRequest",
+  "type": "object",
+  "required": ["text"],
+  "properties": {
+    "text": { "type": "string", "minLength": 1, "maxLength": 60000 },
+    "kind": { "type": "string" },
+    "title": { "type": "string" },
+    "source_date": { "type": ["string", "null"] },
+    "today": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+    "timezone": { "type": "string" },
+    "project": {
+      "type": ["object", "null"],
+      "properties": {
+        "name": { "type": "string" },
+        "aliases": { "type": "array", "items": { "type": "string" } },
+        "work_orders": { "type": "array", "items": { "type": "string" } },
+        "people": { "type": "array", "items": { "type": "string" } },
+        "next_milestone": { "type": ["string", "null"] }
+      },
+      "additionalProperties": true
+    },
+    "candidate_projects": { "type": "array", "items": { "type": "string" }, "maxItems": 60 },
+    "agenda_sections": { "type": "array", "items": { "type": "string" }, "maxItems": 60 },
+    "known_people": { "type": "array", "items": { "type": "string" }, "maxItems": 120 },
+    "my_name": { "type": ["string", "null"] },
+    "image_data_url": { "type": ["string", "null"], "maxLength": 6000000 }
+  },
+  "additionalProperties": true
+}

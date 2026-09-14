@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Sidebar } from "./Sidebar";
+import UniversalDrop from "./UniversalDrop";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
@@ -44,6 +45,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {children}
         </div>
       </main>
+      <UniversalDrop />
     </div>
   );
 }

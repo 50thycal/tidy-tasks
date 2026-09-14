@@ -6,6 +6,8 @@ import { useMetrics } from "@/src/hooks/useMetrics";
 
 const NAV_ITEMS = [
   { href: "/inbox", label: "Inbox", icon: "📥" },
+  { href: "/feed", label: "Feed", icon: "📡" },
+  { href: "/projects", label: "Projects", icon: "🏗️" },
   { href: "/focus", label: "Focus", icon: "🎯" },
   { href: "/settings", label: "Settings", icon: "⚙️" },
 ];
@@ -32,7 +34,7 @@ export function Sidebar() {
         className="md:hidden"
       >
         {NAV_ITEMS.map((item) => {
-          const active = pathname === item.href;
+          const active = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href + "/"));
           return (
             <Link
               key={item.href}
@@ -102,7 +104,7 @@ export function Sidebar() {
           }}
         >
           {NAV_ITEMS.map((item) => {
-            const active = pathname === item.href;
+            const active = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href + "/"));
             return (
               <Link
                 key={item.href}

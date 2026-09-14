@@ -469,6 +469,24 @@ export default function SettingsPage() {
           </div>
 
           <div style={{ marginBottom: "1.5rem" }}>
+            <label htmlFor="my_last_name" style={{ display: "block", fontWeight: "500", marginBottom: "0.5rem", color: "var(--text)" }}>
+              Your last name (as in the progress report)
+            </label>
+            <input
+              id="my_last_name"
+              type="text"
+              className="input"
+              value={work.my_last_name || ""}
+              onChange={(e) => setWork({ ...work, my_last_name: e.target.value })}
+              placeholder="e.g. Wampol"
+              style={{ width: "100%", maxWidth: "320px" }}
+            />
+            <p style={{ fontSize: "0.85rem", color: "var(--muted)", marginTop: "0.25rem" }}>
+              Matched against the &quot;BMcD Project Lead&quot; column when importing the Substation Design Progress Report.
+            </p>
+          </div>
+
+          <div style={{ marginBottom: "1.5rem" }}>
             <label htmlFor="role_context" style={{ display: "block", fontWeight: "500", marginBottom: "0.5rem", color: "var(--text)" }}>
               Role Context (Optional)
             </label>

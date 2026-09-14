@@ -8,6 +8,8 @@ import type { InboxItem } from "./clientStore";
 import { getInboxItems, saveAllInboxItems, clearInbox } from "./clientStore";
 import { saveSettings, resetSettings } from "./settings";
 import { reset as resetMetrics } from "@/src/db/metrics";
+import { importFeedItems, clearFeed } from "./feedStore";
+import { saveRegistry, clearRegistry } from "./registry";
 
 /**
  * Import result statistics
@@ -26,6 +28,8 @@ export interface ImportResult {
   skipped: number;
   settings: boolean;
   metrics: boolean;
+  feed?: number;
+  registry?: boolean;
 }
 
 /**
@@ -176,6 +180,21 @@ export async function importBackup(
           result.added.layouts++;
         }
       }
+    }
+
+    // Feed and registry (present in backups made after the feed feature)
+    if (Array.isArray(doc.tables.feed)) {
+      try {
+        if (mode === "replace") await clearFeed();
+        result.feed = await importFeedItems(doc.tables.feed, mode);
+      } catch (e) {
+        console.warn("Feed import skipped:", e);
+      }
+    }
+    if (doc.tables.registry && doc.tables.registry.version === 1) {
+      if (mode === "replace") clearRegistry();
+      saveRegistry(doc.tables.registry);
+      result.registry = true;
     }
 
     return result;

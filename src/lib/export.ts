@@ -11,6 +11,8 @@ import { getInboxItems } from "./clientStore";
 import { getStoredSettings } from "./settings";
 import { getMetrics } from "@/src/db/metrics";
 import { tasksToCsv } from "./csv";
+import { exportFeedItems, type FeedItem } from "./feedStore";
+import { getRegistry, type RegistryDoc } from "./registry";
 
 /**
  * Weekly summary with metadata (stored per week)
@@ -35,6 +37,10 @@ export interface BackupDoc {
     summaries: WeeklySummaryDoc[];
     metrics: Metrics | null;
     focus_layout: FocusLayout[];
+    /** Project feed items (no file blobs). Added with the feed feature; optional for old backups. */
+    feed?: FeedItem[];
+    /** Project registry from the progress report. Optional for old backups. */
+    registry?: RegistryDoc;
   };
 }
 
@@ -111,6 +117,13 @@ export async function exportToJson(): Promise<BackupDoc> {
   const metrics = await getMetrics();
   const summaries = getAllSummaries();
   const focusLayouts = getAllFocusLayouts();
+  let feed: FeedItem[] = [];
+  try {
+    feed = await exportFeedItems();
+  } catch (e) {
+    console.warn("Feed export skipped:", e);
+  }
+  const registry = getRegistry();
 
   const backup: BackupDoc = {
     version: 1,
@@ -122,6 +135,8 @@ export async function exportToJson(): Promise<BackupDoc> {
       summaries,
       metrics,
       focus_layout: focusLayouts,
+      feed,
+      registry,
     },
   };
 

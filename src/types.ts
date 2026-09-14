@@ -91,6 +91,8 @@ export interface WorkSettingsV2 {
   };
   projects?: ProjectMeta[];
   work_context?: string; // free text
+  /** Last name as it appears in the "BMcD Project Lead" column of the progress report */
+  my_last_name?: string;
   notifications?: {
     enabled: boolean;
     digestTime: string;
