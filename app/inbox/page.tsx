@@ -17,6 +17,10 @@ import {
   bulkMoveToBucket,
   bulkSetDue,
   bulkAddInboxItems,
+  ensureCourtFields,
+  setTaskCourt,
+  courtOf,
+  ownerOf,
   type InboxItem,
 } from "@/src/lib/clientStore";
 import { getWorkSettings, getWorkSettingsV2 } from "@/src/lib/settings";
@@ -55,6 +59,7 @@ export default function InboxPage() {
 
   useEffect(() => {
     setMounted(true);
+    ensureCourtFields();
     setItems(getInboxItems());
   }, []);
 
@@ -543,6 +548,12 @@ export default function InboxPage() {
                     status={item.status}
                     originalPrompt={item.request?.raw_text}
                     emailContext={item.email_context}
+                    owner={ownerOf(item)}
+                    court={courtOf(item)}
+                    onOwnerChange={(owner, court) => {
+                      setTaskCourt(item.id, { owner, court });
+                      setItems(getInboxItems());
+                    }}
                     onToggleDone={() => handleToggleDone(item.id)}
                     onMove={() => handleMove(item.id)}
                     onDelete={() => handleDelete(item.id)}

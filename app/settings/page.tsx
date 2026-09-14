@@ -10,6 +10,7 @@ import {
 } from "@/src/lib/settings";
 import { getInboxItems, type InboxItem, type AIFirstPass } from "@/src/lib/clientStore";
 import ProjectsTable from "@/app/components/Settings/ProjectsTable";
+import ContactsTable from "@/app/components/Settings/ContactsTable";
 import { exportAndDownloadJson, exportAndDownloadCsv, type BackupDoc } from "@/src/lib/export";
 import { validateBackup, importBackup, getBackupPreview, type ImportResult } from "@/src/lib/import";
 import { invalidateAndReload } from "@/src/lib/sw-control";
@@ -516,6 +517,12 @@ export default function SettingsPage() {
             <div style={{ fontSize: "0.85rem", color: "var(--muted)", marginTop: "0.5rem" }}>
               Track project milestones: LLMR (Last Responsible Moment Review), IFR (Incremental Funding Review), IFC (In-Flight Check-in)
             </div>
+
+          {/* Contacts */}
+          <div style={{ marginBottom: "1.5rem" }}>
+            <h3 style={{ fontSize: "1rem", marginBottom: "0.5rem", color: "var(--text)" }}>Contacts</h3>
+            <ContactsTable />
+          </div>
           </div>
 
           {/* Work Context */}

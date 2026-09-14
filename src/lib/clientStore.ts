@@ -1,7 +1,11 @@
 import type { CleanTaskRequest, CleanTaskResponse, EmailContext } from "@/src/types";
 import { inc } from "@/src/db/metrics";
+import { inferOwner } from "./contacts";
 
 export type InboxItemStatus = "active" | "done" | "follow-up";
+
+/** Whose court the task is in. "theirs" = waiting on someone else. */
+export type TaskCourt = "mine" | "theirs" | "team";
 
 /**
  * Snapshot of the AI's initial output, before any user edits.
@@ -34,6 +38,14 @@ export interface InboxItem {
   ai_first_pass?: AIFirstPass;
   /** Email context for tasks extracted from emails */
   email_context?: EmailContext;
+  /** Person or org this task is with (for "theirs") or who asked for it (for "mine") */
+  owner?: string | null;
+  /** Whose court: defaults to "theirs" for follow-up status, else "mine" */
+  court?: TaskCourt;
+  /** When the ball went into their court (ISO). Used for days-waiting. */
+  waiting_since?: string | null;
+  /** Last time you poked them (ISO) */
+  last_nudged_at?: string | null;
 }
 
 const STORAGE_KEY = "tidy.inbox";
@@ -268,4 +280,67 @@ export function bulkSetDue(ids: string[], dueAt: string | null): void {
     },
     updated_at: new Date().toISOString(),
   }));
+}
+
+/** Effective court for an item, falling back to status. */
+export function courtOf(item: InboxItem): TaskCourt {
+  if (item.court) return item.court;
+  return item.status === "follow-up" ? "theirs" : "mine";
+}
+
+/** Effective owner for an item, falling back to email context. */
+export function ownerOf(item: InboxItem): string | null {
+  return item.owner ?? item.email_context?.contact ?? null;
+}
+
+/** Set who a task is with and which court it is in. Moves status to match. */
+export function setTaskCourt(id: string, patch: { owner?: string | null; court?: TaskCourt; follow_up_by?: string | null }): void {
+  mutateInboxItem(id, (item) => {
+    const court = patch.court ?? courtOf(item);
+    const now = new Date().toISOString();
+    const status: InboxItemStatus = item.status === "done" ? "done" : court === "theirs" ? "follow-up" : "active";
+    const becameTheirs = court === "theirs" && courtOf(item) !== "theirs";
+    return {
+      ...item,
+      owner: patch.owner !== undefined ? patch.owner : item.owner ?? item.email_context?.contact ?? null,
+      court,
+      status,
+      waiting_since: court === "theirs" ? (becameTheirs || !item.waiting_since ? now : item.waiting_since) : null,
+      result: patch.follow_up_by !== undefined ? { ...item.result, due_at: patch.follow_up_by } : item.result,
+      touched_at: now,
+      updated_at: now,
+    };
+  });
+}
+
+export function markNudged(id: string): void {
+  mutateInboxItem(id, (item) => ({ ...item, last_nudged_at: new Date().toISOString(), touched_at: new Date().toISOString() }));
+}
+
+/**
+ * One-time backfill: derive owner/court/waiting_since for items created before
+ * these fields existed. Idempotent.
+ */
+export function ensureCourtFields(): number {
+  if (typeof window === "undefined") return 0;
+  const items = getInboxItems();
+  let changed = 0;
+  const next = items.map((item) => {
+    if (item.court) return item;
+    const court: TaskCourt = item.status === "follow-up" || item.result.tags?.includes("waiting") ? "theirs" : "mine";
+    let owner = item.owner ?? item.email_context?.contact ?? null;
+    if (!owner) {
+      const guess = inferOwner(`${item.request?.raw_text ?? ""}\n${item.result.title}`, undefined, court === "theirs");
+      if (guess && (court === "theirs" || guess.court === "theirs")) owner = guess.owner;
+    }
+    changed++;
+    return {
+      ...item,
+      court,
+      owner,
+      waiting_since: court === "theirs" ? item.touched_at ?? item.updated_at ?? item.created_at : null,
+    };
+  });
+  if (changed) saveAllInboxItems(next);
+  return changed;
 }

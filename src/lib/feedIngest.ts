@@ -46,6 +46,7 @@ import {
   firstLineTitle,
 } from "./textParsers";
 import { getWorkSettingsV2 } from "./settings";
+import { getContacts, canonicalOwner, contactsForPrompt } from "./contacts";
 import { bulkAddInboxItems, type InboxItem } from "./clientStore";
 import type { CleanTaskRequest, CleanTaskResponse } from "@/src/types";
 
@@ -99,6 +100,10 @@ function assignProject(item: FeedItem, forced: string | null | undefined): FeedI
 
 function knownPeople(): string[] {
   const set = new Set<string>();
+  for (const c of getContacts()) {
+    set.add(c.name);
+    for (const a of c.aliases) set.add(a);
+  }
   for (const p of getFollowedProjects()) for (const person of projectPeople(p)) set.add(person.name);
   return Array.from(set);
 }
@@ -472,7 +477,7 @@ export async function triageItem(item: FeedItem): Promise<FeedItem> {
       : null,
     candidate_projects: candidates,
     agenda_sections: project ? ((await getAgenda(project.id).catch(() => undefined))?.sections.map((s) => s.heading) ?? []) : [],
-    known_people: people,
+    known_people: contactsForPrompt().length ? contactsForPrompt() : people,
     my_name: settings.my_last_name ?? null,
   };
   if (item.kind === "image" && item.file_ref) body.image_data_url = await blobToDataUrl(item.file_ref);
@@ -544,12 +549,16 @@ export function actionToInboxItem(item: FeedItem, action: FeedAction): InboxItem
     notes_append: [item.triage?.summary, `Source: ${item.title}${item.source_date ? ` (${item.source_date})` : ""}`].filter(Boolean).join("\n"),
   } as CleanTaskResponse;
 
+  const owner = canonicalOwner(action.owner);
   return {
     id: crypto.randomUUID(),
     created_at: nowIso(),
     status: isTheirs ? "follow-up" : "active",
     request,
     result,
+    owner,
+    court: action.court,
+    waiting_since: isTheirs ? (item.source_date ? `${item.source_date}T12:00:00.000Z` : nowIso()) : null,
     email_context: action.owner
       ? { sender: action.owner, subject: item.title, email_date: item.source_date, contact: action.owner, follow_up_by: action.follow_up_by }
       : undefined,
