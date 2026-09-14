@@ -7,6 +7,7 @@
 import { getStoredSettings, saveSettings, getDefaultWorkSettingsV2 } from "./settings";
 import { getFollowedProjects } from "./registry";
 import type { ProjectMeta } from "@/src/types";
+import { seedContactsFromRegistry } from "./contacts";
 
 export function syncRegistryToSettings(): number {
   if (typeof window === "undefined") return 0;
@@ -38,5 +39,10 @@ export function syncRegistryToSettings(): number {
   }
   settings.work.projects = existing;
   saveSettings(settings);
+  try {
+    seedContactsFromRegistry();
+  } catch (e) {
+    console.warn("Contact seeding skipped:", e);
+  }
   return added;
 }

@@ -77,6 +77,19 @@ export interface PrivacySettings {
   redactionMode: "none" | "emails_phones" | "emails_phones_names";
 }
 
+/** A person or organization you exchange work with. */
+export interface Contact {
+  id: string;
+  name: string;           // display name, e.g. "Lake" or "Josh Nickell"
+  org: "BMcD" | "ITC" | "Vendor" | "Other";
+  role?: string;          // "ITC Project Lead", "BMcD Structural"
+  projects: string[];     // project names this person is tied to
+  aliases: string[];      // other spellings: "Lake Ashcroft", "L. Ashcroft"
+  notes?: string;
+  source: "registry" | "manual" | "ai";
+  updated_at: string;
+}
+
 // V2 Settings (current)
 export interface WorkSettingsV2 {
   version: 2;
@@ -93,6 +106,8 @@ export interface WorkSettingsV2 {
   work_context?: string; // free text
   /** Last name as it appears in the "BMcD Project Lead" column of the progress report */
   my_last_name?: string;
+  /** People registry, seeded from the progress report and grown from tasks and feed items */
+  contacts?: Contact[];
   notifications?: {
     enabled: boolean;
     digestTime: string;

@@ -16,6 +16,9 @@ interface TaskCardProps {
   status?: "active" | "done" | "follow-up"; // Task status for done toggle
   originalPrompt?: string; // Raw input before AI cleanup
   emailContext?: EmailContext; // Email context for follow-up items
+  owner?: string | null; // Person this task is with
+  court?: "mine" | "theirs" | "team"; // Whose court
+  onOwnerChange?: (owner: string | null, court: "mine" | "theirs" | "team") => void;
   onToggleDone?: () => void; // Toggle done/active
   onMove?: () => void; // Move to different status
   onEdit?: () => void; // Open edit mode
@@ -32,6 +35,9 @@ export default function TaskCard({
   status,
   originalPrompt,
   emailContext,
+  owner,
+  court,
+  onOwnerChange,
   onToggleDone,
   onMove,
   onEdit,
@@ -1178,6 +1184,29 @@ export default function TaskCard({
               })()}
             </div>
 
+          </div>
+        )}
+
+        {/* Owner / court chip */}
+        {(owner || court === "theirs" || court === "team") && !emailContext && (
+          <div style={{ marginBottom: "0.5rem", display: "flex", gap: "0.4rem", alignItems: "center", flexWrap: "wrap", fontSize: "0.78rem" }}>
+            <span
+              className="badge"
+              title={onOwnerChange ? "Click to change" : undefined}
+              onClick={() => {
+                if (!onOwnerChange) return;
+                const next = window.prompt("Who is this with? (leave blank for nobody)", owner ?? "");
+                if (next === null) return;
+                onOwnerChange(next.trim() || null, next.trim() ? (court === "mine" ? "theirs" : court ?? "theirs") : "mine");
+              }}
+              style={{
+                cursor: onOwnerChange ? "pointer" : "default",
+                backgroundColor: court === "theirs" ? "color-mix(in srgb, var(--warn) 15%, transparent)" : "color-mix(in srgb, var(--muted) 15%, transparent)",
+                color: court === "theirs" ? "var(--warn)" : "var(--muted)",
+              }}
+            >
+              {court === "theirs" ? `Waiting on ${owner ?? "?"}` : court === "team" ? `Team${owner ? ` · ${owner}` : ""}` : `With ${owner}`}
+            </span>
           </div>
         )}
 

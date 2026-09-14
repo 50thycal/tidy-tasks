@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { bulkAddInboxItems, type InboxItem, type AIFirstPass } from "@/src/lib/clientStore";
 import { getWorkSettings, addProject } from "@/src/lib/settings";
 import { runWithPool } from "@/src/lib/batchRunner";
+import { inferOwner } from "@/src/lib/contacts";
 import type { CleanTaskRequest, CleanTaskResponse } from "@/src/types";
 
 interface InlineCaptureProps {
@@ -158,14 +159,19 @@ export function InlineCapture({ defaultBucket = "active", onTasksAdded }: Inline
       };
 
       const { suggested_project, ...cleanResult } = result;
+      const guess = inferOwner(`${r.rawText}\n${result.title}`);
+      const court = defaultBucket === "follow-up" ? "theirs" : guess?.court ?? "mine";
 
       return {
         id: crypto.randomUUID(),
         created_at: new Date().toISOString(),
-        status: defaultBucket,
+        status: court === "theirs" ? "follow-up" : defaultBucket,
         request: r.request!,
         result: cleanResult as CleanTaskResponse,
         ai_first_pass: aiFirstPass,
+        owner: guess?.owner ?? null,
+        court,
+        waiting_since: court === "theirs" ? new Date().toISOString() : null,
       };
     });
 
