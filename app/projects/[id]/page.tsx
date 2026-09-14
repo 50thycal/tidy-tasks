@@ -176,7 +176,9 @@ export default function ProjectDetailPage() {
               Stale after (days)
               <input className="input" type="number" min={1} value={project.stale_after_days} onChange={(e) => { updateProject(project.id, { stale_after_days: Math.max(1, Number(e.target.value) || 7) }); reload(); }} style={{ width: "5rem" }} />
             </label>
-            <div style={{ fontSize: "0.72rem", color: "var(--muted)" }}>Meeting prep (living agenda) arrives in Phase 2 and reads these settings.</div>
+            <Link href={`/projects/${project.id}/meeting`} className="btn btn-primary" style={{ textAlign: "center", textDecoration: "none", marginTop: "0.25rem" }}>
+              Open meeting prep
+            </Link>
           </div>
         </section>
 

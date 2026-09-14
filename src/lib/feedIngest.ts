@@ -10,6 +10,7 @@ import {
   findByHash,
   putBlob,
   updateFeedItem,
+  getAgenda,
   type FeedItem,
   type FeedKind,
   type FeedTriage,
@@ -470,7 +471,7 @@ export async function triageItem(item: FeedItem): Promise<FeedItem> {
         }
       : null,
     candidate_projects: candidates,
-    agenda_sections: [],
+    agenda_sections: project ? ((await getAgenda(project.id).catch(() => undefined))?.sections.map((s) => s.heading) ?? []) : [],
     known_people: people,
     my_name: settings.my_last_name ?? null,
   };

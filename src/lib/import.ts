@@ -8,7 +8,7 @@ import type { InboxItem } from "./clientStore";
 import { getInboxItems, saveAllInboxItems, clearInbox } from "./clientStore";
 import { saveSettings, resetSettings } from "./settings";
 import { reset as resetMetrics } from "@/src/db/metrics";
-import { importFeedItems, clearFeed } from "./feedStore";
+import { importFeedItems, clearFeed, importAgendas } from "./feedStore";
 import { saveRegistry, clearRegistry } from "./registry";
 
 /**
@@ -189,6 +189,13 @@ export async function importBackup(
         result.feed = await importFeedItems(doc.tables.feed, mode);
       } catch (e) {
         console.warn("Feed import skipped:", e);
+      }
+    }
+    if (Array.isArray(doc.tables.agendas)) {
+      try {
+        await importAgendas(doc.tables.agendas, mode);
+      } catch (e) {
+        console.warn("Agenda import skipped:", e);
       }
     }
     if (doc.tables.registry && doc.tables.registry.version === 1) {

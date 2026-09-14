@@ -1,0 +1,55 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PrepMeetingResponse",
+  "type": "object",
+  "required": ["inserts", "stale", "waiting_on", "summary"],
+  "properties": {
+    "summary": { "type": "string", "maxLength": 800 },
+    "inserts": {
+      "type": "array",
+      "maxItems": 60,
+      "items": {
+        "type": "object",
+        "required": ["section", "text", "source_item_ids"],
+        "properties": {
+          "section": { "type": "string", "maxLength": 120 },
+          "after_bullet_id": { "type": ["string", "null"], "maxLength": 40 },
+          "depth": { "type": "integer", "minimum": 0, "maximum": 5 },
+          "text": { "type": "string", "maxLength": 500 },
+          "source_item_ids": { "type": "array", "items": { "type": "string" }, "maxItems": 10 },
+          "reason": { "type": "string", "maxLength": 200 }
+        },
+        "additionalProperties": false
+      }
+    },
+    "stale": {
+      "type": "array",
+      "maxItems": 40,
+      "items": {
+        "type": "object",
+        "required": ["bullet_id", "reason"],
+        "properties": {
+          "bullet_id": { "type": "string", "maxLength": 40 },
+          "reason": { "type": "string", "maxLength": 200 }
+        },
+        "additionalProperties": false
+      }
+    },
+    "waiting_on": {
+      "type": "array",
+      "maxItems": 40,
+      "items": {
+        "type": "object",
+        "required": ["owner", "text"],
+        "properties": {
+          "owner": { "type": "string", "maxLength": 80 },
+          "text": { "type": "string", "maxLength": 300 },
+          "since": { "type": ["string", "null"] },
+          "source_item_ids": { "type": "array", "items": { "type": "string" }, "maxItems": 10 }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

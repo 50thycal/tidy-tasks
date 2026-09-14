@@ -11,7 +11,7 @@ import { getInboxItems } from "./clientStore";
 import { getStoredSettings } from "./settings";
 import { getMetrics } from "@/src/db/metrics";
 import { tasksToCsv } from "./csv";
-import { exportFeedItems, type FeedItem } from "./feedStore";
+import { exportFeedItems, getAllAgendas, type FeedItem, type LivingAgenda } from "./feedStore";
 import { getRegistry, type RegistryDoc } from "./registry";
 
 /**
@@ -41,6 +41,8 @@ export interface BackupDoc {
     feed?: FeedItem[];
     /** Project registry from the progress report. Optional for old backups. */
     registry?: RegistryDoc;
+    /** Living agendas per project. Optional for old backups. */
+    agendas?: LivingAgenda[];
   };
 }
 
@@ -118,8 +120,10 @@ export async function exportToJson(): Promise<BackupDoc> {
   const summaries = getAllSummaries();
   const focusLayouts = getAllFocusLayouts();
   let feed: FeedItem[] = [];
+  let agendas: LivingAgenda[] = [];
   try {
     feed = await exportFeedItems();
+    agendas = await getAllAgendas();
   } catch (e) {
     console.warn("Feed export skipped:", e);
   }
@@ -137,6 +141,7 @@ export async function exportToJson(): Promise<BackupDoc> {
       focus_layout: focusLayouts,
       feed,
       registry,
+      agendas,
     },
   };
 

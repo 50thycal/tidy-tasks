@@ -1,0 +1,50 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PrepMeetingRequest",
+  "type": "object",
+  "required": ["project", "agenda", "items"],
+  "properties": {
+    "today": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+    "timezone": { "type": "string" },
+    "my_name": { "type": ["string", "null"] },
+    "project": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string" },
+        "work_orders": { "type": "array", "items": { "type": "string" } },
+        "people": { "type": "array", "items": { "type": "string" } },
+        "milestones": { "type": "array", "items": { "type": "string" } },
+        "last_meeting_at": { "type": ["string", "null"] },
+        "cadence": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "agenda": { "type": "string", "maxLength": 60000 },
+    "items": {
+      "type": "array",
+      "maxItems": 80,
+      "items": {
+        "type": "object",
+        "required": ["id", "title"],
+        "properties": {
+          "id": { "type": "string" },
+          "kind": { "type": "string" },
+          "title": { "type": "string" },
+          "source_date": { "type": ["string", "null"] },
+          "summary": { "type": ["string", "null"] },
+          "agenda_section": { "type": ["string", "null"] },
+          "decisions": { "type": "array", "items": { "type": "string" } },
+          "open_questions": { "type": "array", "items": { "type": "string" } },
+          "dates": { "type": "array", "items": { "type": "object" } },
+          "actions": { "type": "array", "items": { "type": "object" } },
+          "excerpt": { "type": ["string", "null"], "maxLength": 1500 }
+        },
+        "additionalProperties": true
+      }
+    },
+    "open_tasks": { "type": "array", "maxItems": 60, "items": { "type": "string" } },
+    "stale_after_days": { "type": "number" }
+  },
+  "additionalProperties": true
+}
