@@ -126,16 +126,17 @@ RULES:
       ? parsed.inserts
           .filter((i: any) => i && typeof i.text === "string" && i.text.trim())
           .map((i: any) => ({
-            section: String(i.section ?? "New Items for Discussion").slice(0, 120),
+            section: String(i.section ?? "New Items for Discussion").trim().slice(0, 120) || "New Items for Discussion",
             after_bullet_id: i.after_bullet_id ? String(i.after_bullet_id).slice(0, 40) : null,
             depth: Number.isInteger(i.depth) ? Math.min(5, Math.max(0, i.depth)) : 0,
             text: String(i.text).trim().slice(0, 500),
             source_item_ids: Array.isArray(i.source_item_ids) ? i.source_item_ids.map(String).slice(0, 10) : [],
             reason: String(i.reason ?? "").slice(0, 200),
           }))
+          .slice(0, 60)
       : [];
     parsed.stale = Array.isArray(parsed.stale)
-      ? parsed.stale.filter((s: any) => s && s.bullet_id).map((s: any) => ({ bullet_id: String(s.bullet_id).slice(0, 40), reason: String(s.reason ?? "").slice(0, 200) }))
+      ? parsed.stale.filter((s: any) => s && s.bullet_id).map((s: any) => ({ bullet_id: String(s.bullet_id).slice(0, 40), reason: String(s.reason ?? "").slice(0, 200) })).slice(0, 40)
       : [];
     parsed.waiting_on = Array.isArray(parsed.waiting_on)
       ? parsed.waiting_on
@@ -146,11 +147,13 @@ RULES:
             since: /^\d{4}-\d{2}-\d{2}$/.test(w.since ?? "") ? w.since : null,
             source_item_ids: Array.isArray(w.source_item_ids) ? w.source_item_ids.map(String).slice(0, 10) : [],
           }))
+          .slice(0, 40)
       : [];
 
     if (!validateResponse(parsed)) {
       console.error("Validation errors:", validateResponse.errors);
-      return NextResponse.json({ error: "AI response does not match schema", details: validateResponse.errors, raw_response: parsed }, { status: 422 });
+      const detail = (validateResponse.errors ?? []).map((e) => `${e.instancePath || "/"} ${e.message ?? ""}`).join("; ");
+      return NextResponse.json({ error: `AI response does not match schema: ${detail}`, details: validateResponse.errors, raw_response: parsed }, { status: 422 });
     }
 
     await inc("aiCleans");

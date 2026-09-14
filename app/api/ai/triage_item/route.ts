@@ -159,28 +159,43 @@ Rules: never fabricate names or dates. Preserve the exact spelling of technical 
       return NextResponse.json({ error: "AI returned an invalid response. Please try again." }, { status: 502 });
     }
 
-    // Light coercion before validation: the model sometimes omits nullable fields
-    parsed.agenda_section ??= null;
-    parsed.project_guess ??= null;
-    parsed.topics ??= [];
-    parsed.decisions ??= [];
-    parsed.open_questions ??= [];
-    parsed.dates = Array.isArray(parsed.dates) ? parsed.dates.filter((d: any) => d && /^\d{4}-\d{2}-\d{2}$/.test(d.date)) : [];
-    parsed.actions = Array.isArray(parsed.actions)
-      ? parsed.actions.map((a: any) => ({
-          title: String(a.title ?? "").slice(0, 200),
-          owner: a.owner ? String(a.owner).slice(0, 80) : null,
+    // Clamp everything to the schema instead of rejecting a slightly-too-long reply
+    const str = (v: unknown, max: number, fallback = ""): string => (typeof v === "string" ? v : v == null ? fallback : String(v)).trim().slice(0, max);
+    const strOrNull = (v: unknown, max: number): string | null => (v == null || v === "" ? null : str(v, max));
+    const strArr = (v: unknown, maxItems: number, maxLen: number): string[] =>
+      (Array.isArray(v) ? v : []).filter((x) => x != null && String(x).trim()).map((x) => str(x, maxLen)).slice(0, maxItems);
+    const isDate = (v: unknown): v is string => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v);
+    const bool = (v: unknown): boolean => v === true || (typeof v === "string" && /^(true|yes)$/i.test(v));
+
+    parsed = {
+      summary: str(parsed.summary, 600),
+      include_in_meeting: bool(parsed.include_in_meeting),
+      include_reason: str(parsed.include_reason, 300),
+      agenda_section: strOrNull(parsed.agenda_section, 120),
+      topics: strArr(parsed.topics, 8, 60),
+      decisions: strArr(parsed.decisions, 10, 300),
+      open_questions: strArr(parsed.open_questions, 10, 300),
+      dates: (Array.isArray(parsed.dates) ? parsed.dates : [])
+        .filter((d: any) => d && isDate(d.date))
+        .map((d: any) => ({ label: str(d.label, 120, "date"), date: d.date }))
+        .slice(0, 12),
+      actions: (Array.isArray(parsed.actions) ? parsed.actions : [])
+        .filter((a: any) => a && String(a.title ?? "").trim())
+        .map((a: any) => ({
+          title: str(a.title, 200),
+          owner: strOrNull(a.owner, 80),
           court: ["mine", "theirs", "team"].includes(a.court) ? a.court : "team",
-          due_at: /^\d{4}-\d{2}-\d{2}$/.test(a.due_at ?? "") ? a.due_at : null,
-          follow_up_by: /^\d{4}-\d{2}-\d{2}$/.test(a.follow_up_by ?? "") ? a.follow_up_by : null,
+          due_at: isDate(a.due_at) ? a.due_at : null,
+          follow_up_by: isDate(a.follow_up_by) ? a.follow_up_by : null,
         }))
-      : [];
-    parsed.include_reason = String(parsed.include_reason ?? "").slice(0, 300);
-    parsed.summary = String(parsed.summary ?? "").slice(0, 600);
+        .slice(0, 15),
+      project_guess: strOrNull(parsed.project_guess, 80),
+    };
 
     if (!validateResponse(parsed)) {
       console.error("Validation errors:", validateResponse.errors);
-      return NextResponse.json({ error: "AI response does not match schema", details: validateResponse.errors, raw_response: parsed }, { status: 422 });
+      const detail = (validateResponse.errors ?? []).map((e) => `${e.instancePath || "/"} ${e.message ?? ""}`).join("; ");
+      return NextResponse.json({ error: `AI response does not match schema: ${detail}`, details: validateResponse.errors, raw_response: parsed }, { status: 422 });
     }
 
     await inc("aiCleans");
