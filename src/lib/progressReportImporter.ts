@@ -15,6 +15,8 @@ export interface ProgressReportParse {
   issue_date: string | null;
   work_orders: WorkOrder[];
   warnings: string[];
+  /** Distinct BMcD lead names seen, for diagnosing a failed "mine" match */
+  leads: string[];
 }
 
 type Cell = string | number | boolean | Date | null | undefined;
@@ -107,8 +109,8 @@ export function parseProgressReport(data: ArrayBuffer, fileName = "report.xlsm")
     }
   }
 
-  const h = findHeaderRow(flat, ["work order", "substation", "bmcd project lead"]);
-  if (h < 0) throw new Error("NewProgressReport header row not found");
+  const h = findHeaderRow(flat, ["work order", "substation"]);
+  if (h < 0) throw new Error("NewProgressReport header row not found (expected 'Work Order' and 'Substation' headers)");
   const H = flat[h];
   const c = {
     region: colIndex(H, "region"),
@@ -117,9 +119,9 @@ export function parseProgressReport(data: ArrayBuffer, fileName = "report.xlsm")
     desc: colIndex(H, "project description"),
     status: colIndex(H, "status"),
     assign: colIndex(H, "itc assign date"),
-    itcLead: colIndex(H, "itc project lead"),
-    itcSup: colIndex(H, "itc supervisor"),
-    lead: colIndex(H, "bmcd project lead"),
+    itcLead: colIndex(H, "itc project lead", "itc lead", "itc pm"),
+    itcSup: colIndex(H, "itc supervisor", "supervisor"),
+    lead: colIndex(H, "bmcd project lead", "bmcd design lead", "bmcd lead", "project lead", "design lead", "bmcd pm"),
     dte: colIndex(H, "dte/ce work order", "dte/ce wo"),
     nextMs: colIndex(H, "next milestone"),
     nextDue: colIndex(H, "next milestone due date", "next milestone due"),
@@ -132,41 +134,42 @@ export function parseProgressReport(data: ArrayBuffer, fileName = "report.xlsm")
     site: colIndex(H, "site visit"),
     comments: colIndex(H, "design completion status", "comments"),
   };
+  const cell = (row: Cell[], idx: number): Cell => (idx >= 0 ? row[idx] : null);
 
   const byWo = new Map<string, WorkOrder>();
   for (const row of flat.slice(h + 1)) {
     const wo = str(row[c.wo]);
     if (!wo || !WO_RE.test(wo)) continue;
-    const sub = str(row[c.sub]);
+    const sub = str(cell(row, c.sub));
     if (!sub) {
       warnings.push(`Row for ${wo} has no substation name; skipped`);
       continue;
     }
     const rec: WorkOrder = {
       wo,
-      bmcd_project_no: str(row[c.projNo]),
-      region: str(row[c.region]),
+      bmcd_project_no: str(cell(row, c.projNo)),
+      region: str(cell(row, c.region)),
       substation: sub,
-      description: str(row[c.desc]) ?? "",
-      status: (str(row[c.status]) ?? "ACTIVE").toUpperCase(),
-      itc_assign_date: dateish(row[c.assign]),
-      itc_lead: str(row[c.itcLead]),
-      itc_supervisor: str(row[c.itcSup]),
-      bmcd_lead: str(row[c.lead]),
+      description: str(cell(row, c.desc)) ?? "",
+      status: (str(cell(row, c.status)) ?? "ACTIVE").toUpperCase(),
+      itc_assign_date: dateish(cell(row, c.assign)),
+      itc_lead: str(cell(row, c.itcLead)),
+      itc_supervisor: str(cell(row, c.itcSup)),
+      bmcd_lead: str(cell(row, c.lead)),
       bmcd_civil: null,
       bmcd_structural: null,
       bmcd_project_services: null,
       bmi_approval: null,
-      dte_ce_wo: str(row[c.dte]),
-      next_milestone: str(row[c.nextMs]),
-      next_milestone_due: dateish(row[c.nextDue]),
-      ifc: dateish(row[c.ifc]),
-      ifc_on_track: str(row[c.onTrack])?.toUpperCase() ?? null,
-      proposal_submitted: dateish(row[c.proposal]),
-      po_received: dateish(row[c.po]),
-      latest_authorization: dateish(row[c.auth]),
-      site_visit: dateish(row[c.site]),
-      comments: str(row[c.comments]),
+      dte_ce_wo: str(cell(row, c.dte)),
+      next_milestone: str(cell(row, c.nextMs)),
+      next_milestone_due: dateish(cell(row, c.nextDue)),
+      ifc: dateish(cell(row, c.ifc)),
+      ifc_on_track: str(cell(row, c.onTrack))?.toUpperCase() ?? null,
+      proposal_submitted: dateish(cell(row, c.proposal)),
+      po_received: dateish(cell(row, c.po)),
+      latest_authorization: dateish(cell(row, c.auth)),
+      site_visit: dateish(cell(row, c.site)),
+      comments: str(cell(row, c.comments)),
       milestones: [],
     };
     if (byWo.has(wo)) warnings.push(`Duplicate work order ${wo} in NewProgressReport; last row wins`);
@@ -184,7 +187,10 @@ export function parseProgressReport(data: ArrayBuffer, fileName = "report.xlsm")
     }
   }
 
-  return { issue_date, work_orders: Array.from(byWo.values()), warnings };
+  const work_orders = Array.from(byWo.values());
+  const leads = Array.from(new Set(work_orders.map((w) => w.bmcd_lead).filter((x): x is string => !!x))).sort();
+  if (c.lead < 0) warnings.push(`NewProgressReport has no BMcD lead column (headers: ${H.map(norm).filter(Boolean).join(" | ")}); using Active Projects instead`);
+  return { issue_date, work_orders, warnings, leads };
 }
 
 function attachBlockSheet(sheet: XLSX.WorkSheet, byWo: Map<string, WorkOrder>, warnings: string[]) {
@@ -199,7 +205,8 @@ function attachBlockSheet(sheet: XLSX.WorkSheet, byWo: Map<string, WorkOrder>, w
     target: colIndex(H, "target issue date"),
     final: colIndex(H, "final issue date"),
     pct: colIndex(H, "% design complete", "percent design complete"),
-    lead: colIndex(H, "bmcd design lead"),
+    lead: colIndex(H, "bmcd design lead", "bmcd project lead", "bmcd lead", "design lead"),
+    itcLead: colIndex(H, "itc project lead", "itc lead"),
     civil: colIndex(H, "bmcd civil"),
     structural: colIndex(H, "bmcd structural"),
     services: colIndex(H, "bmcd project services"),
@@ -216,20 +223,24 @@ function attachBlockSheet(sheet: XLSX.WorkSheet, byWo: Map<string, WorkOrder>, w
       current = byWo.get(wo) ?? null;
       if (!current) continue;
       current.milestones = [];
-      current.bmcd_civil = str(row[c.civil]);
-      current.bmcd_structural = str(row[c.structural]);
-      current.bmcd_project_services = str(row[c.services]);
-      current.bmi_approval = str(row[c.bmi]);
+      const get = (idx: number) => (idx >= 0 ? str(row[idx]) : null);
+      current.bmcd_civil = get(c.civil);
+      current.bmcd_structural = get(c.structural);
+      current.bmcd_project_services = get(c.services);
+      current.bmi_approval = get(c.bmi);
+      // The flat sheet sometimes lacks the lead columns; the block sheet always has them
+      if (!current.bmcd_lead) current.bmcd_lead = get(c.lead);
+      if (!current.itc_lead) current.itc_lead = get(c.itcLead);
       continue;
     }
     if (!current) continue;
     const label = str(row[labelCol]);
     if (!label) continue;
     // Section banners are all-caps with no dates; skip them
-    const proposed = dateish(row[c.proposed]);
-    const target = dateish(row[c.target]);
-    const final = dateish(row[c.final]);
-    const pc = pct(row[c.pct]);
+    const proposed = c.proposed >= 0 ? dateish(row[c.proposed]) : null;
+    const target = c.target >= 0 ? dateish(row[c.target]) : null;
+    const final = c.final >= 0 ? dateish(row[c.final]) : null;
+    const pc = c.pct >= 0 ? pct(row[c.pct]) : null;
     if (!proposed && !target && !final && pc === null) {
       if (label === label.toUpperCase()) current = null;
       continue;

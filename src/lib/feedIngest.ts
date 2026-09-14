@@ -59,7 +59,7 @@ export interface IngestOptions {
 export interface IngestResult {
   items: FeedItem[];
   duplicates: number;
-  registryImport?: { projects: number; mine: number; changes: RegistryChange[]; warnings: string[] };
+  registryImport?: { projects: number; mine: number; changes: RegistryChange[]; warnings: string[]; leads: string[] };
   errors: string[];
 }
 
@@ -348,7 +348,7 @@ export async function importProgressReportBuffer(buf: ArrayBuffer, file: File, o
   const current = getRegistry();
   if (current.imports[0]?.file_hash === hash) {
     result.duplicates = 1;
-    result.registryImport = { projects: current.projects.length, mine: current.projects.filter((p) => p.mine).length, changes: [], warnings: ["This exact file was already imported."] };
+    result.registryImport = { projects: current.projects.length, mine: current.projects.filter((p) => p.mine).length, changes: [], warnings: ["This exact file was already imported."], leads: [] };
     return result;
   }
 
@@ -403,6 +403,7 @@ export async function importProgressReportBuffer(buf: ArrayBuffer, file: File, o
     mine: merged.mine.length,
     changes: merged.importRecord.changes,
     warnings: parsed.warnings,
+    leads: parsed.leads,
   };
   return result;
 }
