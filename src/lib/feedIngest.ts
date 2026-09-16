@@ -98,6 +98,17 @@ function assignProject(item: FeedItem, forced: string | null | undefined): FeedI
   return item;
 }
 
+/** Names that are never people: project and substation names, and their aliases. */
+function projectNameReject(): string[] {
+  const out = new Set<string>();
+  for (const p of getProjects()) {
+    out.add(p.name);
+    out.add(p.substation);
+    for (const a of p.aliases) out.add(a);
+  }
+  return Array.from(out);
+}
+
 function knownPeople(): string[] {
   const set = new Set<string>();
   for (const c of getContacts()) {
@@ -136,7 +147,7 @@ export async function ingestText(raw: string, opts: IngestOptions = {}): Promise
         content_hash: hash,
         title: parts[0].subject ?? firstLineTitle(parts[0].body),
         source_date: parts[0].when ?? opts.sourceDate ?? null,
-        people: sniffPeople(text, people),
+        people: sniffPeople(text, people, { isEmail: true, reject: projectNameReject() }),
       });
       items.push(parent);
       for (const part of parts) {
@@ -145,24 +156,25 @@ export async function ingestText(raw: string, opts: IngestOptions = {}): Promise
           result.duplicates++;
           continue;
         }
+        const childText = [
+          part.from ? `From: ${part.from}` : null,
+          part.to ? `To: ${part.to}` : null,
+          part.when ? `Date: ${part.when}` : null,
+          part.subject ? `Subject: ${part.subject}` : null,
+          "",
+          part.body,
+        ]
+          .filter((x): x is string => x !== null)
+          .join("\n");
         items.push(
           baseItem({
             kind: "email",
-            text: [
-              part.from ? `From: ${part.from}` : null,
-              part.to ? `To: ${part.to}` : null,
-              part.when ? `Date: ${part.when}` : null,
-              part.subject ? `Subject: ${part.subject}` : null,
-              "",
-              part.body,
-            ]
-              .filter((x): x is string => x !== null)
-              .join("\n"),
+            text: childText,
             content_hash: childHash,
             title: `${part.from ? part.from.replace(/<.*>/, "").trim() + ": " : ""}${part.subject ?? firstLineTitle(part.body, 60)}`,
             source_date: part.when ?? opts.sourceDate ?? null,
             parent_id: parent.id,
-            people: sniffPeople(part.body, people),
+            people: sniffPeople(childText, people, { isEmail: true, reject: projectNameReject() }),
           })
         );
       }
@@ -175,7 +187,7 @@ export async function ingestText(raw: string, opts: IngestOptions = {}): Promise
           content_hash: hash,
           title: p?.subject ?? firstLineTitle(text),
           source_date: p?.when ?? sniffEmailHeaderDate(text) ?? opts.sourceDate ?? null,
-          people: sniffPeople(text, people),
+          people: sniffPeople(text, people, { isEmail: true, reject: projectNameReject() }),
         })
       );
     }
@@ -187,7 +199,7 @@ export async function ingestText(raw: string, opts: IngestOptions = {}): Promise
       content_hash: hash,
       title: `Teams: ${firstLineTitle(msgs[0]?.text ?? text, 70)}`,
       source_date: msgs.find((m) => m.when)?.when ?? opts.sourceDate ?? null,
-      people: Array.from(new Set([...msgs.map((m) => m.author).filter(Boolean) as string[], ...sniffPeople(text, people)])),
+      people: Array.from(new Set([...(msgs.map((m) => m.author).filter(Boolean) as string[]), ...sniffPeople(text, people, { reject: projectNameReject() })])),
     });
     items.push(parent);
   } else {
@@ -197,7 +209,7 @@ export async function ingestText(raw: string, opts: IngestOptions = {}): Promise
         text,
         content_hash: hash,
         source_date: opts.sourceDate ?? sniffDate(text.slice(0, 300)) ?? nowIso().slice(0, 10),
-        people: sniffPeople(text, people),
+        people: sniffPeople(text, people, { reject: projectNameReject() }),
       })
     );
   }
@@ -210,6 +222,7 @@ export async function ingestText(raw: string, opts: IngestOptions = {}): Promise
 
   await putFeedItems(items);
   result.items = items;
+  emitChanged();
 
   if (opts.triage !== false) {
     // Triage children of a chain (they are the real messages), or the single item
@@ -252,6 +265,7 @@ export async function ingestFile(file: File, opts: IngestOptions = {}): Promise<
       );
       await putFeedItem(item);
       result.items.push(item);
+      emitChanged();
       return result;
     }
 
@@ -291,6 +305,7 @@ export async function ingestFile(file: File, opts: IngestOptions = {}): Promise<
       );
       await putFeedItem(item);
       result.items.push(item);
+      emitChanged();
       if (opts.triage !== false) void triageItems([item]);
       return result;
     }
@@ -315,6 +330,7 @@ export async function ingestFile(file: File, opts: IngestOptions = {}): Promise<
       );
       await putFeedItem(item);
       result.items.push(item);
+      emitChanged();
       return result;
     }
 
@@ -394,6 +410,7 @@ export async function importProgressReportBuffer(buf: ArrayBuffer, file: File, o
   });
   if (items.length) {
     await putFeedItems(items);
+    emitChanged();
     if (opts.triage !== false) void triageItems(items);
   }
 
@@ -422,6 +439,74 @@ function humanField(f: string): string {
 
 type Listener = (item: FeedItem) => void;
 const listeners = new Set<Listener>();
+
+// ---------------------------------------------------------------------------
+// Triage progress (in-memory: what is queued and what is in flight right now)
+// ---------------------------------------------------------------------------
+
+export type TriagePhase = "queued" | "running";
+
+export interface TriageProgressEntry {
+  id: string;
+  phase: TriagePhase;
+  /** epoch ms the item entered this phase, for a live elapsed counter */
+  since: number;
+}
+
+/** Fires whenever items are added or removed, so open pages can re-read the store. */
+const changeListeners = new Set<() => void>();
+
+export function onFeedChanged(fn: () => void): () => void {
+  changeListeners.add(fn);
+  return () => changeListeners.delete(fn);
+}
+
+function emitChanged() {
+  changeListeners.forEach((fn) => {
+    try {
+      fn();
+    } catch (e) {
+      console.error(e);
+    }
+  });
+}
+
+const triageProgress = new Map<string, TriageProgressEntry>();
+const progressListeners = new Set<() => void>();
+
+/** Subscribe to queue/in-flight changes. Returns unsubscribe. */
+export function onTriageProgress(fn: () => void): () => void {
+  progressListeners.add(fn);
+  return () => progressListeners.delete(fn);
+}
+
+function emitProgress() {
+  progressListeners.forEach((fn) => {
+    try {
+      fn();
+    } catch (e) {
+      console.error(e);
+    }
+  });
+}
+
+function setPhase(id: string, phase: TriagePhase | null) {
+  if (phase === null) triageProgress.delete(id);
+  else triageProgress.set(id, { id, phase, since: Date.now() });
+  emitProgress();
+}
+
+export function getTriagePhase(id: string): TriageProgressEntry | undefined {
+  return triageProgress.get(id);
+}
+
+/** How many items are waiting and how many are being triaged right now. */
+export function triageQueue(): { queued: number; running: number; total: number } {
+  let queued = 0;
+  let running = 0;
+  triageProgress.forEach((e) => (e.phase === "running" ? running++ : queued++));
+  return { queued, running, total: queued + running };
+}
 
 /** Subscribe to feed item updates (triage completion). Returns unsubscribe. */
 export function onFeedItemUpdated(fn: Listener): () => void {
@@ -452,6 +537,7 @@ async function blobToDataUrl(ref: string): Promise<string | null> {
 }
 
 export async function triageItem(item: FeedItem): Promise<FeedItem> {
+  setPhase(item.id, "running");
   const settings = getWorkSettingsV2();
   const project = item.project_id ? getProjectById(item.project_id) : null;
   const people = knownPeople();
@@ -509,18 +595,27 @@ export async function triageItem(item: FeedItem): Promise<FeedItem> {
     const updated = (await updateFeedItem(item.id, { triage_error: e instanceof Error ? e.message : String(e) })) ?? item;
     emit(updated);
     return updated;
+  } finally {
+    setPhase(item.id, null);
   }
 }
 
 export async function triageItems(items: FeedItem[], concurrency = 3): Promise<void> {
-  const queue = [...items];
+  const queue = items.filter((i) => !triageProgress.has(i.id));
+  if (!queue.length) return;
+  // Show the whole batch as queued immediately so the UI can report "1 of 7"
+  for (const i of queue) setPhase(i.id, "queued");
   const workers = Array.from({ length: Math.min(concurrency, queue.length) }, async () => {
     while (queue.length) {
       const next = queue.shift()!;
       await triageItem(next);
     }
   });
-  await Promise.all(workers);
+  try {
+    await Promise.all(workers);
+  } finally {
+    for (const i of items) setPhase(i.id, null);
+  }
 }
 
 // ---------------------------------------------------------------------------

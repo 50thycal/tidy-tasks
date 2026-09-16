@@ -87,7 +87,8 @@ Next milestone: ${project.next_milestone ?? "unknown"}`
       ? `EXISTING MEETING AGENDA SECTIONS (choose the best fit for "agenda_section", or null if none fits):\n${agenda_sections.map((s) => `- ${s}`).join("\n")}`
       : `No agenda sections exist yet. Set "agenda_section" to a short heading this item would sit under (e.g. "LLMR Rev 2", "H-Frame Update", "Open RFIs"), or null.`;
 
-    const systemPrompt = `You triage incoming project information for a substation design project manager at Burns & McDonnell (client: ITC). The user is ${my_name ?? "the recipient"}.
+    const me = my_name ?? "the recipient";
+    const systemPrompt = `You triage incoming project information for a substation design project manager at Burns & McDonnell (client: ITC). The user is ${me}. Content written by or addressed to the user may use their first name, last name, full name, or signature block; treat all of those as the user.
 Today is ${todayDate} (${getDayOfWeek(todayDate)}). Timezone: ${timezone ?? "America/Chicago"}. Source date of this item: ${source_date ?? "unknown"}. Source kind: ${kind}.${title ? ` Title: ${title}` : ""}
 
 ${projectBlock}
@@ -96,19 +97,46 @@ ${agendaBlock}
 
 Known people (use these spellings; owners are last names or first names as they appear here): ${known_people.join(", ") || "none"}
 
-TASK: Read the content and return strict JSON with:
-- summary: 1-2 sentences, factual, no filler. What happened / what is being asked.
-- include_in_meeting: true if the project team should discuss or be told this at the next weekly project meeting (decisions needed, schedule changes, scope changes, open questions to the client, deliverable status, risks). false for FYI noise, pleasantries, or items already resolved in the same content.
-- include_reason: one short clause.
-- agenda_section: best matching existing section, or a short new heading, or null.
-- topics: 1-6 short tags (e.g. "sync breakers", "LLMR Rev 2", "fiber", "H-frame").
-- decisions: decisions that were made in this content (verbatim-ish, short).
-- open_questions: questions still unanswered after this content.
-- dates: dated commitments or milestones mentioned (label + YYYY-MM-DD). Resolve relative dates against the source date. Skip vague dates.
-- actions: concrete next steps. court = "mine" if ${my_name ?? "the user"} must do it, "theirs" if someone else owes it (client, vendor, teammate), "team" if the project team collectively owns it. owner = the person's name as written, or "ITC" / vendor name for organizations, or null. Set follow_up_by for "theirs" items (2-5 business days after source date, sooner if a deadline is mentioned). Set due_at only when a date is stated or clearly implied. Do NOT invent trivial actions like "read the email".
-- project_guess: as instructed above (null when the project is already given).
+Return STRICT JSON in exactly this shape:
+{
+  "summary": "1-2 sentences, factual, no filler: what happened or what is being asked",
+  "include_in_meeting": true,
+  "include_reason": "one short clause",
+  "agenda_section": "best matching existing section, a short new heading, or null",
+  "topics": ["1-6 short tags, e.g. sync breakers, LLMR Rev 2, fiber, H-frame"],
+  "decisions": ["decisions actually made in this content, short"],
+  "open_questions": ["questions still unanswered after this content"],
+  "dates": [{ "label": "what the date is for", "date": "YYYY-MM-DD" }],
+  "actions": [{ "title": "verb-first next step", "owner": "person or org, or null", "court": "mine", "due_at": null, "follow_up_by": null }],
+  "project_guess": "best candidate project name, or null"
+}
 
-Rules: never fabricate names or dates. Preserve the exact spelling of technical terms (LLMR, PR&C, Q3/Q4/Q6, IFC, RFI, MR, H-Frame, CCVT). Keep every string short.`;
+ACTIONS ARE THE MOST IMPORTANT FIELD, and most real messages contain two or more. Extract one for every commitment, request, or unanswered ask, including ones already in flight. In this line of work an action is almost always one of:
+- a request to the client or a vendor that has not been answered yet
+- something someone promised to send, update, confirm, or advise on
+- a QC or review assignment to a named person (Q3, Q4, Q6, "to be QC'ed by X")
+- an RFI opened and awaiting a response
+- a document, markup, cut sheet, point list, drawing, or quantity someone owes
+- a meeting, site visit, or call that must be scheduled or confirmed
+- a count, drawing, or requisition that must be revised because of new information
+
+court: "mine" when ${me} must do it, "theirs" when someone else owes it (client, vendor, teammate), "team" when the project team collectively owns it.
+owner: the person's name as written, or an organization ("ITC", "DTE", "Valmont"), or null when genuinely unassigned.
+follow_up_by: set on every "theirs" action (2-5 business days after the source date, sooner if a deadline is stated).
+due_at: only when a date is stated or clearly implied.
+
+Worked examples of the expected extraction:
+- "I sent out the Siemens breaker options to Lake. Still no answer on how to move forward." -> { "title": "Confirm how to move forward on Siemens breaker options", "owner": "Lake", "court": "theirs" }
+- "Lauren informed me that the Bus Diff CCVTs need to be 3-phase. So we are going to be updating the CCVT count on the LLMR." -> { "title": "Update the CCVT count on the LLMR for 3-phase Bus Diff CCVTs", "owner": null, "court": "team" }
+- "Sync Breakers (john - to be QC'ed by Jacob)" -> { "title": "QC the sync breaker drawings", "owner": "Jacob", "court": "theirs" }
+- "BMcD has asked DTE to markup the attached PDF with the anticipated fiber lines." -> { "title": "Mark up the switchyard fiber routing PDF with anticipated fiber lines", "owner": "DTE", "court": "theirs" }
+- "Please advise if this phasing is acceptable." -> { "title": "Advise whether the station phasing is acceptable", "owner": "DTE", "court": "theirs" }
+- "need to let stephen know" -> { "title": "Tell Stephen about the site visit", "owner": "Stephen", "court": "mine" }
+- "Could you send me a calendar invite with the time?" -> { "title": "Send the site visit calendar invite", "owner": "Ahmed", "court": "theirs" }
+
+Do NOT create an action for pleasantries, acknowledgements ("thanks", "congratulations"), or for reading the message itself. An item whose only content is a pleasantry has no actions and include_in_meeting false.
+
+Rules: never fabricate names or dates. Preserve the exact spelling of technical terms (LLMR, PR&C, Q3/Q4/Q6, IFC, RFI, MR, H-Frame, CCVT, FOPP, RTU, DFR). Keep every string short.`;
 
     const userContent: any[] = [{ type: "text", text: trimText(text) || "(no text; see image)" }];
     if (image_data_url && /^data:image\/(png|jpe?g|webp|gif);base64,/.test(image_data_url)) {

@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { FeedItem, FeedAction } from "@/src/lib/feedStore";
 import { updateFeedItem, deleteFeedItem } from "@/src/lib/feedStore";
-import { triageItem, createTasksFromActions } from "@/src/lib/feedIngest";
+import { triageItem, createTasksFromActions, getTriagePhase, onTriageProgress } from "@/src/lib/feedIngest";
 import type { Project } from "@/src/lib/registry";
 
 const KIND_ICON: Record<string, string> = {
@@ -29,13 +29,36 @@ interface Props {
   projects: Project[];
   onChange: (item: FeedItem | null) => void;
   compact?: boolean;
+  /** This item is the container for a split email chain; its messages are triaged instead. */
+  isChainParent?: boolean;
+  childCount?: number;
 }
 
-export default function FeedItemCard({ item, projects, onChange, compact = false }: Props) {
+export default function FeedItemCard({ item, projects, onChange, compact = false, isChainParent = false, childCount = 0 }: Props) {
   const [expanded, setExpanded] = useState(false);
   const [busy, setBusy] = useState(false);
   const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [phase, setPhase] = useState(() => getTriagePhase(item.id));
+  const [elapsed, setElapsed] = useState(0);
   const t = item.triage;
+
+  // Track this item's place in the triage queue and how long it has been running
+  useEffect(() => {
+    const sync = () => setPhase(getTriagePhase(item.id));
+    sync();
+    return onTriageProgress(sync);
+  }, [item.id]);
+
+  useEffect(() => {
+    if (phase?.phase !== "running") {
+      setElapsed(0);
+      return;
+    }
+    const tick = () => setElapsed(Math.floor((Date.now() - phase.since) / 1000));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [phase]);
 
   const setProject = async (id: string) => {
     const p = projects.find((x) => x.id === id) ?? null;
@@ -131,9 +154,18 @@ export default function FeedItemCard({ item, projects, onChange, compact = false
               <span className="badge" style={{ fontSize: "0.68rem", color: "var(--danger)" }} title={item.triage_error}>
                 Triage failed
               </span>
+            ) : isChainParent ? (
+              <span className="badge" style={{ fontSize: "0.68rem", color: "var(--muted)" }} title="The messages in this chain are triaged individually, below">
+                Email chain · {childCount} message{childCount === 1 ? "" : "s"}
+              </span>
+            ) : phase ? (
+              <span className="badge" style={{ fontSize: "0.68rem", color: "var(--warn)", display: "inline-flex", alignItems: "center", gap: "0.3rem" }}>
+                <span className="tidy-spin" aria-hidden />
+                {phase.phase === "queued" ? "Queued" : `Reading and extracting… ${elapsed}s`}
+              </span>
             ) : (
-              <span className="badge" style={{ fontSize: "0.68rem", color: "var(--warn)" }}>
-                Triaging…
+              <span className="badge" style={{ fontSize: "0.68rem", color: "var(--muted)" }} title="Not triaged yet. Use Re-triage, or the Retry button on the Feed page.">
+                Not triaged
               </span>
             )}
             {t?.topics.slice(0, 4).map((tp) => (
@@ -203,8 +235,8 @@ export default function FeedItemCard({ item, projects, onChange, compact = false
                 {item.text || "(no text)"}
               </pre>
               <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
-                <button type="button" className="btn" style={{ padding: "0.3rem 0.6rem", fontSize: "0.72rem" }} onClick={retriage} disabled={busy}>
-                  {busy ? "…" : "Re-triage"}
+                <button type="button" className="btn" style={{ padding: "0.3rem 0.6rem", fontSize: "0.72rem" }} onClick={retriage} disabled={busy} title={isChainParent ? "Triage the whole chain as one item" : "Run triage again"}>
+                  {busy ? "…" : isChainParent ? "Triage whole chain" : "Re-triage"}
                 </button>
                 {item.status !== "covered" && (
                   <button type="button" className="btn" style={{ padding: "0.3rem 0.6rem", fontSize: "0.72rem" }} onClick={() => setStatus("covered")}>
