@@ -240,22 +240,139 @@ export function detectProject(text: string, projects: Project[]): ProjectMatch |
   return best;
 }
 
-/** Capitalized-name sniffing for the people field (cheap, over-inclusive on purpose). */
-export function sniffPeople(text: string, known: string[] = []): string[] {
+/**
+ * Words that never start or end a person's name in this domain. Used to reject
+ * two-capitalized-word phrases like "The Siemens", "Relay Upgrade", "Sub Design".
+ */
+const NAME_STOPWORDS = new Set(
+  (
+    "the this that these those our your their his her its all both each any some no not and or but for with from into onto over under " +
+    "hey hi hello dear good morning afternoon evening thanks thank regards sincerely best kind please note caution external sender " +
+    "since during before after once when while because although however additionally lastly finally also just still now next then " +
+    "project projects design designs department departments services service group groups team teams company companies " +
+    "substation station stations switchyard relay relays breaker breakers panel panels bus line lines fiber conduit ground grounding " +
+    "upgrade upgrades install installation replace replacement modify modification construct construction expansion " +
+    "senior engineer engineers manager lead leads supervisor coordinator drafter analyst president director " +
+    "log logs list lists sketch sketches drawing drawings package packages report reports point points sheet sheets " +
+    "creek point hill grove ridge valley center centre park road way street energy transmission distribution " +
+    "date dates time times week weeks month months day days morning update updates status question questions answer answers " +
+    "request requests response responses item items issue issues action actions meeting meetings visit visits review reviews " +
+    "phase rev revision final draft preliminary current existing new old attached below above per via " +
+    "description automatically generated blue white black square rectangle sign letter logo yellow " +
+    "burns mcdonnell itc bmcd dte google telco scada"
+  ).split(" ")
+);
+
+function looksLikePersonName(name: string): boolean {
+  const parts = name.split(/\s+/);
+  if (parts.length < 2) return false;
+  return !parts.some((w) => NAME_STOPWORDS.has(w.toLowerCase()));
+}
+
+/**
+ * Turn one address-header entry into a display name.
+ * "Bender, Elizabeth <ebender@x.com>" -> "Elizabeth Bender"
+ * "Ryan Meaney <rmeaney@x.com>"       -> "Ryan Meaney"
+ * "someone@x.com"                     -> null (no usable name)
+ */
+function displayNameFromAddress(entry: string): string | null {
+  let s = entry.replace(/\r?\n[ \t]+/g, " ").trim();
+  s = s.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+  s = s.replace(/^["']+|["']+$/g, "").replace(/[;,]+$/, "").trim();
+  if (!s || s.length > 60 || /@/.test(s)) return null;
+  // Distribution lists and shared mailboxes are not people
+  if (/^dl\s/i.test(s) || /\b(group|team|list|mailbox|all|dept|department)$/i.test(s)) return null;
+  // "Last, First M" -> "First Last"
+  const c = s.match(/^([A-Z][\w'\u2019.-]+)\s*,\s*([A-Z][\w'\u2019.-]+)(?:\s+[A-Z]\.?)?$/);
+  if (c) return `${c[2]} ${c[1]}`;
+  if (!/[A-Za-z]/.test(s)) return null;
+  return s;
+}
+
+/**
+ * Names from From/To/Cc/Bcc headers. These are structured and reliable, so for
+ * email content they are preferred over sniffing the body.
+ */
+export function parseEmailPeople(text: string, max = 20): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  const re = /^(?:From|To|Cc|CC|Bcc|Sender):[ \t]*(.+(?:\r?\n[ \t]+.+)*)$/gim;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    // Outlook separates recipients with semicolons; commas are part of "Last, First"
+    for (const entry of m[1].split(";")) {
+      const name = displayNameFromAddress(entry);
+      if (!name) continue;
+      const key = name.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(name);
+      if (out.length >= max) return out;
+    }
+  }
+  return out;
+}
+
+/**
+ * Collapse "Bender" + "Elizabeth Bender" into just "Elizabeth Bender": a bare
+ * contact surname is dropped when a fuller name for the same person is present.
+ */
+function collapseNames(names: string[]): string[] {
+  const kept: string[] = [];
+  for (const name of names) {
+    const words = name.toLowerCase().split(/\s+/);
+    const fullerExists = names.some(
+      (other) =>
+        other !== name &&
+        other.split(/\s+/).length > words.length &&
+        words.every((w) => other.toLowerCase().split(/\s+/).includes(w))
+    );
+    if (!fullerExists) kept.push(name);
+  }
+  return kept;
+}
+
+export interface SniffPeopleOptions {
+  /** Prefer From/To/Cc headers and skip loose body sniffing. */
+  isEmail?: boolean;
+  /** Names that are never people here (project and substation names). */
+  reject?: string[];
+}
+
+/**
+ * People mentioned in a piece of content. Known contacts always win; for email,
+ * the address headers are the source; loose body sniffing is a last resort and
+ * is filtered hard, because a false name pollutes the contact list.
+ */
+export function sniffPeople(text: string, known: string[] = [], opts: SniffPeopleOptions = {}): string[] {
   const out = new Set<string>();
-  const lowerKnown = known.map((k) => k.toLowerCase());
+  const reject = new Set((opts.reject ?? []).map((r) => r.toLowerCase()));
+
   for (const k of known) {
+    if (!k || k.length < 3) continue;
     const re = new RegExp(`(^|[^a-z])${escapeRe(k.toLowerCase())}($|[^a-z])`, "i");
     if (re.test(text)) out.add(k);
   }
+
+  if (opts.isEmail) {
+    for (const name of parseEmailPeople(text)) {
+      if (out.size >= 25) break;
+      if (reject.has(name.toLowerCase())) continue;
+      out.add(name);
+    }
+    return collapseNames(Array.from(out));
+  }
+
+  const lowerKnown = known.map((k) => k.toLowerCase());
   const m = text.match(/\b[A-Z][a-z]{2,}\s[A-Z][a-z]{2,}\b/g) ?? [];
   for (const name of m) {
     if (out.size >= 25) break;
     if (lowerKnown.includes(name.toLowerCase())) continue;
-    if (/^(Burns|Project|Design|Phase|Panel|Change|Meeting|Action|Work|Rev|Please|Thank|Thanks|Best|Kind|Hi|Hello|Need|Needs|Got|Will|Also|Just|Sent|From|Subject|Note|Per|Once|After|Before|Waiting|Following|Attached|See|Let|Can|Should|Would|Could|Yes|No|Ok|Okay|Sync|Line|Bus|Cap|Bank|Station|New|Install|Replace|Upgrade|Final|Draft|Team|Field|Site|Plan|Update|Confirm)\b/.test(name)) continue;
+    if (reject.has(name.toLowerCase())) continue;
+    if (!looksLikePersonName(name)) continue;
     out.add(name);
   }
-  return Array.from(out);
+  return collapseNames(Array.from(out));
 }
 
 /** First non-empty line, trimmed to a title length. */

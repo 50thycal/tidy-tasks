@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import FeedItemCard from "@/app/components/FeedItemCard";
 import { getAllFeedItems, type FeedItem, type FeedStatus } from "@/src/lib/feedStore";
-import { onFeedItemUpdated, triageItems } from "@/src/lib/feedIngest";
+import { onFeedItemUpdated, triageItems, onTriageProgress, triageQueue, onFeedChanged } from "@/src/lib/feedIngest";
 import { getProjects, type Project } from "@/src/lib/registry";
 
 type StatusFilter = "open" | "new" | "meeting" | "covered" | "all";
@@ -17,6 +17,7 @@ function FeedPageInner() {
   const [projectFilter, setProjectFilter] = useState<string>(params.get("project") ?? "");
   const [status, setStatus] = useState<StatusFilter>("open");
   const [mounted, setMounted] = useState(false);
+  const [queue, setQueue] = useState(() => triageQueue());
 
   const reload = async () => {
     const all = await getAllFeedItems();
@@ -31,7 +32,17 @@ function FeedPageInner() {
   useEffect(() => {
     setMounted(true);
     reload();
-    return onFeedItemUpdated((it) => setItems((prev) => prev.map((p) => (p.id === it.id ? it : p))));
+    const offItems = onFeedItemUpdated((it) =>
+      setItems((prev) => (prev.some((p) => p.id === it.id) ? prev.map((p) => (p.id === it.id ? it : p)) : prev))
+    );
+    // Items captured from anywhere in the app land here without a page reload
+    const offAdded = onFeedChanged(() => void reload());
+    const offProgress = onTriageProgress(() => setQueue(triageQueue()));
+    return () => {
+      offItems();
+      offAdded();
+      offProgress();
+    };
   }, []);
 
   const followed = projects.filter((p) => p.mine || p.pinned);
@@ -76,6 +87,17 @@ function FeedPageInner() {
           Everything you drop or paste, dated and triaged. Drop files anywhere, paste anywhere, or press Ctrl+Shift+V.
         </p>
       </div>
+
+      {queue.total > 0 && (
+        <div className="card" style={{ padding: "0.6rem 0.9rem", display: "flex", alignItems: "center", gap: "0.6rem", fontSize: "0.82rem", borderLeft: "3px solid var(--warn)" }}>
+          <span className="tidy-spin" style={{ color: "var(--warn)" }} aria-hidden />
+          <span>
+            Triaging {queue.running} of {queue.total} item{queue.total === 1 ? "" : "s"}
+            {queue.queued > 0 && ` · ${queue.queued} waiting`}
+          </span>
+          <span style={{ color: "var(--muted)" }}>Each item is read once and turned into a summary, topics, dates and actions. Results appear as they finish.</span>
+        </div>
+      )}
 
       {projects.length === 0 && (
         <div className="card" style={{ padding: "1rem", fontSize: "0.85rem" }}>
@@ -132,7 +154,7 @@ function FeedPageInner() {
             const kids = childrenOf(item.id);
             return (
               <div key={item.id} style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
-                <FeedItemCard item={item} projects={projects} onChange={(u) => onChange(u, item.id)} compact={kids.length > 0} />
+                <FeedItemCard item={item} projects={projects} onChange={(u) => onChange(u, item.id)} compact={kids.length > 0} isChainParent={kids.length > 0} childCount={kids.length} />
                 {kids.length > 0 && (
                   <div style={{ marginLeft: "1.5rem", display: "flex", flexDirection: "column", gap: "0.35rem" }}>
                     {kids.map((k) => (

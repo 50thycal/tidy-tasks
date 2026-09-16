@@ -6,7 +6,7 @@ import { useParams } from "next/navigation";
 import FeedItemCard from "@/app/components/FeedItemCard";
 import { getProjectById, getProjects, updateProject, nextMilestone, projectPeople, getRegistry, type Project, type MeetingSettings } from "@/src/lib/registry";
 import { getFeedItemsForProject, type FeedItem } from "@/src/lib/feedStore";
-import { onFeedItemUpdated } from "@/src/lib/feedIngest";
+import { onFeedItemUpdated, onFeedChanged } from "@/src/lib/feedIngest";
 import { getInboxItems, type InboxItem } from "@/src/lib/clientStore";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -31,7 +31,12 @@ export default function ProjectDetailPage() {
   useEffect(() => {
     setMounted(true);
     reload();
-    return onFeedItemUpdated((it) => setFeed((prev) => prev.map((f) => (f.id === it.id ? it : f))));
+    const offItems = onFeedItemUpdated((it) => setFeed((prev) => prev.map((f) => (f.id === it.id ? it : f))));
+    const offAdded = onFeedChanged(() => void reload());
+    return () => {
+      offItems();
+      offAdded();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id]);
 
@@ -268,9 +273,19 @@ export default function ProjectDetailPage() {
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-            {openFeed.map((f) => (
-              <FeedItemCard key={f.id} item={f} projects={projects} onChange={(u) => setFeed((prev) => (u ? prev.map((x) => (x.id === u.id ? u : x)) : prev.filter((x) => x.id !== f.id)))} />
-            ))}
+            {openFeed.map((f) => {
+              const kids = feed.filter((x) => x.parent_id === f.id).length;
+              return (
+                <FeedItemCard
+                  key={f.id}
+                  item={f}
+                  projects={projects}
+                  isChainParent={kids > 0}
+                  childCount={kids}
+                  onChange={(u) => setFeed((prev) => (u ? prev.map((x) => (x.id === u.id ? u : x)) : prev.filter((x) => x.id !== f.id)))}
+                />
+              );
+            })}
           </div>
         )}
       </section>

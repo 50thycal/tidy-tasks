@@ -336,3 +336,22 @@ h4 {
   }
 }
 
+
+/* Triage in-flight spinner */
+.tidy-spin {
+  display: inline-block;
+  width: 0.7em;
+  height: 0.7em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: tidy-spin 0.7s linear infinite;
+}
+
+@keyframes tidy-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tidy-spin { animation-duration: 2s; }
+}
